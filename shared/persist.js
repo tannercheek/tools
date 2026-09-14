@@ -44,6 +44,11 @@ function passphrase() {
   return p;
 }
 
+function writeRemote(docId, key, value) {
+  const ref = doc(db, "toolState", docId);
+  return setDoc(ref, { [key]: value, passphrase: passphrase() }, { merge: true });
+}
+
 function localKey(docId) {
   return `toolState:${docId}`;
 }
@@ -100,13 +105,27 @@ export async function syncedState(docId) {
       writeLocal(docId, data);
       setStatus("saved-locally");
 
-      ensureSignedIn()
-        .then(() => {
-          const ref = doc(db, "toolState", docId);
-          return setDoc(ref, { [key]: value, passphrase: passphrase() }, { merge: true });
-        })
-        .then(() => setStatus("synced"))
-        .catch(() => setStatus("offline"));
+      (async () => {
+        try {
+          await ensureSignedIn();
+          await writeRemote(docId, key, value);
+          setStatus("synced");
+        } catch (err) {
+          if (err && err.code !== "permission-denied") {
+            setStatus("offline");
+            return;
+          }
+
+          // Stale passphrase — drop it, ask once more, retry once.
+          localStorage.removeItem(PASSPHRASE_KEY);
+          try {
+            await writeRemote(docId, key, value);
+            setStatus("synced");
+          } catch {
+            setStatus("offline");
+          }
+        }
+      })();
     },
 
     // fn is called immediately with the current status, then on every change.
