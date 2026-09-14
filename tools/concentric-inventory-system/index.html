@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Concentric Inventory System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- Top-left logo/title -->
+      <header class="app-header">
+        <div class="logo">
+          <span class="logo-mark">◎</span>
+          <span class="logo-text">Concentric<br>Inventory<br>System</span>
+        </div>
+      </header>
+
+      <!-- Main content area: concentric rings centered -->
+      <main class="app-main">
+        <div class="rings-wrapper">
+          <div class="rings-system">
+            <!-- Central profile placeholder -->
+            <div class="profile-circle">
+              <span class="profile-initials">You</span>
+            </div>
+
+            <!-- Concentric rings (static structure; interactive via CSS/JS) -->
+            <div class="ring ring-1" data-ring-id="edc"></div>
+            <div class="ring ring-2" data-ring-id="daily-backpack"></div>
+            <div class="ring ring-3" data-ring-id="go-bag"></div>
+            <div class="ring ring-4" data-ring-id="travel-luggage"></div>
+            <div class="ring ring-5" data-ring-id="hq-house"></div>
+            <div class="ring ring-6" data-ring-id="other-storage-1"></div>
+            <div class="ring ring-7" data-ring-id="other-storage-2"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
