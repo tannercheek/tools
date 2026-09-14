@@ -401,6 +401,8 @@ function render(){
     a.className = 'folder' + (t.archived ? ' archived' : '');
     a.href = t.url || '#';
     a.title = t.name;
+    a.target = '_blank';
+    a.rel = 'noopener';
     a.style.setProperty('--tab-x', STAGGER[i % STAGGER.length] + '%');
 
     const glyph = ICONS[t.icon] || ICONS.folder;

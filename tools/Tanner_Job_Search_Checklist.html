@@ -1,405 +1,685 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tanner Cheek — Job Search Checklist</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Search Checklist</title>
+    <meta
+      name="description"
+      content="Track job-search readiness tasks and progress"
+    />
+    <meta name="icon" content="checklist" />
+    <meta name="tags" content="checklist, career" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: #f5f5f2;
-      color: #1a1a18;
-      line-height: 1.6;
-      padding: 2.5rem 1.25rem;
-      min-height: 100vh;
-    }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        background: #f5f5f2;
+        color: #1a1a18;
+        line-height: 1.6;
+        padding: 2.5rem 1.25rem;
+        min-height: 100vh;
+      }
 
-    .container { max-width: 700px; margin: 0 auto; }
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
 
-    .header { margin-bottom: 1.75rem; }
-    .header h1 { font-size: 21px; font-weight: 600; color: #1a1a18; margin-bottom: 4px; }
-    .header p { font-size: 13.5px; color: #6b6b68; }
+      .header {
+        margin-bottom: 1.75rem;
+      }
+      .header h1 {
+        font-size: 21px;
+        font-weight: 600;
+        color: #1a1a18;
+        margin-bottom: 4px;
+      }
+      .header p {
+        font-size: 13.5px;
+        color: #6b6b68;
+      }
 
-    .progress-card {
-      background: #ffffff;
-      border: 1px solid #e5e5e0;
-      border-radius: 12px;
-      padding: 14px 18px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 2rem;
-    }
-    .progress-label { font-size: 13px; color: #6b6b68; white-space: nowrap; }
-    .progress-bar-wrap { flex: 1; height: 6px; background: #eeeee9; border-radius: 3px; overflow: hidden; }
-    .progress-bar { height: 100%; background: #2563eb; border-radius: 3px; transition: width 0.35s ease; width: 0%; }
-    .progress-count { font-size: 13px; font-weight: 500; color: #1a1a18; white-space: nowrap; min-width: 48px; text-align: right; }
+      .progress-card {
+        background: #ffffff;
+        border: 1px solid #e5e5e0;
+        border-radius: 12px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 0.5rem;
+      }
+      .sync-status {
+        font-size: 11px;
+        color: #9a9a95;
+        min-height: 14px;
+        margin: 0 2px 2rem;
+      }
+      .sync-status.sync-synced {
+        color: #15803d;
+      }
+      .sync-status.sync-saved-locally {
+        color: #b45309;
+      }
+      .sync-status.sync-offline {
+        color: #dc2626;
+      }
+      .progress-label {
+        font-size: 13px;
+        color: #6b6b68;
+        white-space: nowrap;
+      }
+      .progress-bar-wrap {
+        flex: 1;
+        height: 6px;
+        background: #eeeee9;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        background: #2563eb;
+        border-radius: 3px;
+        transition: width 0.35s ease;
+        width: 0%;
+      }
+      .progress-count {
+        font-size: 13px;
+        font-weight: 500;
+        color: #1a1a18;
+        white-space: nowrap;
+        min-width: 48px;
+        text-align: right;
+      }
 
-    .phase { margin-bottom: 2rem; }
-    .phase-header {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 1rem; padding-bottom: 0.5rem;
-      border-bottom: 1px solid #e5e5e0;
-    }
-    .phase-tag {
-      font-size: 11px; font-weight: 600; padding: 3px 11px;
-      border-radius: 20px; letter-spacing: 0.04em;
-    }
-    .tag-now    { background: #fef2f2; color: #dc2626; }
-    .tag-grad   { background: #eff6ff; color: #1d4ed8; }
-    .tag-ongoing{ background: #f0fdf4; color: #15803d; }
-    .phase-title { font-size: 15px; font-weight: 500; color: #1a1a18; }
+      .phase {
+        margin-bottom: 2rem;
+      }
+      .phase-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e5e5e0;
+      }
+      .phase-tag {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 11px;
+        border-radius: 20px;
+        letter-spacing: 0.04em;
+      }
+      .tag-now {
+        background: #fef2f2;
+        color: #dc2626;
+      }
+      .tag-grad {
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+      .tag-ongoing {
+        background: #f0fdf4;
+        color: #15803d;
+      }
+      .phase-title {
+        font-size: 15px;
+        font-weight: 500;
+        color: #1a1a18;
+      }
 
-    .group { margin-bottom: 1.25rem; }
-    .group-label {
-      font-size: 10.5px; font-weight: 700; color: #b0b0ab;
-      text-transform: uppercase; letter-spacing: 0.07em;
-      margin-bottom: 5px; padding-left: 3px;
-    }
+      .group {
+        margin-bottom: 1.25rem;
+      }
+      .group-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #b0b0ab;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        margin-bottom: 5px;
+        padding-left: 3px;
+      }
 
-    .cl-item {
-      display: flex; align-items: flex-start; gap: 11px;
-      padding: 7px 8px; border-radius: 8px;
-      cursor: pointer; transition: background 0.1s;
-      user-select: none;
-    }
-    .cl-item:hover { background: #ededea; }
+      .cl-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 11px;
+        padding: 7px 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.1s;
+        user-select: none;
+      }
+      .cl-item:hover {
+        background: #ededea;
+      }
 
-    .checkbox {
-      width: 18px; height: 18px; min-width: 18px;
-      border: 1.5px solid #ccccc7; border-radius: 4px;
-      display: flex; align-items: center; justify-content: center;
-      margin-top: 2px; transition: all 0.15s; background: #fff;
-    }
-    .checkbox.checked { background: #2563eb; border-color: #2563eb; }
-    .checkmark { display: none; color: #fff; font-size: 11px; font-weight: 800; line-height: 1; }
-    .checkbox.checked .checkmark { display: block; }
+      .checkbox {
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        border: 1.5px solid #ccccc7;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2px;
+        transition: all 0.15s;
+        background: #fff;
+      }
+      .checkbox.checked {
+        background: #2563eb;
+        border-color: #2563eb;
+      }
+      .checkmark {
+        display: none;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .checkbox.checked .checkmark {
+        display: block;
+      }
 
-    .item-content { flex: 1; }
-    .item-label { font-size: 14px; color: #1a1a18; line-height: 1.5; }
-    .item-label.checked { color: #b0b0ab; text-decoration: line-through; }
-    .item-note { font-size: 12px; color: #6b6b68; margin-top: 2px; line-height: 1.45; }
-    .item-note.checked { color: #b0b0ab; }
+      .item-content {
+        flex: 1;
+      }
+      .item-label {
+        font-size: 14px;
+        color: #1a1a18;
+        line-height: 1.5;
+      }
+      .item-label.checked {
+        color: #b0b0ab;
+        text-decoration: line-through;
+      }
+      .item-note {
+        font-size: 12px;
+        color: #6b6b68;
+        margin-top: 2px;
+        line-height: 1.45;
+      }
+      .item-note.checked {
+        color: #b0b0ab;
+      }
 
-    .divider { height: 1px; background: #e5e5e0; margin: 1.75rem 0; }
+      .divider {
+        height: 1px;
+        background: #e5e5e0;
+        margin: 1.75rem 0;
+      }
 
-    @media (max-width: 480px) {
-      body { padding: 1.25rem 0.75rem; }
-      .header h1 { font-size: 18px; }
-    }
-    @media print {
-      body { background: #fff; }
-      .cl-item:hover { background: none; }
-    }
-  </style>
-</head>
-<body>
-<div class="container">
+      @media (max-width: 480px) {
+        body {
+          padding: 1.25rem 0.75rem;
+        }
+        .header h1 {
+          font-size: 18px;
+        }
+      }
+      @media print {
+        body {
+          background: #fff;
+        }
+        .cl-item:hover {
+          background: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Job Search Checklist</h1>
+        <p>
+          Everything that needs to be in place before applying. Check items off
+          as you complete them.
+        </p>
+      </div>
 
-  <div class="header">
-    <h1>Tanner Cheek — Job Search Checklist</h1>
-    <p>Everything that needs to be in place before applying. Check items off as you complete them.</p>
-  </div>
+      <div class="progress-card">
+        <span class="progress-label">Ready to apply</span>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="prog-bar"></div>
+        </div>
+        <span class="progress-count" id="prog-count">0 / 0</span>
+      </div>
+      <div class="sync-status" id="sync-status"></div>
 
-  <div class="progress-card">
-    <span class="progress-label">Ready to apply</span>
-    <div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar"></div></div>
-    <span class="progress-count" id="prog-count">0 / 0</span>
-  </div>
+      <!-- PHASE 1 -->
+      <div class="phase">
+        <div class="phase-header">
+          <span class="phase-tag tag-now">Do now</span>
+          <span class="phase-title">Before you apply — get these in place</span>
+        </div>
 
-  <!-- PHASE 1 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-tag tag-now">Do now</span>
-      <span class="phase-title">Before you apply — get these in place</span>
+        <div class="group">
+          <div class="group-label">Resumes</div>
+          <div class="cl-item" data-id="cybersecurity-forensics-resume-v2" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Cybersecurity / forensics resume (v2)
+              </div>
+              <div class="item-note">
+                Updated with Nmap, Hydra, Burp Suite; 77+ lab count; 6-person
+                team
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="general-swe-resume-v2" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">General SWE resume (v2)</div>
+              <div class="item-note">Updated with 6-person team detail</div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="set-up-a-permanent-professional-email" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Set up a permanent professional email
+              </div>
+              <div class="item-note">
+                PDX email will die post-graduation — get
+                firstname.lastname@gmail.com now
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-label">LinkedIn</div>
+          <div class="cl-item" data-id="update-headline-with-both-tracks-graduation" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Update headline with both tracks + graduation
+              </div>
+              <div class="item-note">
+                "CS Student | Full-Stack & Cybersecurity | PSU B.S. 2026"
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="write-and-publish-about-section" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Write and publish About section</div>
+              <div class="item-note">Draft completed — ready to paste in</div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="add-all-technical-skills-to-skills-section" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Add all technical skills to Skills section
+              </div>
+              <div class="item-note">
+                Next.js, Python, SQL, Burp Suite, Nmap, Hydra, Linux, Git, etc.
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="add-capstone-project-as-experience-entry" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Add capstone project as experience entry
+              </div>
+              <div class="item-note">
+                List it like a job with role, dates, and the 3 bullets from your
+                resume
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="pin-capstone-to-featured-section" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Pin capstone to Featured section</div>
+              <div class="item-note">Live URL or GitHub link if public</div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="turn-on-open-to-work" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Turn on Open to Work</div>
+              <div class="item-note">
+                Both: Software Engineer + Information Security Analyst. Portland
+                + Remote.
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="set-up-job-alerts" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Set up job alerts</div>
+              <div class="item-note">
+                Junior SWE, SOC Analyst, Junior Security Analyst, Entry Level
+                Cybersecurity — all + remote filter
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-label">GitHub</div>
+          <div class="cl-item" data-id="profile-readme-is-up-to-date" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Profile README is up-to-date</div>
+              <div class="item-note">
+                Short bio, current focus (CS + cybersecurity), links to
+                portfolio and LinkedIn
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="capstone-repo-is-presentable" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Capstone repo is presentable</div>
+              <div class="item-note">
+                Clean README, no sensitive keys or .env files, clear setup
+                instructions
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="pin-your-best-repos-up-to-6" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Pin your best repos (up to 6)</div>
+              <div class="item-note">
+                Capstone first — anything else worth showing
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-label">Personal website / portfolio</div>
+          <div class="cl-item" data-id="portfolio-site-is-live-and-updated" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Portfolio site is live and updated</div>
+              <div class="item-note">
+                tannercheek.com — capstone featured, links to GitHub and
+                LinkedIn working
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="notion-project-database-populated" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Notion project database populated</div>
+              <div class="item-note">
+                At least capstone entry fully filled out — add projects as
+                portfolio grows
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="contact-method-clearly-visible-on-site" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Contact method clearly visible on site
+              </div>
+              <div class="item-note">
+                Professional email (not PDX) or contact form
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-label">Application tracker</div>
+          <div class="cl-item" data-id="notion-tracker-set-up-with-all-properties" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Notion tracker set up with all properties
+              </div>
+              <div class="item-note">
+                Company, Role, Resume Version, Date Applied, Source, Status,
+                Contact, Follow-up Date, Notes
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="board-view-configured-grouped-by-status" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Board view configured, grouped by Status
+              </div>
+              <div class="item-note">
+                Applied → Phone Screen → Interview → Offer / Rejected / Ghosted
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- PHASE 2 -->
+      <div class="phase">
+        <div class="phase-header">
+          <span class="phase-tag tag-grad">Post-graduation</span>
+          <span class="phase-title">Add these once earned</span>
+        </div>
+
+        <div class="group">
+          <div class="group-label">Certifications</div>
+          <div class="cl-item" data-id="isc2-certified-in-cybersecurity-cc-earned" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                ISC2 Certified in Cybersecurity (CC) earned
+              </div>
+              <div class="item-note">
+                Add to LinkedIn, resume header, and portfolio immediately. $199
+                exam + $50/yr AMF.
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="comptia-security-sy0-701-earned" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">CompTIA Security+ SY0-701 earned</div>
+              <div class="item-note">
+                Add to LinkedIn, resume header, and portfolio. Remove all "in
+                progress" language everywhere.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- PHASE 3 -->
+      <div class="phase">
+        <div class="phase-header">
+          <span class="phase-tag tag-ongoing">Ongoing</span>
+          <span class="phase-title">Keep doing these every week</span>
+        </div>
+
+        <div class="group">
+          <div class="group-label">Studying</div>
+          <div class="cl-item" data-id="neetcode-150-1-problem-day-now-2-3-day-post-grad" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                NeetCode 150 — 1 problem/day now, 2–3/day post-grad
+              </div>
+              <div class="item-note">
+                Order: Arrays → Two Pointers → Stack → Binary Search → Sliding
+                Window → Linked List → Trees → Graphs
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="professor-messer-sy0-701-1-video-day" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Professor Messer SY0-701 — 1 video/day
+              </div>
+              <div class="item-note">
+                Free on YouTube. Doubles as Security+ study and cyber interview
+                prep simultaneously.
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="1-tryhackme-room-or-portswigger-lab-per-week" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                1 TryHackMe room or PortSwigger lab per week
+              </div>
+              <div class="item-note">
+                Keep hands-on skills sharp while working through cert material
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-label">Networking</div>
+          <div class="cl-item" data-id="1-linkedin-connection-personalized-note-per-week" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                1 LinkedIn connection + personalized note per week
+              </div>
+              <div class="item-note">
+                PSU CS alumni, Portland security professionals, hiring managers
+                at target companies
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="attend-owasp-portland-or-local-infosec-meetup-monthly" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Attend OWASP Portland or local infosec meetup monthly
+              </div>
+              <div class="item-note">
+                Check Portland Infosec Community site for OWASP, ISACA, CSNP,
+                WiCyS schedules
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="attend-bsidespdx-when-it-runs" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">Attend BSidesPDX when it runs</div>
+              <div class="item-note">
+                Highest-leverage in-person networking event in Portland's
+                security scene
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-label">Applying</div>
+          <div class="cl-item" data-id="5-10-quality-applications-per-week-post-grad" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                5–10 quality applications per week (post-grad)
+              </div>
+              <div class="item-note">
+                Pick the right resume version, scan for keywords, log everything
+                in Notion — no spray-and-pray
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="follow-up-on-applications-1-2-weeks-after-no-response" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Follow up on applications 1–2 weeks after no response
+              </div>
+              <div class="item-note">
+                Short, polite check-in email or LinkedIn message — use Follow-up
+                Date field in Notion
+              </div>
+            </div>
+          </div>
+          <div class="cl-item" data-id="send-thank-you-note-within-24-hrs-of-every-interview" onclick="toggle(this)">
+            <div class="checkbox"><span class="checkmark">✓</span></div>
+            <div class="item-content">
+              <div class="item-label">
+                Send thank-you note within 24 hrs of every interview
+              </div>
+              <div class="item-note">
+                Email to every person you spoke with — reference something
+                specific from the conversation
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="group">
-      <div class="group-label">Resumes</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Cybersecurity / forensics resume (v2)</div>
-          <div class="item-note">Updated with Nmap, Hydra, Burp Suite; 77+ lab count; 6-person team</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">General SWE resume (v2)</div>
-          <div class="item-note">Updated with 6-person team detail</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Set up a permanent professional email</div>
-          <div class="item-note">PDX email will die post-graduation — get firstname.lastname@gmail.com now</div>
-        </div>
-      </div>
-    </div>
+    <script type="module">
+      import { syncedState } from "../shared/persist.js";
 
-    <div class="group">
-      <div class="group-label">LinkedIn</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Update headline with both tracks + graduation</div>
-          <div class="item-note">"CS Student | Full-Stack & Cybersecurity | PSU B.S. 2026"</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Write and publish About section</div>
-          <div class="item-note">Draft completed — ready to paste in</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Add all technical skills to Skills section</div>
-          <div class="item-note">Next.js, Python, SQL, Burp Suite, Nmap, Hydra, Linux, Git, etc.</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Add capstone project as experience entry</div>
-          <div class="item-note">List it like a job with role, dates, and the 3 bullets from your resume</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Pin capstone to Featured section</div>
-          <div class="item-note">Live URL or GitHub link if public</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Turn on Open to Work</div>
-          <div class="item-note">Both: Software Engineer + Information Security Analyst. Portland + Remote.</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Set up job alerts</div>
-          <div class="item-note">Junior SWE, SOC Analyst, Junior Security Analyst, Entry Level Cybersecurity — all + remote filter</div>
-        </div>
-      </div>
-    </div>
+      const state = await syncedState("job-search-checklist");
+      const statusEl = document.getElementById("sync-status");
 
-    <div class="group">
-      <div class="group-label">GitHub</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Profile README is up-to-date</div>
-          <div class="item-note">Short bio, current focus (CS + cybersecurity), links to portfolio and LinkedIn</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Capstone repo is presentable</div>
-          <div class="item-note">Clean README, no sensitive keys or .env files, clear setup instructions</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Pin your best repos (up to 6)</div>
-          <div class="item-note">Capstone first — anything else worth showing</div>
-        </div>
-      </div>
-    </div>
+      const STATUS_TEXT = {
+        synced: "synced",
+        "saved-locally": "saved locally — will sync when reachable",
+        offline: "offline — changes saved locally",
+      };
 
-    <div class="group">
-      <div class="group-label">Personal website / portfolio</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Portfolio site is live and updated</div>
-          <div class="item-note">tannercheek.com — capstone featured, links to GitHub and LinkedIn working</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Notion project database populated</div>
-          <div class="item-note">At least capstone entry fully filled out — add projects as portfolio grows</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Contact method clearly visible on site</div>
-          <div class="item-note">Professional email (not PDX) or contact form</div>
-        </div>
-      </div>
-    </div>
+      state.onStatus((status) => {
+        statusEl.textContent = STATUS_TEXT[status] || "";
+        statusEl.className = "sync-status sync-" + status;
+      });
 
-    <div class="group">
-      <div class="group-label">Application tracker</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Notion tracker set up with all properties</div>
-          <div class="item-note">Company, Role, Resume Version, Date Applied, Source, Status, Contact, Follow-up Date, Notes</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Board view configured, grouped by Status</div>
-          <div class="item-note">Applied → Phone Screen → Interview → Offer / Rejected / Ghosted</div>
-        </div>
-      </div>
-    </div>
-  </div>
+      function setChecked(el, checked) {
+        const box = el.querySelector(".checkbox");
+        const label = el.querySelector(".item-label");
+        const note = el.querySelector(".item-note");
+        box.classList.toggle("checked", checked);
+        label.classList.toggle("checked", checked);
+        if (note) note.classList.toggle("checked", checked);
+      }
 
-  <div class="divider"></div>
+      window.toggle = function (el) {
+        const checked = !el.querySelector(".checkbox").classList.contains("checked");
+        setChecked(el, checked);
+        state.set(el.dataset.id, checked);
+        updateProgress();
+      };
 
-  <!-- PHASE 2 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-tag tag-grad">Post-graduation</span>
-      <span class="phase-title">Add these once earned</span>
-    </div>
+      function updateProgress() {
+        const all = document.querySelectorAll(".cl-item");
+        const done = document.querySelectorAll(".checkbox.checked");
+        const total = all.length;
+        const count = done.length;
+        const pct = total ? Math.round((count / total) * 100) : 0;
+        document.getElementById("prog-bar").style.width = pct + "%";
+        document.getElementById("prog-count").textContent =
+          count + " / " + total;
+      }
 
-    <div class="group">
-      <div class="group-label">Certifications</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">ISC2 Certified in Cybersecurity (CC) earned</div>
-          <div class="item-note">Add to LinkedIn, resume header, and portfolio immediately. $199 exam + $50/yr AMF.</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">CompTIA Security+ SY0-701 earned</div>
-          <div class="item-note">Add to LinkedIn, resume header, and portfolio. Remove all "in progress" language everywhere.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <!-- PHASE 3 -->
-  <div class="phase">
-    <div class="phase-header">
-      <span class="phase-tag tag-ongoing">Ongoing</span>
-      <span class="phase-title">Keep doing these every week</span>
-    </div>
-
-    <div class="group">
-      <div class="group-label">Studying</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">NeetCode 150 — 1 problem/day now, 2–3/day post-grad</div>
-          <div class="item-note">Order: Arrays → Two Pointers → Stack → Binary Search → Sliding Window → Linked List → Trees → Graphs</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Professor Messer SY0-701 — 1 video/day</div>
-          <div class="item-note">Free on YouTube. Doubles as Security+ study and cyber interview prep simultaneously.</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">1 TryHackMe room or PortSwigger lab per week</div>
-          <div class="item-note">Keep hands-on skills sharp while working through cert material</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="group">
-      <div class="group-label">Networking</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">1 LinkedIn connection + personalized note per week</div>
-          <div class="item-note">PSU CS alumni, Portland security professionals, hiring managers at target companies</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Attend OWASP Portland or local infosec meetup monthly</div>
-          <div class="item-note">Check Portland Infosec Community site for OWASP, ISACA, CSNP, WiCyS schedules</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Attend BSidesPDX when it runs</div>
-          <div class="item-note">Highest-leverage in-person networking event in Portland's security scene</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="group">
-      <div class="group-label">Applying</div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">5–10 quality applications per week (post-grad)</div>
-          <div class="item-note">Pick the right resume version, scan for keywords, log everything in Notion — no spray-and-pray</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Follow up on applications 1–2 weeks after no response</div>
-          <div class="item-note">Short, polite check-in email or LinkedIn message — use Follow-up Date field in Notion</div>
-        </div>
-      </div>
-      <div class="cl-item" onclick="toggle(this)">
-        <div class="checkbox"><span class="checkmark">✓</span></div>
-        <div class="item-content">
-          <div class="item-label">Send thank-you note within 24 hrs of every interview</div>
-          <div class="item-note">Email to every person you spoke with — reference something specific from the conversation</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<script>
-  function toggle(el) {
-    const box = el.querySelector('.checkbox');
-    const label = el.querySelector('.item-label');
-    const note = el.querySelector('.item-note');
-    box.classList.toggle('checked');
-    label.classList.toggle('checked');
-    if (note) note.classList.toggle('checked');
-    updateProgress();
-  }
-
-  function updateProgress() {
-    const all = document.querySelectorAll('.cl-item');
-    const done = document.querySelectorAll('.checkbox.checked');
-    const total = all.length;
-    const count = done.length;
-    const pct = total ? Math.round((count / total) * 100) : 0;
-    document.getElementById('prog-bar').style.width = pct + '%';
-    document.getElementById('prog-count').textContent = count + ' / ' + total;
-  }
-
-  updateProgress();
-</script>
-</body>
+      document.querySelectorAll(".cl-item").forEach((el) => {
+        if (state.get(el.dataset.id)) setChecked(el, true);
+      });
+      updateProgress();
+    </script>
+  </body>
 </html>
