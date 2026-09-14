@@ -1,5 +1,14 @@
 [
   {
+    "name": "Concentric Inventory System",
+    "desc": "",
+    "icon": "folder",
+    "tags": [],
+    "url": "tools/concentric-inventory-system/",
+    "updated": "2026-09-14T11:11:54-07:00",
+    "fresh": true
+  },
+  {
     "name": "Job Search Checklist",
     "desc": "Track job-search readiness tasks and progress",
     "icon": "checklist",
