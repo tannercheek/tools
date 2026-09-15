@@ -20,7 +20,7 @@ const DIRS = [
   { dir: 'archive', archived: true  }
 ];
 
-const FRESH_DAYS = 14;
+const SYNC_MODULE = /shared\/persist\.js/;
 
 /* ── tiny HTML head parser ──────────────────────────── */
 
@@ -68,10 +68,8 @@ function lastTouched(path) {
   } catch { return null; }
 }
 
-function isFresh(iso) {
-  if (!iso) return false;
-  const age = (Date.now() - new Date(iso).getTime()) / 86400000;
-  return age <= FRESH_DAYS;
+function usesSync(html) {
+  return SYNC_MODULE.test(html);
 }
 
 /* ── walk the folders ───────────────────────────────── */
@@ -116,7 +114,7 @@ function collect({ dir, archived }) {
       tags: (meta.tags || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean),
       url,
       updated,
-      ...(isFresh(updated) && !archived ? { fresh: true } : {}),
+      ...(usesSync(html) ? { synced: true } : {}),
       ...(archived ? { archived: true } : {})
     });
   }

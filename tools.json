@@ -1,12 +1,14 @@
 [
   {
     "name": "Concentric Inventory System",
-    "desc": "",
-    "icon": "folder",
-    "tags": [],
+    "desc": "Concentric Inventory rings",
+    "icon": "checklist",
+    "tags": [
+      "checklist",
+      "travel"
+    ],
     "url": "tools/concentric-inventory-system/",
-    "updated": "2026-09-14T11:11:54-07:00",
-    "fresh": true
+    "updated": "2026-09-14T11:11:54-07:00"
   },
   {
     "name": "Job Search Checklist",
@@ -18,6 +20,6 @@
     ],
     "url": "tools/Tanner_Job_Search_Checklist.html",
     "updated": "2026-09-14T00:00:27-07:00",
-    "fresh": true
+    "synced": true
   }
 ]
