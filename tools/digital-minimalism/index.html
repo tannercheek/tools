@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Minimalism</title>
+<meta name="description" content="Map your life, prune what doesn't serve it">
+<meta name="icon" content="compass">
+<meta name="tags" content="checklist, admin, privacy">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="mast-left">
+    <a class="home" href="../../index.html" title="Back to tools">←</a>
+    <h1>digital minimalism</h1>
+  </div>
+  <div class="mast-right">
+    <span class="sync" id="sync" title="persistence status">···</span>
+    <div class="overall">
+      <span class="overall-num" id="overall-num">0/0</span>
+      <span class="overall-bar"><i id="overall-fill"></i></span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tabs-inner" id="tabs"></div>
+</nav>
+
+<main id="view"></main>
+
+<!-- node detail modal, used by the map view -->
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-path" id="drawer-path"></div>
+      <h2 id="drawer-title"></h2>
+    </div>
+    <button class="x" id="drawer-close" aria-label="Close">×</button>
+  </div>
+  <p class="drawer-note" id="drawer-note"></p>
+  <ul class="surface-list" id="surface-list"></ul>
+  <form class="surface-add" id="surface-add">
+    <input id="surface-input" placeholder="add an app, account or service…" autocomplete="off" spellcheck="false">
+    <button type="submit" title="Add">+</button>
+  </form>
+</aside>
+<div class="scrim" id="scrim" hidden></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
