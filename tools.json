@@ -11,6 +11,18 @@
     "updated": "2026-09-14T23:16:41-07:00"
   },
   {
+    "name": "Digital Minimalism",
+    "desc": "Map your life, prune what doesn't serve it",
+    "icon": "compass",
+    "tags": [
+      "checklist",
+      "admin",
+      "privacy"
+    ],
+    "url": "tools/digital-minimalism/",
+    "updated": "2026-09-15T23:36:18-07:00"
+  },
+  {
     "name": "Job Search Checklist",
     "desc": "Track job-search readiness tasks and progress",
     "icon": "checklist",
