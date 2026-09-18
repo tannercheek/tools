@@ -11,6 +11,22 @@
     "updated": "2026-09-14T23:16:41-07:00"
   },
   {
+    "name": "Daily Flow",
+    "desc": "Flexible daily routine and time-block planner",
+    "icon": "checklist",
+    "tags": [
+      "daily",
+      "schedule",
+      "routine",
+      "checklist",
+      "time-blocking",
+      "planner",
+      "habits"
+    ],
+    "url": "tools/daily-flow/",
+    "updated": "2026-09-18T16:28:54-07:00"
+  },
+  {
     "name": "Digital Minimalism",
     "desc": "Map your life, prune what doesn't serve it",
     "icon": "compass",
@@ -20,8 +36,7 @@
       "privacy"
     ],
     "url": "tools/digital-minimalism/",
-    "updated": "2026-09-15T23:36:18-07:00",
-    "synced": true
+    "updated": "2026-09-15T23:36:18-07:00"
   },
   {
     "name": "Job Search Checklist",
