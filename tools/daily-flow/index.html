@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Daily Flow</title>
+    <meta
+      name="description"
+      content="Flexible daily routine and time-block planner"
+    />
+    <meta name="icon" content="checklist" />
+    <meta
+      name="tags"
+      content="daily, schedule, routine, checklist, time-blocking, planner, habits"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="day-header">
+        <div class="day-nav">
+          <button class="nav-btn" id="prev-day" aria-label="Previous day">
+            &lsaquo;
+          </button>
+          <div class="day-title" id="day-title" title="Click to rename">
+            Loading…
+          </div>
+          <button class="nav-btn" id="next-day" aria-label="Next day">
+            &rsaquo;
+          </button>
+        </div>
+        <div id="day-detail-wrap"></div>
+        <div class="day-actions">
+          <button class="day-action" id="new-day">New day</button>
+          <button class="day-action" id="dup-day">Duplicate</button>
+          <button class="day-action delete" id="del-day">Delete</button>
+        </div>
+        <div class="day-jump">
+          <button
+            class="day-count"
+            id="day-count"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            title="Jump to a day"
+          ></button>
+          <div class="day-jump-menu" id="day-jump-menu" hidden></div>
+        </div>
+        <div class="sync-status" id="sync-status" aria-live="polite"></div>
+      </div>
+
+      <div class="sections-row">
+        <div class="section" id="section-morning">
+          <div class="section-title">Morning</div>
+          <ul class="item-list" id="list-morning"></ul>
+          <div class="add-row">
+            <input type="text" id="input-morning" placeholder="Add item…" />
+            <button id="add-morning" aria-label="Add">+</button>
+          </div>
+        </div>
+
+        <div class="section" id="section-midday">
+          <div class="section-title">Midday</div>
+          <ul class="block-list" id="list-midday"></ul>
+          <div class="type-picker-label">Add block</div>
+          <div class="type-picker" id="type-picker"></div>
+        </div>
+
+        <div class="section" id="section-night">
+          <div class="section-title">Night</div>
+          <ul class="item-list" id="list-night"></ul>
+          <div class="add-row">
+            <input type="text" id="input-night" placeholder="Add item…" />
+            <button id="add-night" aria-label="Add">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
