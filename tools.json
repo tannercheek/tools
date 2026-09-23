@@ -24,7 +24,8 @@
       "habits"
     ],
     "url": "tools/daily-flow/",
-    "updated": "2026-09-18T16:28:54-07:00"
+    "updated": "2026-09-18T16:28:54-07:00",
+    "synced": true
   },
   {
     "name": "Digital Minimalism",
@@ -36,7 +37,8 @@
       "privacy"
     ],
     "url": "tools/digital-minimalism/",
-    "updated": "2026-09-15T23:36:18-07:00"
+    "updated": "2026-09-15T23:36:18-07:00",
+    "synced": true
   },
   {
     "name": "Job Search Checklist",

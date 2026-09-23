@@ -68,8 +68,17 @@ function lastTouched(path) {
   } catch { return null; }
 }
 
-function usesSync(html) {
-  return SYNC_MODULE.test(html);
+function usesSync(text) {
+  return SYNC_MODULE.test(text);
+}
+
+// directory-based tools often keep their logic in sibling .js files rather
+// than inline in index.html — collect those too so sync detection sees them
+function siblingScripts(toolDir) {
+  if (!existsSync(toolDir)) return [];
+  return readdirSync(toolDir, { withFileTypes: true })
+    .filter(e => e.isFile() && /\.js$/i.test(e.name))
+    .map(e => readFileSync(join(toolDir, e.name), 'utf8'));
 }
 
 /* ── walk the folders ───────────────────────────────── */
@@ -81,12 +90,13 @@ function collect({ dir, archived }) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
 
-    let file, url;
+    let file, url, scripts;
 
     if (entry.isFile() && /\.html?$/i.test(entry.name)) {
       // single-file tool
       file = join(dir, entry.name);
       url  = `${dir}/${entry.name}`;
+      scripts = [];
     } else if (entry.isDirectory()) {
       // multi-file tool — must have an index.html
       const idx = join(dir, entry.name, 'index.html');
@@ -96,6 +106,7 @@ function collect({ dir, archived }) {
       }
       file = idx;
       url  = `${dir}/${entry.name}/`;
+      scripts = siblingScripts(join(dir, entry.name));
     } else {
       continue;
     }
@@ -114,7 +125,7 @@ function collect({ dir, archived }) {
       tags: (meta.tags || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean),
       url,
       updated,
-      ...(usesSync(html) ? { synced: true } : {}),
+      ...(usesSync([html, ...scripts].join('\n')) ? { synced: true } : {}),
       ...(archived ? { archived: true } : {})
     });
   }
