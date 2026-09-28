@@ -196,3 +196,50 @@ test('deleteLift: removes the lift and its sessions, keeps tags, writes only "li
   assert.deepEqual(p.writes, ['lifts']);
   assert.deepEqual(p.map.get('lifts'), []);
 });
+
+test('logSession: replaces lastSets and appends one summary, writing only "lifts"', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  const now = new Date('2026-09-22T18:00:00.000Z');
+  const id = store.logSession('l-1', [
+    { weightKg: 104.326, reps: 5 }, { weightKg: 106.594, reps: 3 }, { weightKg: 90.7185, reps: 8 },
+  ], now);
+  const lift = store.lift('l-1');
+  assert.match(id, /^s-[a-z0-9]{8}$/);
+  assert.deepEqual(lift.lastSets, [{ weightKg: 104.33, reps: 5 }, { weightKg: 106.59, reps: 3 }, { weightKg: 90.72, reps: 8 }]);
+  assert.equal(lift.sessions.length, 2);
+  const s = lift.sessions.at(-1);
+  assert.deepEqual(s, { id, date: now.toISOString(), bestE1RMKg: 121.72, topWeightKg: 106.59, topReps: 3 });
+  assert.deepEqual(p.writes, ['lifts']);
+  assert.deepEqual(p.map.get('lifts')[0].sessions.at(-1), s);
+});
+
+test('logSession: two sessions the same day are both kept; the later sets become lastSets', () => {
+  const store = createStore(fakePersist(validDoc()));
+  store.logSession('l-1', [{ weightKg: 100, reps: 5 }], new Date('2026-09-22T10:00:00Z'));
+  const second = store.logSession('l-1', [{ weightKg: 80, reps: 10 }], new Date('2026-09-22T19:00:00Z'));
+  const lift = store.lift('l-1');
+  assert.equal(lift.sessions.length, 3);
+  assert.deepEqual(lift.lastSets, [{ weightKg: 80, reps: 10 }]);
+  assert.equal(lift.sessions.at(-1).id, second);
+  assert.equal(new Set(lift.sessions.map(s => s.id)).size, 3);
+});
+
+test('logSession: bodyweight lifts accept 0; other lifts need weight; bad input changes nothing', () => {
+  const p = fakePersist();
+  const store = createStore(p);
+  const bw = store.addLift({ name: 'Pull-Up', pattern: 'verticalPull', isBodyweight: true });
+  const bench = store.addLift({ name: 'Bench Press', pattern: 'horizontalPush' });
+  store.logSession(bw, [{ weightKg: 0, reps: 12 }]);
+  assert.equal(store.lift(bw).sessions[0].topReps, 12);
+  assert.equal(store.lift(bw).sessions[0].topWeightKg, 0);
+  p.writes.length = 0;
+  assert.throws(() => store.logSession(bench, [{ weightKg: 0, reps: 5 }]));
+  assert.throws(() => store.logSession(bench, []));
+  assert.throws(() => store.logSession(bench, [{ weightKg: 100, reps: 0 }]));
+  assert.throws(() => store.logSession(bench, [{ weightKg: 100, reps: 5.5 }]));
+  assert.throws(() => store.logSession(bench, [{ weightKg: -1, reps: 5 }]));
+  assert.throws(() => store.logSession('l-missing', [{ weightKg: 100, reps: 5 }]));
+  assert.deepEqual(store.lift(bench).sessions, []);
+  assert.deepEqual(p.writes, []);
+});
