@@ -1,0 +1,131 @@
+/* LiftBoard tokens — every color, font and font size lives here, and only here.
+   Swapping an accent or a font family is a change to this file alone. */
+
+/* ── Fonts (self-hosted from @fontsource; licenses in fonts/*-OFL.txt) ── */
+
+/* Anton — display */
+@font-face {
+  font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(./fonts/anton-latin-ext-400-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(./fonts/anton-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Archivo — ui */
+@font-face {
+  font-family: 'Archivo'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url(./fonts/archivo-latin-ext-500-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url(./fonts/archivo-latin-500-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Archivo'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url(./fonts/archivo-latin-ext-700-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url(./fonts/archivo-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Archivo'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url(./fonts/archivo-latin-ext-800-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Archivo'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url(./fonts/archivo-latin-800-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Space Mono — mono */
+@font-face {
+  font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(./fonts/space-mono-latin-ext-400-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(./fonts/space-mono-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url(./fonts/space-mono-latin-ext-700-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url(./fonts/space-mono-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ── Colors, fonts, base size ── */
+
+:root {
+  --bg: #F5F1E6;             --surface-raised: #FFFFFF;   --surface-field: #F1F1F1;
+  --text-primary: #12110F;   --text-secondary: #4B4945;   --text-tertiary: #615F5A;
+  --border-control: #12110F; --divider: #DEDEDD;          --chart-grid: #D5D2C8;
+  --accent: #2255FF;         --on-accent: #FFFFFF;        --accent-soft: #E0E7FF;   /* Cobalt */
+
+  --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --font-ui: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, Menlo, monospace;
+  /* Width of one Space Mono character, in em, with a little slack.
+     The hero uses it to shrink long values to fit. Change it with the font. */
+  --mono-advance: 0.62;
+
+  --base: 1.0625rem;   /* 17px at the default browser size */
+  --field-min: 16px;   /* below this, iOS Safari zooms on focus */
+  color-scheme: light dark;
+}
+:root[data-accent="brick"] { --accent: #C23A0A; --accent-soft: #F6E3DD; }
+:root[data-accent="ink"]   { --accent: #12110F; --accent-soft: #E6E4DE; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;             --surface-raised: #1D1D1B;   --surface-field: #2E2E2B;
+    --text-primary: #F5F1E6;   --text-secondary: #BCB9B1;   --text-tertiary: #A6A39C;
+    --border-control: #F5F1E6; --divider: #403F3B;          --chart-grid: #363634;
+    --accent: #6488FF;         --on-accent: #121212;        --accent-soft: #2A3044;
+  }
+  :root[data-accent="brick"] { --accent: #D47554; --accent-soft: #3E2D25; }
+  :root[data-accent="ink"]   { --accent: #F5F1E6; --accent-soft: #2E2E2B; }
+}
+
+/* ── Type scale (sizes are multiples of --base) ── */
+
+.t-wordmark      { font: 400 calc(var(--base) * 1.75)/1 var(--font-display); color: var(--accent); letter-spacing: 0.02em; }
+.t-subtitle      { font: 500 calc(var(--base) * 0.75)/1.3 var(--font-ui); color: var(--text-tertiary); }
+.t-lift-name     { font: 700 calc(var(--base) * 0.875)/1.25 var(--font-ui); color: var(--text-primary);
+                   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.t-hero          { font: 700 min(calc(var(--base) * 1.375), calc(100cqi / (var(--hero-chars, 8) * var(--mono-advance))))/1.15 var(--font-mono);
+                   color: var(--accent); letter-spacing: -0.02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.t-e1rm          { font: 400 calc(var(--base) * 0.75)/1.3 var(--font-mono); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.t-date          { font: 500 calc(var(--base) * 0.7)/1.3 var(--font-ui); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.t-chip          { font: 700 calc(var(--base) * 0.75)/1 var(--font-ui); }
+.t-chip-small    { font: 700 calc(var(--base) * 0.7)/1 var(--font-ui); color: var(--text-primary); }
+.t-sheet-title   { font: 800 calc(var(--base) * 1.3)/1.2 var(--font-ui); color: var(--text-primary); }
+.t-row-label     { font: 500 var(--base)/1.3 var(--font-ui); color: var(--text-primary); }
+.t-row-value     { font: 700 var(--base)/1.3 var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.t-section       { font: 800 calc(var(--base) * 0.75)/1.3 var(--font-ui); color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.06em; }
+.t-column        { font: 700 calc(var(--base) * 0.7)/1.3 var(--font-ui); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.t-field         { font: 700 max(var(--field-min), calc(var(--base) * 1.1))/1.2 var(--font-mono); color: var(--text-primary); text-align: center; }
+.t-button        { font: 800 calc(var(--base) * 1.1)/1.2 var(--font-ui); }
+.t-chart-title   { font: 700 var(--base)/1.3 var(--font-ui); color: var(--text-primary); }
+.t-chart-callout { font: 700 calc(var(--base) * 0.875)/1 var(--font-mono); color: var(--accent); }
+.t-axis          { font: 400 calc(var(--base) * 0.7)/1 var(--font-mono); color: var(--text-tertiary); }
+
+/* The tab bar's labels and the body default aren't in the spec's scale;
+   they reuse its sizes. */
+.t-tab           { font: 700 calc(var(--base) * 0.7)/1 var(--font-ui); }
+.t-body          { font: 500 var(--base)/1.4 var(--font-ui); color: var(--text-primary); }

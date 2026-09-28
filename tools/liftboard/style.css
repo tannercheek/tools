@@ -1,0 +1,118 @@
+/* LiftBoard styles — layout and components. Colors, fonts and font sizes come
+   from tokens.css; spacing, radii and border widths live here. */
+
+/* ── Reset ── */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--text-primary); }
+h1, h2, h3, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.icon { width: 22px; height: 22px; flex: none; }
+
+/* ── Page layout ── */
+
+:root { --tabbar-h: 64px; }
+
+/* One column: 20px gutters on phones, 640px of content from 700px up. */
+#view {
+  max-width: 680px;
+  margin: 0 auto;
+  padding:
+    calc(env(safe-area-inset-top) + 24px)
+    max(20px, env(safe-area-inset-right))
+    calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px)
+    max(20px, env(safe-area-inset-left));
+}
+
+/* Loading and can't-open messages */
+.screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px max(20px, env(safe-area-inset-left));
+  text-align: center;
+}
+
+.page-title { margin-bottom: 24px; }
+
+/* ── Board header ── */
+
+.board-header { display: grid; gap: 8px; margin-bottom: 24px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo-mark { width: 20px; height: 20px; border-radius: 6px; background: var(--accent); flex: none; }
+
+/* ── Sync dot ── */
+
+.sync { display: inline-flex; align-items: center; gap: 6px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); }
+.sync[data-status="saved-locally"] .sync-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-tertiary); }
+.sync[data-status="offline"] .sync-dot { background: var(--text-primary); }
+.sync-label { display: none; }
+.sync[data-status="offline"] .sync-label { display: inline; }
+
+/* ── Empty states ── */
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 64px 0;
+  text-align: center;
+}
+
+/* ── Buttons ── */
+
+.btn-primary {
+  min-height: 56px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ── Settings ── */
+
+.group { display: grid; gap: 8px; margin-bottom: 32px; }
+.row {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--divider);
+}
+
+/* ── Tab bar ── */
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--surface-raised);
+  border-top: 1px solid var(--divider);
+}
+.tab {
+  flex: 1;
+  max-width: 200px;
+  min-height: var(--tabbar-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+}
+.tab[aria-current="page"] { color: var(--accent); }
