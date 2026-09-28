@@ -3,7 +3,21 @@
 // it, seeds a first run, and saves the keys each change touches. Views read
 // `store.state`, call store operations, and re-render on `subscribe`.
 
-import { KEYS, freshDoc, migrate, validate } from './schema.js';
+import { KEYS, freshDoc, migrate, validate, newLiftId } from './schema.js';
+import { PATTERNS } from './library.js';
+
+/** The editable fields of a lift, tidied: a trimmed, non-empty name and a
+ *  known pattern. Throws on an empty name — the editor never allows one. */
+function liftFields({ name, pattern, isBodyweight, notes }) {
+  const clean = {
+    name: String(name ?? '').trim(),
+    pattern: pattern in PATTERNS ? pattern : 'accessory',
+    isBodyweight: Boolean(isBodyweight),
+    notes: String(notes ?? ''),
+  };
+  if (clean.name === '') throw new Error('A lift needs a name');
+  return clean;
+}
 
 /** @param persist  what syncedState('liftboard') returned (or a test fake) */
 export function createStore(persist) {
@@ -56,7 +70,42 @@ export function createStore(persist) {
       return persist.onStatus(fn);
     },
 
-    // Operations (addLift, logSession, …) arrive phase by phase, each ending
-    // in commit([...the keys it changed]).
+    /** The lift with this id, or null. */
+    lift(id) {
+      return doc.lifts.find(l => l.id === id) ?? null;
+    },
+
+    // ── Operations: each changes the document, then commit()s the keys it touched ──
+
+    /** Adds a lift at the end of the custom order, untagged, never logged.
+     *  Returns its id. */
+    addLift(fields) {
+      const lift = {
+        id: newLiftId(),
+        ...liftFields(fields),
+        sortOrder: Math.max(-1, ...doc.lifts.map(l => l.sortOrder)) + 1,
+        createdAt: new Date().toISOString(),
+        tagIds: [],
+        lastSets: [],
+        sessions: [],
+      };
+      doc.lifts.push(lift);
+      commit(['lifts']);
+      return lift.id;
+    },
+
+    /** Changes a lift's name, pattern, bodyweight flag or notes. */
+    updateLift(id, changes) {
+      const lift = this.lift(id);
+      if (!lift) return;
+      Object.assign(lift, liftFields({ ...lift, ...changes }));
+      commit(['lifts']);
+    },
+
+    /** Deletes a lift and its sessions. Tags are left alone. */
+    deleteLift(id) {
+      doc.lifts = doc.lifts.filter(l => l.id !== id);
+      commit(['lifts']);
+    },
   };
 }

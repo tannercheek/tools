@@ -76,6 +76,7 @@
   --text-primary: #12110F;   --text-secondary: #4B4945;   --text-tertiary: #615F5A;
   --border-control: #12110F; --divider: #DEDEDD;          --chart-grid: #D5D2C8;
   --accent: #2255FF;         --on-accent: #FFFFFF;        --accent-soft: #E0E7FF;   /* Cobalt */
+  --backdrop: rgb(18 17 15 / 0.4);   /* behind sheets and dialogs */
 
   --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
   --font-ui: 'Archivo', system-ui, sans-serif;
@@ -97,6 +98,7 @@
     --text-primary: #F5F1E6;   --text-secondary: #BCB9B1;   --text-tertiary: #A6A39C;
     --border-control: #F5F1E6; --divider: #403F3B;          --chart-grid: #363634;
     --accent: #6488FF;         --on-accent: #121212;        --accent-soft: #2A3044;
+    --backdrop: rgb(0 0 0 / 0.6);
   }
   :root[data-accent="brick"] { --accent: #D47554; --accent-soft: #3E2D25; }
   :root[data-accent="ink"]   { --accent: #F5F1E6; --accent-soft: #2E2E2B; }

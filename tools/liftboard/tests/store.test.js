@@ -139,3 +139,60 @@ test('session ids: "s-" plus 8 characters, unique within their lift', () => {
     taken.add(id);
   }
 });
+
+test('addLift: adds an untagged, never-logged lift at the end, writing only "lifts"', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  let notified = 0;
+  store.subscribe(() => notified++);
+  const id = store.addLift({ name: '  Pull-Up ', pattern: 'verticalPull', isBodyweight: true });
+  assert.match(id, /^l-[0-9a-f-]{36}$/);
+  const lift = store.lift(id);
+  assert.equal(lift.name, 'Pull-Up');
+  assert.equal(lift.pattern, 'verticalPull');
+  assert.equal(lift.isBodyweight, true);
+  assert.equal(lift.notes, '');
+  assert.equal(lift.sortOrder, 1);
+  assert.deepEqual([lift.tagIds, lift.lastSets, lift.sessions], [[], [], []]);
+  assert.ok(!Number.isNaN(Date.parse(lift.createdAt)));
+  assert.deepEqual(p.writes, ['lifts']);
+  assert.equal(notified, 1);
+  assert.equal(p.map.get('lifts').length, 2);
+});
+
+test('addLift: duplicate names are allowed; an empty name or unknown pattern is not kept', () => {
+  const store = createStore(fakePersist());
+  const a = store.addLift({ name: 'Curl', pattern: 'accessory' });
+  const b = store.addLift({ name: 'Curl', pattern: 'nonsense' });
+  assert.notEqual(a, b);
+  assert.equal(store.lift(b).pattern, 'accessory');
+  assert.equal(store.lift(a).sortOrder, 0);
+  assert.equal(store.lift(b).sortOrder, 1);
+  assert.throws(() => store.addLift({ name: '   ', pattern: 'squat' }));
+  assert.equal(store.state.lifts.length, 2);
+});
+
+test('updateLift: changes the editable fields only; id, sessions and tags stay', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  store.updateLift('l-1', { name: 'Paused Bench', notes: '2-count pause', id: 'l-hacked', sessions: [] });
+  const lift = store.lift('l-1');
+  assert.equal(lift.name, 'Paused Bench');
+  assert.equal(lift.notes, '2-count pause');
+  assert.equal(lift.pattern, 'horizontalPush');
+  assert.equal(lift.sessions.length, 1);
+  assert.deepEqual(lift.tagIds, ['t-1']);
+  assert.equal(store.lift('l-hacked'), null);
+  assert.deepEqual(p.writes, ['lifts']);
+  assert.equal(p.map.get('lifts')[0].name, 'Paused Bench');
+});
+
+test('deleteLift: removes the lift and its sessions, keeps tags, writes only "lifts"', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  store.deleteLift('l-1');
+  assert.deepEqual(store.state.lifts, []);
+  assert.equal(store.state.tags.length, 1);
+  assert.deepEqual(p.writes, ['lifts']);
+  assert.deepEqual(p.map.get('lifts'), []);
+});
