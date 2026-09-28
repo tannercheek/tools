@@ -267,3 +267,44 @@ test('replaceAll: refuses malformed data and changes nothing', () => {
   assert.equal(store.state.lifts[0].name, 'Bench Press');
   assert.deepEqual(p.writes, []);
 });
+
+test('addTag: unique names ignoring case; reusing writes nothing', () => {
+  const p = fakePersist();
+  const store = createStore(p);
+  p.writes.length = 0;
+  const id = store.addTag('  Barbell ');
+  assert.match(id, /^t-[0-9a-f-]{36}$/);
+  const tag = store.state.tags.find(t => t.id === id);
+  assert.deepEqual([tag.name, tag.sortOrder], ['Barbell', 5]);
+  assert.deepEqual(p.writes, ['tags']);
+  p.writes.length = 0;
+  assert.equal(store.addTag('barbell'), id);
+  assert.equal(store.addTag('PUSH'), store.state.tags[0].id);
+  assert.deepEqual(p.writes, []);
+  assert.throws(() => store.addTag('  '));
+});
+
+test('setLiftTags: keeps known tags once each, writing only "lifts"', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  const legs = store.addTag('Legs');
+  p.writes.length = 0;
+  store.setLiftTags('l-1', [legs, 't-1', legs, 't-deleted']);
+  assert.deepEqual(store.lift('l-1').tagIds, [legs, 't-1']);
+  assert.deepEqual(p.writes, ['lifts']);
+});
+
+test('setSetting: valid values only, writing only "settings"', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  store.setSetting('sort', 'recent');
+  store.setSetting('filterTagIds', ['t-1', 't-1']);
+  assert.equal(store.state.settings.sort, 'recent');
+  assert.deepEqual(store.state.settings.filterTagIds, ['t-1']);
+  assert.deepEqual(p.writes, ['settings', 'settings']);
+  assert.throws(() => store.setSetting('sort', 'random'));
+  assert.throws(() => store.setSetting('retention', 'forever'));
+  assert.throws(() => store.setSetting('filterTagIds', 't-1'));
+  assert.throws(() => store.setSetting('nonsense', 'x'));
+  assert.equal(p.writes.length, 2);
+});

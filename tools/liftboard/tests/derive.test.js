@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   e1rm, round2, beats, summarizeSession, history, latest, isLoaded, score,
   recordSession, comparablePR, previousComparable, isTrendingUp, latestIsPR,
-  showsPR, daysSince, badge, pruneSessions, STALE_AFTER_DAYS,
+  showsPR, daysSince, badge, pruneSessions, STALE_AFTER_DAYS, filterLifts, sortLifts,
 } from '../js/derive.js';
 
 const NOW = new Date(2026, 8, 22, 12, 0);   // Sep 22 2026, noon local
@@ -185,4 +185,34 @@ test('pruneSessions: an old latest session is kept; everything in the window sta
   assert.equal(removed, 1);
   const fresh = lift([sess(10, 100), sess(5, 90)]);
   assert.equal(pruneSessions(fresh, 6, NOW).removed, 0);
+});
+
+
+const L = (name, sortOrder, sessions, tagIds = [], isBodyweight = false) => ({ name, sortOrder, sessions, tagIds, isBodyweight });
+
+test('filterLifts: any of the selected tags; none selected means all', () => {
+  const lifts = [L('A', 0, [], ['push']), L('B', 1, [], ['legs']), L('C', 2, [], ['push', 'upper']), L('D', 3, [])];
+  const names = r => r.map(l => l.name).join('');
+  const all = ['push', 'legs', 'upper'];
+  assert.equal(names(filterLifts(lifts, [], all)), 'ABCD');
+  assert.equal(names(filterLifts(lifts, ['push'], all)), 'AC');
+  assert.equal(names(filterLifts(lifts, ['push', 'legs'], all)), 'ABC');
+  assert.equal(names(filterLifts(lifts, ['gone'], all)), 'ABCD', 'deleted tags are ignored');
+});
+
+test('sortLifts: every order, with never-logged lifts last', () => {
+  const lifts = [
+    L('bench', 0, [sess(10, 120)]),
+    L('Squat', 1, [sess(2, 150)]),
+    L('Curl', 2, []),                               // never logged
+    L('Dip', 3, [bw(1, 12)], [], true),             // plain bodyweight only
+    L('pull-up', 4, [bw(20, 10), sess(5, 30, 20, 5)], [], true),
+    L('Apple', 5, []),                              // never logged
+  ];
+  const order = sort => sortLifts(lifts, sort).map(l => l.name).join(',');
+  assert.equal(order('custom'), 'bench,Squat,Dip,pull-up,Curl,Apple');
+  assert.equal(order('recent'), 'Dip,Squat,pull-up,bench,Curl,Apple');
+  assert.equal(order('name'), 'bench,Dip,pull-up,Squat,Curl,Apple');
+  assert.equal(order('e1rm'), 'Squat,bench,pull-up,Dip,Curl,Apple');
+  assert.equal(lifts[0].name, 'bench', 'pure: the input order is untouched');
 });

@@ -54,6 +54,20 @@ html:has(dialog[open]) { overflow: hidden; }
 .board-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .logo-mark { width: 20px; height: 20px; border-radius: 6px; background: var(--accent); flex: none; }
+.header-actions { display: flex; gap: 8px; flex: none; }
+
+/* Sort: an invisible native <select> over the icon button */
+.sort-control { position: relative; }
+.sort-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: var(--field-min);   /* iOS zooms on focus below 16px, even when invisible */
+}
+.sort-control:has(.sort-select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Sync dot ── */
 
@@ -372,6 +386,54 @@ dialog::backdrop { background: var(--backdrop); }
   background: var(--accent);
   color: var(--on-accent);
 }
+
+/* ── Tag chips ── */
+
+/* Filter chips: one horizontal scrolling row, bleeding to the screen edges */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  margin: 0 -20px 16px;
+  padding: 4px 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+  position: relative;
+  flex: none;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 2px solid var(--border-control);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.chip::after { content: ''; position: absolute; inset: -4px 0; }   /* 44px hit area */
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+.tag-chooser { display: grid; gap: 12px; }
+.new-tag { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+/* Log sheet: the Tags row and its small pills */
+.sheet-row-button {
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+}
+.sheet-row-end { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.tag-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.tag-pill { padding: 4px 12px; border: 1.5px solid var(--text-primary); border-radius: 999px; white-space: nowrap; }
+.chevron { display: flex; color: var(--text-tertiary); }
+.chevron .icon { width: 18px; height: 18px; }
 
 /* ── Card grid ── */
 

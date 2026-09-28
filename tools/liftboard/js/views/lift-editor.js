@@ -1,10 +1,11 @@
 // views/lift-editor.js — the Lift Editor sheet, for creating a lift (empty or
-// prefilled from the library) and for editing one. Tags arrive in Phase 4.
+// prefilled from the library) and for editing one. Tag choices apply on Save.
 
 import { h } from '../dom.js';
 import { openSheet, confirmDialog } from '../dialogs.js';
 import { patternIcon } from '../icons.js';
 import { PATTERNS } from '../library.js';
+import { tagChooser } from './tag-chooser.js';
 
 let nextId = 0;
 
@@ -42,6 +43,8 @@ export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
           h('span', { class: 't-chip-small' }, label)))));
 
   const bodyweight = h('input', { id: `${id}-bw`, type: 'checkbox', role: 'switch', class: 'switch', checked: start.isBodyweight });
+  let tagIds = existing ? [...existing.tagIds] : [];   // library lifts start untagged
+  const tags = tagChooser(store, tagIds, ids => { tagIds = ids; });
   const notes = h('textarea', { id: `${id}-notes`, class: 'field field-multiline t-row-label', rows: '3' }, start.notes);
 
   const save = h('button', { type: 'submit', class: 'btn-primary btn-wide t-button' }, existing ? 'Save' : 'Add Lift');
@@ -60,6 +63,9 @@ export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
         h('span', { class: 't-subtitle' }, 'The weight field records added load')),
       bodyweight),
     h('div', { class: 'editor-group' },
+      h('span', { class: 't-section' }, 'Tags'),
+      tags),
+    h('div', { class: 'editor-group' },
       h('label', { class: 't-section', for: notes.id }, 'Notes'),
       notes),
     save,
@@ -76,8 +82,10 @@ export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
       isBodyweight: bodyweight.checked,
       notes: notes.value,
     };
-    if (existing) store.updateLift(existing.id, fields);
-    else store.addLift(fields);
+    const savedId = existing ? existing.id : store.addLift(fields);
+    if (existing) store.updateLift(savedId, fields);
+    const before = existing ? existing.tagIds : [];
+    if (tagIds.length !== before.length || tagIds.some(t => !before.includes(t))) store.setLiftTags(savedId, tagIds);
     sheet.close();
   });
 

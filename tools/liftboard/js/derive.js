@@ -122,3 +122,37 @@ export function pruneSessions(lift, months, now = new Date()) {
   const kept = lift.sessions.filter(s => new Date(s.date) >= cutoff || keep.has(s.id));
   return { kept, removed: lift.sessions.length - kept.length };
 }
+
+/* ── The Board's filter and sort ── */
+
+/** Lifts having any of the selected tags. No selection (or only tags that no
+ *  longer exist) means all lifts. */
+export function filterLifts(lifts, selectedTagIds, existingTagIds) {
+  const selected = selectedTagIds.filter(id => existingTagIds.includes(id));
+  if (selected.length === 0) return lifts;
+  return lifts.filter(l => l.tagIds.some(id => selected.includes(id)));
+}
+
+const byCustom = (a, b) => a.sortOrder - b.sortOrder;
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) || byCustom(a, b);
+
+/** The Board's order. In every sort, never-logged lifts go last (in custom
+ *  order among themselves). "e1rm" ranks by the loaded record — a bodyweight
+ *  lift's added-load record — and lifts with only plain bodyweight sessions
+ *  come after every lift that has an e1RM. Ties fall back to custom order. */
+export function sortLifts(lifts, sort) {
+  const logged = lifts.filter(l => l.sessions.length > 0);
+  const never = lifts.filter(l => l.sessions.length === 0).sort(byCustom);
+  let ordered;
+  if (sort === 'recent') {
+    ordered = logged.sort((a, b) => latest(b).date.localeCompare(latest(a).date) || byCustom(a, b));
+  } else if (sort === 'name') {
+    ordered = logged.sort(byName);
+  } else if (sort === 'e1rm') {
+    const best = l => recordSession(l, true)?.bestE1RMKg ?? -1;   // -1: no loaded session
+    ordered = logged.sort((a, b) => best(b) - best(a) || byCustom(a, b));
+  } else {
+    ordered = logged.sort(byCustom);
+  }
+  return [...ordered, ...never];
+}

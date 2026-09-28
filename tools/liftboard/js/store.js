@@ -3,7 +3,7 @@
 // it, seeds a first run, and saves the keys each change touches. Views read
 // `store.state`, call store operations, and re-render on `subscribe`.
 
-import { KEYS, freshDoc, migrate, validate, newLiftId, newSessionId } from './schema.js';
+import { KEYS, CHOICES, freshDoc, migrate, validate, newLiftId, newTagId, newSessionId } from './schema.js';
 import { PATTERNS } from './library.js';
 import { round2, summarizeSession } from './derive.js';
 
@@ -127,6 +127,40 @@ export function createStore(persist) {
       lift.sessions.push(session);
       commit(['lifts']);
       return session.id;
+    },
+
+    /** Creates a tag, or returns the existing one with the same name (names
+     *  are unique, ignoring case). Returns its id. */
+    addTag(name) {
+      const clean = String(name ?? '').trim();
+      if (clean === '') throw new Error('A tag needs a name');
+      const existing = doc.tags.find(t => t.name.toLowerCase() === clean.toLowerCase());
+      if (existing) return existing.id;
+      const tag = { id: newTagId(), name: clean, sortOrder: Math.max(-1, ...doc.tags.map(t => t.sortOrder)) + 1 };
+      doc.tags.push(tag);
+      commit(['tags']);
+      return tag.id;
+    },
+
+    /** Sets which tags a lift has. Unknown and repeated ids are dropped. */
+    setLiftTags(liftId, tagIds) {
+      const lift = this.lift(liftId);
+      if (!lift) return;
+      const known = new Set(doc.tags.map(t => t.id));
+      lift.tagIds = [...new Set(tagIds)].filter(id => known.has(id));
+      commit(['lifts']);
+    },
+
+    /** Changes one setting: unit, accent, retention, sort, or filterTagIds. */
+    setSetting(key, value) {
+      if (key === 'filterTagIds') {
+        if (!Array.isArray(value) || !value.every(v => typeof v === 'string')) throw new Error('Bad tag filter');
+        value = [...new Set(value)];
+      } else if (!CHOICES[key]?.includes(value)) {
+        throw new Error(`Bad setting: ${key}`);
+      }
+      doc.settings[key] = value;
+      commit(['settings']);
     },
 
     /** Replaces every tag and lift (the sample-data loader; import will use it

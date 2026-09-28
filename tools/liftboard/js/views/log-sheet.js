@@ -1,6 +1,6 @@
 // views/log-sheet.js — the Log Session sheet: last session's sets prefilled,
-// adjusted, then logged. The row rules live in log-rows.js. The tags row
-// arrives in Phase 4.
+// adjusted, then logged. The row rules live in log-rows.js. Tag changes made
+// here save at once, even if the session is then discarded.
 
 import { h, fill } from '../dom.js';
 import { openSheet, confirmDialog } from '../dialogs.js';
@@ -9,6 +9,7 @@ import { latest } from '../derive.js';
 import { shortDate, todayLabel } from '../format.js';
 import { prefillRows, copyRow, readRows, rowsDiffer, weightValid, repsValid } from '../log-rows.js';
 import { openLiftEditor } from './lift-editor.js';
+import { openTagPicker } from './tag-chooser.js';
 
 /** Opens the sheet for one lift. `onLogged(liftId)` runs after a session is saved. */
 export function openLogSheet(store, liftId, { onLogged } = {}) {
@@ -27,6 +28,7 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
   });
   const title = sheet.body.closest('dialog').querySelector('.t-sheet-title');
 
+  const tagSummary = h('span', { class: 'tag-summary' });
   const count = h('span', { class: 't-section' });
   const lastLabel = h('span', { class: 't-e1rm' });
   const weightColumn = h('span', { class: 't-column' });
@@ -71,6 +73,10 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
     const l = lift();
     if (!l) return;
     title.textContent = `Log ${l.name}`;
+    const names = store.state.tags.filter(t => l.tagIds.includes(t.id)).sort((a, b) => a.sortOrder - b.sortOrder);
+    fill(tagSummary, names.length
+      ? names.map(t => h('span', { class: 'tag-pill t-chip-small' }, t.name))
+      : h('span', { class: 't-subtitle' }, 'None'));
     count.textContent = `Sets · ${rows.length}`;
     const last = latest(l);
     lastLabel.textContent = last ? `Last: ${shortDate(last.date)}` : '';
@@ -100,6 +106,11 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
     onLogged?.(liftId);
   }
 
+  async function onTags() {
+    await openTagPicker(store, liftId);
+    refresh();
+  }
+
   async function onEdit() {
     await openLiftEditor(store, { liftId });
     if (!lift()) sheet.close();   // deleted from the editor: nothing left to log
@@ -107,6 +118,9 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
   }
 
   sheet.body.append(
+    h('button', { type: 'button', class: 'sheet-row sheet-row-button', onclick: onTags },
+      h('span', { class: 't-row-label' }, 'Tags'),
+      h('span', { class: 'sheet-row-end' }, tagSummary, h('span', { class: 'chevron', html: icon('chevron-right') }))),
     h('div', { class: 'sheet-row' },
       h('span', { class: 't-row-label' }, 'Date'),
       h('span', { class: 't-row-value' }, todayLabel())),
