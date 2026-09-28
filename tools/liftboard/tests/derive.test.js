@@ -4,6 +4,7 @@ import {
   e1rm, round2, beats, summarizeSession, history, latest, isLoaded, score,
   recordSession, comparablePR, previousComparable, isTrendingUp, latestIsPR,
   showsPR, daysSince, badge, pruneSessions, STALE_AFTER_DAYS, filterLifts, sortLifts,
+  metricsFor, defaultMetric, series, rangeStart, inRange, summaryFigures,
 } from '../js/derive.js';
 
 const NOW = new Date(2026, 8, 22, 12, 0);   // Sep 22 2026, noon local
@@ -215,4 +216,36 @@ test('sortLifts: every order, with never-logged lifts last', () => {
   assert.equal(order('name'), 'bench,Dip,pull-up,Squat,Curl,Apple');
   assert.equal(order('e1rm'), 'Squat,bench,pull-up,Dip,Curl,Apple');
   assert.equal(lifts[0].name, 'bench', 'pure: the input order is untouched');
+});
+
+test('stats: metrics, default metric, and series per kind', () => {
+  const normal = lift([sess(20, 110, 100, 3), sess(10, 120, 105, 5)]);
+  assert.deepEqual(metricsFor(normal), ['e1rm', 'top']);
+  assert.equal(defaultMetric(normal), 'e1rm');
+  assert.deepEqual(series(normal, 'e1rm').map(p => p.value), [110, 120]);
+  assert.deepEqual(series(normal, 'top').map(p => p.value), [100, 105]);
+
+  const pullUp = lift([bw(30, 10), sess(20, 23, 9, 5), bw(10, 12), sess(5, 25, 10, 5)], true);
+  assert.deepEqual(metricsFor(pullUp), ['reps', 'added']);
+  assert.equal(defaultMetric(pullUp), 'added');
+  assert.deepEqual(series(pullUp, 'reps').map(p => p.value), [10, 12]);
+  assert.deepEqual(series(pullUp, 'added').map(p => p.value), [23, 25]);
+  assert.equal(defaultMetric(lift([sess(9, 20, 9, 5), bw(1, 12)], true)), 'reps');
+  assert.equal(defaultMetric(lift([], true)), 'reps');
+});
+
+test('stats: range start, points in range, and the summary figures', () => {
+  const l = lift([sess(300, 100), sess(150, 104), sess(60, 110), sess(20, 108), sess(3, 115)]);
+  const points = series(l, 'e1rm');
+  const start6m = rangeStart('6m', points, NOW);
+  assert.equal(start6m.getMonth(), 2);   // Sep 22 → Mar 22
+  const ranged = inRange(points, start6m);
+  assert.deepEqual(ranged.map(p => p.value), [104, 110, 108, 115]);
+  assert.deepEqual(summaryFigures(points, ranged), { current: 115, best: 115, change: 11 });
+  assert.equal(rangeStart('all', points, NOW).toISOString(), points[0].date);
+  const last3m = inRange(points, rangeStart('3m', points, NOW));
+  assert.deepEqual(summaryFigures(points, last3m), { current: 115, best: 115, change: 5 });
+  // Too little data
+  assert.deepEqual(summaryFigures(points, points.slice(-1)), { current: 115, best: 115, change: null });
+  assert.deepEqual(summaryFigures([], []), { current: null, best: null, change: null });
 });

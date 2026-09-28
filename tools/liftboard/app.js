@@ -48,18 +48,19 @@ function buildTabbar() {
 
 function startRouter(store) {
   let cleanup = null;
-  let current = null;
+  let currentHash = null;
 
+  /** #tab or #tab/rest… — the rest (e.g. a lift id) goes to the tab's view. */
   function render() {
-    const [tab] = location.hash.slice(1).split('/');
+    const [tab, ...rest] = location.hash.slice(1).split('/').map(decodeURIComponent);
     if (!TABS[tab]) {
       history.replaceState(null, '', '#board');
       return render();
     }
-    if (tab !== current) window.scrollTo(0, 0);
-    current = tab;
+    if (location.hash !== currentHash) window.scrollTo(0, 0);
     cleanup?.();
-    cleanup = TABS[tab].render(view, store) ?? null;
+    cleanup = TABS[tab].render(view, store, rest) ?? null;
+    currentHash = location.hash;   // after render: a view may correct the hash
     for (const link of tabbar.querySelectorAll('.tab')) {
       if (link.dataset.tab === tab) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');

@@ -308,3 +308,15 @@ test('setSetting: valid values only, writing only "settings"', () => {
   assert.throws(() => store.setSetting('nonsense', 'x'));
   assert.equal(p.writes.length, 2);
 });
+
+test('deleteSession: removes one session, leaves lastSets, writes only "lifts"', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  const id = store.logSession('l-1', [{ weightKg: 110, reps: 5 }]);
+  p.writes.length = 0;
+  store.deleteSession('l-1', id);
+  const lift = store.lift('l-1');
+  assert.deepEqual(lift.sessions.map(s => s.id), ['s-7d19mz3a']);
+  assert.deepEqual(lift.lastSets, [{ weightKg: 110, reps: 5 }]);
+  assert.deepEqual(p.writes, ['lifts']);
+});

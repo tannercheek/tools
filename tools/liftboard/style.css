@@ -476,6 +476,65 @@ dialog::backdrop { background: var(--backdrop); }
   .switch, .switch::after { transition: none; }
 }
 
+/* ── Stats ── */
+
+.list-row-text { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.list-row .chevron { margin-left: auto; }
+
+.detail-header { display: grid; gap: 8px; margin-bottom: 16px; }
+.btn-back {
+  justify-self: start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -6px;
+  color: var(--accent);
+}
+
+/* Segmented controls: metric and range */
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--surface-field);
+}
+.segment {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.segment[aria-pressed="true"] { background: var(--surface-raised); color: var(--text-primary); }
+
+/* Current / Best / Change */
+.figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 12px 0 24px; }
+.figure { display: grid; gap: 2px; align-content: start; }
+
+/* The chart card matches a lift card, with 24px padding */
+.chart-card {
+  display: grid;
+  gap: 4px;
+  padding: 24px;
+  border: 3px solid var(--accent);
+  border-radius: 16px;
+}
+.chart-box { margin-top: 12px; min-width: 0; }
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.chart-point { fill: var(--bg); stroke: var(--accent); stroke-width: 2.5; }
+.chart-text { fill: currentColor; }
+.chart-empty { padding: 32px 0 16px; color: var(--text-secondary); }
+.chart-note { margin: 8px 0 32px; }
+
+.session-row { justify-content: space-between; gap: 12px; }
+.session-text { min-width: 0; overflow-wrap: anywhere; }
+
 /* ── Settings ── */
 
 .group { display: grid; gap: 8px; margin-bottom: 32px; }

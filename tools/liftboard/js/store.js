@@ -129,6 +129,15 @@ export function createStore(persist) {
       return session.id;
     },
 
+    /** Deletes one session. Nothing else changes: lastSets stays as it is, and
+     *  the PR, arrow and badge recompute from what's left. */
+    deleteSession(liftId, sessionId) {
+      const lift = this.lift(liftId);
+      if (!lift) return;
+      lift.sessions = lift.sessions.filter(s => s.id !== sessionId);
+      commit(['lifts']);
+    },
+
     /** Creates a tag, or returns the existing one with the same name (names
      *  are unique, ignoring case). Returns its id. */
     addTag(name) {

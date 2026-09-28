@@ -156,3 +156,54 @@ export function sortLifts(lifts, sort) {
   }
   return [...ordered, ...never];
 }
+
+/* ── Stats: what the lift detail plots ── */
+
+/** The metrics a lift offers. A bodyweight lift's two kinds of session are
+ *  never on one line: "reps" plots plain sessions, "added" loaded ones. */
+export const metricsFor = lift => (lift.isBodyweight ? ['reps', 'added'] : ['e1rm', 'top']);
+
+/** The detail opens on the kind of session the latest one was. */
+export function defaultMetric(lift) {
+  if (!lift.isBodyweight) return 'e1rm';
+  const l = latest(lift);
+  return l && isLoaded(l) ? 'added' : 'reps';
+}
+
+/** Whether a metric's values are weights (kg) or rep counts. */
+export const isWeightMetric = metric => metric !== 'reps';
+
+/** [{ date, value, session }] oldest first. Weights stay in kg. */
+export function series(lift, metric) {
+  const pick = {
+    e1rm: s => s.bestE1RMKg,
+    top: s => s.topWeightKg,
+    added: s => s.bestE1RMKg,
+    reps: s => s.topReps,
+  }[metric];
+  const wanted = metric === 'reps' ? s => !isLoaded(s) : metric === 'added' ? isLoaded : () => true;
+  return history(lift).filter(wanted).map(s => ({ date: s.date, value: pick(s), session: s }));
+}
+
+export const RANGE_MONTHS = { '3m': 3, '6m': 6, '1y': 12, all: null };
+
+/** Where a range starts: `months` back from now, or the first point for "all". */
+export function rangeStart(range, points, now = new Date()) {
+  const months = RANGE_MONTHS[range];
+  if (months == null) return points.length ? new Date(points[0].date) : new Date(now);
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - months);
+  return start;
+}
+
+export const inRange = (points, start) => points.filter(p => new Date(p.date) >= start);
+
+/** Current (the latest point of all), Best (the max in range) and Change
+ *  (last minus first in range). Null where there's too little to say. */
+export function summaryFigures(points, ranged) {
+  return {
+    current: points.at(-1)?.value ?? null,
+    best: ranged.length ? Math.max(...ranged.map(p => p.value)) : null,
+    change: ranged.length >= 2 ? ranged.at(-1).value - ranged[0].value : null,
+  };
+}
