@@ -129,6 +129,17 @@ export function createStore(persist) {
       return session.id;
     },
 
+    /** Replaces every tag and lift (the sample-data loader; import will use it
+     *  too). Settings are kept, except the tag filter, since tag ids change.
+     *  Refuses anything that wouldn't pass the load-time checks. */
+    replaceAll({ tags, lifts }) {
+      const problem = validate({ tags, lifts });
+      if (problem) throw new Error(`Can't replace the data: ${problem}`);
+      doc = migrate({ ...doc, tags: structuredClone(tags), lifts: structuredClone(lifts) });
+      doc.settings.filterTagIds = [];
+      commit(['settings', 'tags', 'lifts']);
+    },
+
     /** Deletes a lift and its sessions. Tags are left alone. */
     deleteLift(id) {
       doc.lifts = doc.lifts.filter(l => l.id !== id);

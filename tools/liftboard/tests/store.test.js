@@ -243,3 +243,27 @@ test('logSession: bodyweight lifts accept 0; other lifts need weight; bad input 
   assert.deepEqual(store.lift(bench).sessions, []);
   assert.deepEqual(p.writes, []);
 });
+
+test('replaceAll: swaps tags and lifts, keeps settings but clears the filter', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  const tags = [{ id: 't-new', name: 'Legs', sortOrder: 0 }];
+  const lifts = [{ id: 'l-new', name: 'Squat', pattern: 'squat', sortOrder: 0, createdAt: '2026-09-01T00:00:00.000Z', tagIds: ['t-new'], lastSets: [], sessions: [] }];
+  store.replaceAll({ tags, lifts });
+  assert.deepEqual(store.state.tags, tags);
+  assert.equal(store.state.lifts[0].name, 'Squat');
+  assert.equal(store.state.lifts[0].notes, '');   // defaults filled
+  assert.equal(store.state.settings.unit, 'kg');
+  assert.deepEqual(store.state.settings.filterTagIds, []);
+  assert.deepEqual(p.writes.sort(), ['lifts', 'settings', 'tags']);
+  lifts[0].name = 'changed after';
+  assert.equal(store.state.lifts[0].name, 'Squat', 'stores a copy');
+});
+
+test('replaceAll: refuses malformed data and changes nothing', () => {
+  const p = fakePersist(validDoc());
+  const store = createStore(p);
+  assert.throws(() => store.replaceAll({ tags: [], lifts: [{ name: 'no id' }] }));
+  assert.equal(store.state.lifts[0].name, 'Bench Press');
+  assert.deepEqual(p.writes, []);
+});

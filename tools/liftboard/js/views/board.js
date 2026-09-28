@@ -1,29 +1,22 @@
-// views/board.js — the Board tab. Phase 2: the header (logo mark, wordmark,
-// sync dot, Add button), the live subtitle, the empty state, and lifts as a
-// plain list showing "225 × 5 · e1RM 263". Tapping a lift opens the Log
-// Session sheet. The card grid replaces the list in Phase 3.
+// views/board.js — the Board tab: the header (logo mark, wordmark, sync dot,
+// Add button, live subtitle), the empty state, and the grid of lift cards.
+// Tapping a card opens the Log Session sheet. Sort and filters: Phase 4.
 
 import { h, fill } from '../dom.js';
-import { plural, heroText, formatE1RM } from '../format.js';
-import { latest } from '../derive.js';
-import { icon, patternIcon } from '../icons.js';
+import { plural } from '../format.js';
+import { badge } from '../derive.js';
+import { icon } from '../icons.js';
 import { openAddLift } from './add-lift.js';
 import { openLogSheet } from './log-sheet.js';
+import { liftCard } from './card.js';
 
-/** "225 × 5 · e1RM 263", "BW × 12" (no e1RM for bodyweight), or "Not logged yet". */
-function summaryText(lift, unit) {
-  const last = latest(lift);
-  const hero = heroText(last, lift, unit);
-  return last && !lift.isBodyweight ? `${hero} · e1RM ${formatE1RM(last.bestE1RMKg, unit)}` : hero;
-}
-
-/** A short pop on the row just logged, found after the board re-renders. */
+/** A short pop on the card just logged, found after the board re-renders. */
 function pop(liftId) {
-  const row = document.querySelector(`.list-row[data-lift-id="${CSS.escape(liftId)}"]`);
-  if (!row) return;
-  row.classList.remove('pop');
-  void row.offsetWidth;   // restart the animation if it's already run
-  row.classList.add('pop');
+  const card = document.querySelector(`.card[data-lift-id="${CSS.escape(liftId)}"]`);
+  if (!card) return;
+  card.classList.remove('pop');
+  void card.offsetWidth;   // restart the animation if it's already run
+  card.classList.add('pop');
 }
 
 const SYNC_TEXT = {
@@ -47,6 +40,8 @@ function syncDot(store) {
 export function renderBoard(root, store) {
   const lifts = [...store.state.lifts].sort((a, b) => a.sortOrder - b.sortOrder);
   const { unit } = store.state.settings;
+  const now = new Date();
+  const flames = lifts.filter(l => badge(l, now) === 'newPR').length;
   const sync = syncDot(store);
   const add = () => openAddLift(store);
 
@@ -57,22 +52,14 @@ export function renderBoard(root, store) {
         h('h1', { class: 't-wordmark' }, 'LiftBoard'),
         sync.el),
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Add lift', onclick: add, html: icon('plus') })),
-    h('p', { class: 't-subtitle' }, plural(lifts.length, 'lift')));
+    h('p', { class: 't-subtitle' }, plural(lifts.length, 'lift') + (flames ? ` · ${flames} 🔥` : '')));
 
   const body = lifts.length === 0
     ? h('div', { class: 'empty' },
         h('p', { class: 't-row-label' }, 'No lifts yet'),
         h('button', { type: 'button', class: 'btn-primary t-button', onclick: add }, 'Add your first lift'))
-    : h('ul', { class: 'lift-list' }, lifts.map(lift =>
-        h('li', {},
-          h('button', {
-            type: 'button', class: 'list-row', 'data-lift-id': lift.id,
-            onclick: () => openLogSheet(store, lift.id, { onLogged: pop }),
-          },
-            h('span', { class: 'list-row-icon', html: patternIcon(lift.pattern) }),
-            h('span', { class: 'list-row-text' },
-              h('span', { class: 't-lift-name' }, lift.name),
-              h('span', { class: 't-e1rm' }, summaryText(lift, unit)))))));
+    : h('ul', { class: 'card-grid' }, lifts.map(lift =>
+        h('li', {}, liftCard(lift, unit, now, () => openLogSheet(store, lift.id, { onLogged: pop })))));
 
   fill(root, header, body);
   return sync.stop;
