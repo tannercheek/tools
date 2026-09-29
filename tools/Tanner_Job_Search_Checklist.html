@@ -6,7 +6,7 @@
     <title>Job Search Checklist</title>
     <meta
       name="description"
-      content="Track job-search readiness tasks and progress"
+      content="Setup, interview prep, and weekly habits for SWE and cybersecurity job searches"
     />
     <meta name="icon" content="checklist" />
     <meta name="tags" content="checklist, career" />
@@ -19,12 +19,71 @@
         padding: 0;
       }
 
+      :root {
+        --bg: #f5f5f2;
+        --surface: #ffffff;
+        --border: #e5e5e0;
+        --hover: #ededea;
+        --text: #1a1a18;
+        --muted: #6b6b68;
+        --faint: #b0b0ab;
+        --box-border: #ccccc7;
+        --track: #eeeee9;
+        --accent: #2563eb;
+        --accent-weekly: #15803d;
+        --green: #15803d;
+        --amber: #b45309;
+        --red: #dc2626;
+        --tag-setup-bg: #fef2f2;
+        --tag-setup-fg: #dc2626;
+        --tag-prep-bg: #fff7ed;
+        --tag-prep-fg: #c2410c;
+        --tag-cert-bg: #eff6ff;
+        --tag-cert-fg: #1d4ed8;
+        --tag-week-bg: #f0fdf4;
+        --tag-week-fg: #15803d;
+        --badge-swe-bg: #eef2ff;
+        --badge-swe-fg: #4338ca;
+        --badge-sec-bg: #fdf4ff;
+        --badge-sec-fg: #a21caf;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #161615;
+          --surface: #1f1f1d;
+          --border: #2e2e2b;
+          --hover: #262624;
+          --text: #ececea;
+          --muted: #a3a39e;
+          --faint: #6b6b67;
+          --box-border: #55554f;
+          --track: #2e2e2b;
+          --accent: #3b82f6;
+          --accent-weekly: #22c55e;
+          --green: #4ade80;
+          --amber: #fbbf24;
+          --red: #f87171;
+          --tag-setup-bg: #3b1717;
+          --tag-setup-fg: #fca5a5;
+          --tag-prep-bg: #3a2210;
+          --tag-prep-fg: #fdba74;
+          --tag-cert-bg: #172554;
+          --tag-cert-fg: #93c5fd;
+          --tag-week-bg: #14301f;
+          --tag-week-fg: #86efac;
+          --badge-swe-bg: #1e1b4b;
+          --badge-swe-fg: #a5b4fc;
+          --badge-sec-bg: #3b0a3f;
+          --badge-sec-fg: #f0abfc;
+        }
+      }
+
       body {
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
           Arial, sans-serif;
-        background: #f5f5f2;
-        color: #1a1a18;
+        background: var(--bg);
+        color: var(--text);
         line-height: 1.6;
         padding: 2.5rem 1.25rem;
         min-height: 100vh;
@@ -36,82 +95,128 @@
       }
 
       .header {
-        margin-bottom: 1.75rem;
+        margin-bottom: 1.5rem;
       }
       .header h1 {
         font-size: 21px;
         font-weight: 600;
-        color: #1a1a18;
         margin-bottom: 4px;
       }
       .header p {
         font-size: 13.5px;
-        color: #6b6b68;
+        color: var(--muted);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 1rem;
+      }
+      .segmented {
+        display: inline-flex;
+        background: var(--track);
+        border-radius: 9px;
+        padding: 3px;
+      }
+      .segmented button {
+        font: inherit;
+        font-size: 12.5px;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        padding: 4px 12px;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+      .segmented button[aria-pressed="true"] {
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 500;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      }
+      .toggle-done {
+        font-size: 12.5px;
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
       }
 
       .progress-card {
-        background: #ffffff;
-        border: 1px solid #e5e5e0;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 14px 18px;
-        display: flex;
+        padding: 12px 18px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
-        gap: 14px;
+        gap: 8px 14px;
         margin-bottom: 0.5rem;
-      }
-      .sync-status {
-        font-size: 11px;
-        color: #9a9a95;
-        min-height: 14px;
-        margin: 0 2px 2rem;
-      }
-      .sync-status.sync-synced {
-        color: #15803d;
-      }
-      .sync-status.sync-saved-locally {
-        color: #b45309;
-      }
-      .sync-status.sync-offline {
-        color: #dc2626;
       }
       .progress-label {
         font-size: 13px;
-        color: #6b6b68;
+        color: var(--muted);
         white-space: nowrap;
       }
       .progress-bar-wrap {
-        flex: 1;
         height: 6px;
-        background: #eeeee9;
+        background: var(--track);
         border-radius: 3px;
         overflow: hidden;
       }
       .progress-bar {
         height: 100%;
-        background: #2563eb;
+        background: var(--accent);
         border-radius: 3px;
         transition: width 0.35s ease;
         width: 0%;
       }
+      .progress-bar.weekly {
+        background: var(--accent-weekly);
+      }
       .progress-count {
         font-size: 13px;
         font-weight: 500;
-        color: #1a1a18;
         white-space: nowrap;
         min-width: 48px;
         text-align: right;
       }
+      .sync-status {
+        font-size: 11px;
+        color: var(--faint);
+        min-height: 14px;
+        margin: 0 2px 2rem;
+      }
+      .sync-status.sync-synced {
+        color: var(--green);
+      }
+      .sync-status.sync-saved-locally {
+        color: var(--amber);
+      }
+      .sync-status.sync-offline {
+        color: var(--red);
+      }
 
       .phase {
         margin-bottom: 2rem;
+        padding-bottom: 1.75rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .phase:last-child {
+        border-bottom: 0;
       }
       .phase-header {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 10px;
+        gap: 4px 10px;
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
-        border-bottom: 1px solid #e5e5e0;
+        border-bottom: 1px solid var(--border);
       }
       .phase-tag {
         font-size: 11px;
@@ -120,22 +225,35 @@
         border-radius: 20px;
         letter-spacing: 0.04em;
       }
-      .tag-now {
-        background: #fef2f2;
-        color: #dc2626;
+      .tag-setup {
+        background: var(--tag-setup-bg);
+        color: var(--tag-setup-fg);
       }
-      .tag-grad {
-        background: #eff6ff;
-        color: #1d4ed8;
+      .tag-prep {
+        background: var(--tag-prep-bg);
+        color: var(--tag-prep-fg);
       }
-      .tag-ongoing {
-        background: #f0fdf4;
-        color: #15803d;
+      .tag-cert {
+        background: var(--tag-cert-bg);
+        color: var(--tag-cert-fg);
+      }
+      .tag-week {
+        background: var(--tag-week-bg);
+        color: var(--tag-week-fg);
       }
       .phase-title {
         font-size: 15px;
         font-weight: 500;
-        color: #1a1a18;
+      }
+      .phase-meta {
+        font-size: 12px;
+        color: var(--muted);
+        margin-left: auto;
+      }
+      .phase-intro {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin: -0.5rem 3px 1rem;
       }
 
       .group {
@@ -144,7 +262,7 @@
       .group-label {
         font-size: 10.5px;
         font-weight: 700;
-        color: #b0b0ab;
+        color: var(--faint);
         text-transform: uppercase;
         letter-spacing: 0.07em;
         margin-bottom: 5px;
@@ -155,32 +273,41 @@
         display: flex;
         align-items: flex-start;
         gap: 11px;
+        width: 100%;
         padding: 7px 8px;
+        border: 0;
         border-radius: 8px;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
         cursor: pointer;
         transition: background 0.1s;
         user-select: none;
       }
       .cl-item:hover {
-        background: #ededea;
+        background: var(--hover);
+      }
+      .cl-item:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      [hidden] {
+        display: none !important;
       }
 
       .checkbox {
         width: 18px;
         height: 18px;
         min-width: 18px;
-        border: 1.5px solid #ccccc7;
+        border: 1.5px solid var(--box-border);
         border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-top: 2px;
         transition: all 0.15s;
-        background: #fff;
-      }
-      .checkbox.checked {
-        background: #2563eb;
-        border-color: #2563eb;
+        background: var(--surface);
       }
       .checkmark {
         display: none;
@@ -189,44 +316,75 @@
         font-weight: 800;
         line-height: 1;
       }
-      .checkbox.checked .checkmark {
+      .cl-item[aria-checked="true"] .checkbox {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .cl-item.weekly[aria-checked="true"] .checkbox {
+        background: var(--accent-weekly);
+        border-color: var(--accent-weekly);
+      }
+      .cl-item[aria-checked="true"] .checkmark {
         display: block;
       }
 
       .item-content {
         flex: 1;
+        min-width: 0;
       }
       .item-label {
         font-size: 14px;
-        color: #1a1a18;
         line-height: 1.5;
-      }
-      .item-label.checked {
-        color: #b0b0ab;
-        text-decoration: line-through;
       }
       .item-note {
         font-size: 12px;
-        color: #6b6b68;
+        color: var(--muted);
         margin-top: 2px;
         line-height: 1.45;
       }
-      .item-note.checked {
-        color: #b0b0ab;
+      .cl-item[aria-checked="true"] .item-label {
+        color: var(--faint);
+        text-decoration: line-through;
       }
-
-      .divider {
-        height: 1px;
-        background: #e5e5e0;
-        margin: 1.75rem 0;
+      .cl-item[aria-checked="true"] .item-note {
+        color: var(--faint);
+      }
+      .badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        padding: 0 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        vertical-align: 1px;
+      }
+      .badge-swe {
+        background: var(--badge-swe-bg);
+        color: var(--badge-swe-fg);
+      }
+      .badge-sec {
+        background: var(--badge-sec-bg);
+        color: var(--badge-sec-fg);
+      }
+      .badge-opt {
+        background: var(--track);
+        color: var(--muted);
       }
 
       @media (max-width: 480px) {
         body {
-          padding: 1.25rem 0.75rem;
+          padding: 1.25rem 1rem;
         }
         .header h1 {
           font-size: 18px;
+        }
+        .progress-card {
+          padding: 12px 14px;
+        }
+        .phase-meta {
+          margin-left: 0;
+          width: 100%;
         }
       }
       @media print {
@@ -236,6 +394,10 @@
         .cl-item:hover {
           background: none;
         }
+        .controls,
+        .sync-status {
+          display: none;
+        }
       }
     </style>
   </head>
@@ -244,396 +406,609 @@
       <div class="header">
         <h1>Job Search Checklist</h1>
         <p>
-          Everything that needs to be in place before applying. Check items off
-          as you complete them.
+          For entry-level software engineering and cybersecurity roles. Pick
+          your track; setup items stay checked, weekly items reset every Monday.
         </p>
+      </div>
+
+      <div class="controls">
+        <div class="segmented" id="track-picker" role="group" aria-label="Track">
+          <button type="button" data-track="all">Both tracks</button>
+          <button type="button" data-track="swe">Software eng.</button>
+          <button type="button" data-track="sec">Cybersecurity</button>
+        </div>
+        <label class="toggle-done">
+          <input type="checkbox" id="hide-done" /> Hide completed
+        </label>
       </div>
 
       <div class="progress-card">
         <span class="progress-label">Ready to apply</span>
         <div class="progress-bar-wrap">
-          <div class="progress-bar" id="prog-bar"></div>
+          <div class="progress-bar" id="ready-bar"></div>
         </div>
-        <span class="progress-count" id="prog-count">0 / 0</span>
+        <span class="progress-count" id="ready-count">0 / 0</span>
+
+        <span class="progress-label">This week</span>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar weekly" id="week-bar"></div>
+        </div>
+        <span class="progress-count" id="week-count">0 / 0</span>
       </div>
       <div class="sync-status" id="sync-status"></div>
 
-      <!-- PHASE 1 -->
-      <div class="phase">
-        <div class="phase-header">
-          <span class="phase-tag tag-now">Do now</span>
-          <span class="phase-title">Before you apply — get these in place</span>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Resumes</div>
-          <div class="cl-item" data-id="cybersecurity-forensics-resume-v2" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Cybersecurity / forensics resume (v2)
-              </div>
-              <div class="item-note">
-                Updated with Nmap, Hydra, Burp Suite; 77+ lab count; 6-person
-                team
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="general-swe-resume-v2" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">General SWE resume (v2)</div>
-              <div class="item-note">Updated with 6-person team detail</div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="set-up-a-permanent-professional-email" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Set up a permanent professional email
-              </div>
-              <div class="item-note">
-                PDX email will die post-graduation — get
-                firstname.lastname@gmail.com now
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-label">LinkedIn</div>
-          <div class="cl-item" data-id="update-headline-with-both-tracks-graduation" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Update headline with both tracks + graduation
-              </div>
-              <div class="item-note">
-                "CS Student | Full-Stack & Cybersecurity | PSU B.S. 2026"
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="write-and-publish-about-section" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Write and publish About section</div>
-              <div class="item-note">Draft completed — ready to paste in</div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="add-all-technical-skills-to-skills-section" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Add all technical skills to Skills section
-              </div>
-              <div class="item-note">
-                Next.js, Python, SQL, Burp Suite, Nmap, Hydra, Linux, Git, etc.
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="add-capstone-project-as-experience-entry" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Add capstone project as experience entry
-              </div>
-              <div class="item-note">
-                List it like a job with role, dates, and the 3 bullets from your
-                resume
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="pin-capstone-to-featured-section" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Pin capstone to Featured section</div>
-              <div class="item-note">Live URL or GitHub link if public</div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="turn-on-open-to-work" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Turn on Open to Work</div>
-              <div class="item-note">
-                Both: Software Engineer + Information Security Analyst. Portland
-                + Remote.
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="set-up-job-alerts" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Set up job alerts</div>
-              <div class="item-note">
-                Junior SWE, SOC Analyst, Junior Security Analyst, Entry Level
-                Cybersecurity — all + remote filter
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-label">GitHub</div>
-          <div class="cl-item" data-id="profile-readme-is-up-to-date" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Profile README is up-to-date</div>
-              <div class="item-note">
-                Short bio, current focus (CS + cybersecurity), links to
-                portfolio and LinkedIn
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="capstone-repo-is-presentable" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Capstone repo is presentable</div>
-              <div class="item-note">
-                Clean README, no sensitive keys or .env files, clear setup
-                instructions
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="pin-your-best-repos-up-to-6" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Pin your best repos (up to 6)</div>
-              <div class="item-note">
-                Capstone first — anything else worth showing
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Personal website / portfolio</div>
-          <div class="cl-item" data-id="portfolio-site-is-live-and-updated" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Portfolio site is live and updated</div>
-              <div class="item-note">
-                tannercheek.com — capstone featured, links to GitHub and
-                LinkedIn working
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="notion-project-database-populated" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Notion project database populated</div>
-              <div class="item-note">
-                At least capstone entry fully filled out — add projects as
-                portfolio grows
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="contact-method-clearly-visible-on-site" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Contact method clearly visible on site
-              </div>
-              <div class="item-note">
-                Professional email (not PDX) or contact form
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Application tracker</div>
-          <div class="cl-item" data-id="notion-tracker-set-up-with-all-properties" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Notion tracker set up with all properties
-              </div>
-              <div class="item-note">
-                Company, Role, Resume Version, Date Applied, Source, Status,
-                Contact, Follow-up Date, Notes
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="board-view-configured-grouped-by-status" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Board view configured, grouped by Status
-              </div>
-              <div class="item-note">
-                Applied → Phone Screen → Interview → Offer / Rejected / Ghosted
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- PHASE 2 -->
-      <div class="phase">
-        <div class="phase-header">
-          <span class="phase-tag tag-grad">Post-graduation</span>
-          <span class="phase-title">Add these once earned</span>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Certifications</div>
-          <div class="cl-item" data-id="isc2-certified-in-cybersecurity-cc-earned" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                ISC2 Certified in Cybersecurity (CC) earned
-              </div>
-              <div class="item-note">
-                Add to LinkedIn, resume header, and portfolio immediately. $199
-                exam + $50/yr AMF.
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="comptia-security-sy0-701-earned" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">CompTIA Security+ SY0-701 earned</div>
-              <div class="item-note">
-                Add to LinkedIn, resume header, and portfolio. Remove all "in
-                progress" language everywhere.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- PHASE 3 -->
-      <div class="phase">
-        <div class="phase-header">
-          <span class="phase-tag tag-ongoing">Ongoing</span>
-          <span class="phase-title">Keep doing these every week</span>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Studying</div>
-          <div class="cl-item" data-id="neetcode-150-1-problem-day-now-2-3-day-post-grad" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                NeetCode 150 — 1 problem/day now, 2–3/day post-grad
-              </div>
-              <div class="item-note">
-                Order: Arrays → Two Pointers → Stack → Binary Search → Sliding
-                Window → Linked List → Trees → Graphs
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="professor-messer-sy0-701-1-video-day" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Professor Messer SY0-701 — 1 video/day
-              </div>
-              <div class="item-note">
-                Free on YouTube. Doubles as Security+ study and cyber interview
-                prep simultaneously.
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="1-tryhackme-room-or-portswigger-lab-per-week" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                1 TryHackMe room or PortSwigger lab per week
-              </div>
-              <div class="item-note">
-                Keep hands-on skills sharp while working through cert material
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Networking</div>
-          <div class="cl-item" data-id="1-linkedin-connection-personalized-note-per-week" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                1 LinkedIn connection + personalized note per week
-              </div>
-              <div class="item-note">
-                PSU CS alumni, Portland security professionals, hiring managers
-                at target companies
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="attend-owasp-portland-or-local-infosec-meetup-monthly" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Attend OWASP Portland or local infosec meetup monthly
-              </div>
-              <div class="item-note">
-                Check Portland Infosec Community site for OWASP, ISACA, CSNP,
-                WiCyS schedules
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="attend-bsidespdx-when-it-runs" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">Attend BSidesPDX when it runs</div>
-              <div class="item-note">
-                Highest-leverage in-person networking event in Portland's
-                security scene
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-label">Applying</div>
-          <div class="cl-item" data-id="5-10-quality-applications-per-week-post-grad" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                5–10 quality applications per week (post-grad)
-              </div>
-              <div class="item-note">
-                Pick the right resume version, scan for keywords, log everything
-                in Notion — no spray-and-pray
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="follow-up-on-applications-1-2-weeks-after-no-response" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Follow up on applications 1–2 weeks after no response
-              </div>
-              <div class="item-note">
-                Short, polite check-in email or LinkedIn message — use Follow-up
-                Date field in Notion
-              </div>
-            </div>
-          </div>
-          <div class="cl-item" data-id="send-thank-you-note-within-24-hrs-of-every-interview" onclick="toggle(this)">
-            <div class="checkbox"><span class="checkmark">✓</span></div>
-            <div class="item-content">
-              <div class="item-label">
-                Send thank-you note within 24 hrs of every interview
-              </div>
-              <div class="item-note">
-                Email to every person you spoke with — reference something
-                specific from the conversation
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div id="phases"></div>
     </div>
 
     <script type="module">
       import { syncedState } from "../shared/persist.js";
+
+      // track: "all" | "swe" | "sec". kind: "setup" (counts toward
+      // Ready to apply), "optional" (one-time, not counted), "weekly" (resets
+      // each Monday, counts toward This week).
+      const PHASES = [
+        {
+          tag: "Set up",
+          tagClass: "tag-setup",
+          title: "Before you apply",
+          kind: "setup",
+          groups: [
+            {
+              label: "Application materials",
+              items: [
+                {
+                  id: "general-swe-resume-v2",
+                  track: "swe",
+                  label: "Software engineering resume",
+                  note: "One page, single column, no tables or graphics (ATS-friendly). Lead with projects and stack; quantify impact — users, speed-ups, team size.",
+                },
+                {
+                  id: "cybersecurity-forensics-resume-v2",
+                  track: "sec",
+                  label: "Cybersecurity resume",
+                  note: "Lead with hands-on work: labs, CTFs, homelab, tools used (e.g. Nmap, Wireshark, Burp Suite, Splunk). List certs in progress with an expected date.",
+                },
+                {
+                  id: "resume-reviewed-and-parse-tested",
+                  track: "all",
+                  label: "Resume reviewed and parse-tested",
+                  note: "Have a mentor, peer, or career center review it. Copy text out of the PDF into a plain-text editor — if it comes out garbled, so will the ATS.",
+                },
+                {
+                  id: "cover-letter-template",
+                  track: "all",
+                  label: "Cover letter template",
+                  note: "Three short paragraphs: why this company, the one most relevant thing you've done, a brief close. Rewrite the first line every time.",
+                },
+                {
+                  id: "set-up-a-permanent-professional-email",
+                  track: "all",
+                  label: "Permanent professional email",
+                  note: "firstname.lastname@… — not a school or work address that will expire. Use it everywhere below.",
+                },
+                {
+                  id: "references-lined-up",
+                  track: "all",
+                  label: "2–3 references lined up",
+                  note: "Ask first. Keep their current title, email, phone, and how they know you in one doc.",
+                },
+                {
+                  id: "elevator-pitch",
+                  track: "all",
+                  label: "30-second pitch",
+                  note: "Who you are, what you've built, what you're looking for. Say it out loud until it sounds natural — it's also your networking intro.",
+                },
+              ],
+            },
+            {
+              label: "LinkedIn",
+              items: [
+                {
+                  id: "linkedin-headline",
+                  track: "all",
+                  label: "Headline names the role you want",
+                  note: "e.g. \"Software Engineer | Full-Stack (React, Python)\" or \"Security Analyst | SOC & Network Security | Security+\". Recruiters search these words.",
+                },
+                {
+                  id: "linkedin-photo-url",
+                  track: "all",
+                  label: "Photo, banner, and custom URL",
+                  note: "Clear headshot; set linkedin.com/in/firstname-lastname and use that link on your resume.",
+                },
+                {
+                  id: "write-and-publish-about-section",
+                  track: "all",
+                  label: "About section written",
+                  note: "3–5 sentences: what you do, what you've built, what you're looking for, how to reach you.",
+                },
+                {
+                  id: "linkedin-experience-projects",
+                  track: "all",
+                  label: "Experience and projects match your resume",
+                  note: "Treat major projects like jobs — role, dates, the same bullets. Mismatches between resume and profile raise questions.",
+                },
+                {
+                  id: "linkedin-skills-featured",
+                  track: "all",
+                  label: "Skills and Featured sections filled in",
+                  note: "Pin the 3 skills that appear most in your target postings. Feature your best project and your portfolio link.",
+                },
+                {
+                  id: "turn-on-open-to-work",
+                  track: "all",
+                  label: "Open to Work turned on",
+                  note: "Add every title you'd accept, plus locations and remote. Use \"recruiters only\" if you're currently employed.",
+                },
+                {
+                  id: "job-alerts-swe",
+                  track: "swe",
+                  label: "SWE job alerts set up",
+                  note: "Junior / Associate / New Grad Software Engineer, Backend, Frontend, Full-Stack Developer — on LinkedIn plus one or two other boards.",
+                },
+                {
+                  id: "job-alerts-sec",
+                  track: "sec",
+                  label: "Security job alerts set up",
+                  note: "SOC Analyst, Security Analyst, Junior Penetration Tester, IT Security Specialist, GRC Analyst. Also check USAJobs and defense contractors if you can get clearance.",
+                },
+              ],
+            },
+            {
+              label: "GitHub and portfolio",
+              items: [
+                {
+                  id: "profile-readme-is-up-to-date",
+                  track: "all",
+                  label: "GitHub profile README",
+                  note: "Short bio, current focus, links to portfolio and LinkedIn.",
+                },
+                {
+                  id: "pinned-repos-presentable",
+                  track: "all",
+                  label: "4–6 best repos pinned and presentable",
+                  note: "Each README says what it is, why it exists, how to run it, and has a screenshot or demo link. Best project first.",
+                },
+                {
+                  id: "repos-scrubbed-for-secrets",
+                  track: "all",
+                  label: "Public repos scrubbed for secrets",
+                  note: "No API keys, .env files, or credentials — in current code or commit history. Run a scanner like gitleaks or trufflehog to check.",
+                },
+                {
+                  id: "swe-flagship-project",
+                  track: "swe",
+                  label: "One flagship project deployed",
+                  note: "Live URL, tests, CI, real data. Be ready to explain every design decision and what you'd change.",
+                },
+                {
+                  id: "sec-writeups-homelab",
+                  track: "sec",
+                  label: "Security writeups or homelab published",
+                  note: "Lab/CTF writeups, a homelab repo (SIEM, AD lab, detection rules), or a tool you built. Shows skill better than a tools list. Don't post spoilers for active challenges.",
+                },
+                {
+                  id: "portfolio-site-is-live-and-updated",
+                  track: "all",
+                  label: "Portfolio site live",
+                  note: "Projects, resume PDF, and a visible contact method. Click every link and check it on your phone.",
+                },
+                {
+                  id: "online-presence-audit",
+                  track: "all",
+                  label: "Online presence audited",
+                  note: "Search your name. Clean up or make private anything you wouldn't want a hiring manager to see.",
+                },
+              ],
+            },
+            {
+              label: "Tracking",
+              items: [
+                {
+                  id: "notion-tracker-set-up-with-all-properties",
+                  track: "all",
+                  label: "Application tracker set up",
+                  note: "Spreadsheet, Notion, Huntr, etc. Fields: Company, Role, Resume version, Date applied, Source, Status, Contact, Follow-up date, Notes.",
+                },
+                {
+                  id: "board-view-configured-grouped-by-status",
+                  track: "all",
+                  label: "Status pipeline defined",
+                  note: "Saved → Applied → Screen → Interview → Offer / Rejected / No response. A board view grouped by status makes this easy to scan.",
+                },
+                {
+                  id: "target-company-list",
+                  track: "all",
+                  label: "Target company list (20–30)",
+                  note: "A mix of reach and realistic. Note anyone you know at each — referrals get far more responses than cold applications.",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tag: "Prepare",
+          tagClass: "tag-prep",
+          title: "Interview readiness",
+          kind: "setup",
+          intro: "Start these before the first interview is booked — there's often less than a week of notice.",
+          groups: [
+            {
+              label: "Behavioral",
+              items: [
+                {
+                  id: "star-stories",
+                  track: "all",
+                  label: "5–6 STAR stories written",
+                  note: "Conflict, failure, leadership, tight deadline, learning something fast, a project you're proud of. Each under 2 minutes; most can be reused across questions.",
+                },
+                {
+                  id: "tell-me-about-yourself",
+                  track: "all",
+                  label: "\"Tell me about yourself\" and \"Why this role?\"",
+                  note: "Rehearsed, 60–90 seconds each. Tailor the \"why\" to each company.",
+                },
+                {
+                  id: "project-deep-dive",
+                  track: "all",
+                  label: "Project deep-dive ready",
+                  note: "Walk through your main project: architecture, tradeoffs, hardest bug, what you'd do differently.",
+                },
+                {
+                  id: "questions-to-ask",
+                  track: "all",
+                  label: "Questions to ask interviewers",
+                  note: "3–5 per stage — about the team, onboarding, what success looks like at 90 days. Never \"no questions.\"",
+                },
+              ],
+            },
+            {
+              label: "Technical — software engineering",
+              items: [
+                {
+                  id: "dsa-patterns",
+                  track: "swe",
+                  label: "Core DS&A patterns covered",
+                  note: "Work through a curated list (NeetCode 150, Blind 75) by pattern: Arrays & Hashing → Two Pointers → Sliding Window → Stack → Binary Search → Linked List → Trees → Graphs → DP basics.",
+                },
+                {
+                  id: "interview-language",
+                  track: "swe",
+                  label: "One interview language, known cold",
+                  note: "Its lists, maps, sets, heaps, sorting, and string handling without looking anything up.",
+                },
+                {
+                  id: "mock-interviews-swe",
+                  track: "swe",
+                  label: "2+ mock coding interviews done",
+                  note: "Timed, 45 minutes, talking out loud. Peers, a career center, or free mock-interview sites.",
+                },
+                {
+                  id: "system-design-basics",
+                  track: "swe",
+                  label: "System design basics",
+                  note: "REST APIs, SQL vs NoSQL, indexing, caching, load balancing, queues. Enough to sketch a simple \"design X\" at junior level.",
+                },
+              ],
+            },
+            {
+              label: "Technical — cybersecurity",
+              items: [
+                {
+                  id: "networking-fundamentals",
+                  track: "sec",
+                  label: "Networking fundamentals",
+                  note: "OSI / TCP-IP, the TCP handshake, DNS, HTTP(S) and TLS, common ports, subnetting.",
+                },
+                {
+                  id: "security-fundamentals",
+                  track: "sec",
+                  label: "Security fundamentals",
+                  note: "CIA triad, authentication vs authorization, hashing vs encryption, OWASP Top 10, common attacks (phishing, SQLi, XSS, privilege escalation).",
+                },
+                {
+                  id: "incident-response-walkthrough",
+                  track: "sec",
+                  label: "Incident response walkthrough",
+                  note: "Narrate an alert end to end: triage → contain → eradicate → recover → lessons learned (NIST SP 800-61).",
+                },
+                {
+                  id: "log-analysis-tools",
+                  track: "sec",
+                  label: "Log analysis and tooling",
+                  note: "Read Windows event logs and Linux auth logs, write basic SIEM queries (Splunk or Elastic), inspect a packet capture in Wireshark.",
+                },
+                {
+                  id: "scenario-practice-sec",
+                  track: "sec",
+                  label: "Scenario questions practiced out loud",
+                  note: "\"You see this alert — what do you do?\" \"A user clicked a phishing link — now what?\"",
+                },
+              ],
+            },
+            {
+              label: "Logistics",
+              items: [
+                {
+                  id: "interview-setup",
+                  track: "all",
+                  label: "Video interview setup tested",
+                  note: "Quiet space, stable internet, camera at eye level, Zoom / Teams / Meet all installed and tested.",
+                },
+                {
+                  id: "salary-research",
+                  track: "all",
+                  label: "Salary range researched",
+                  note: "Levels.fyi, Glassdoor, and BLS data for your location and role. Know your number before the first recruiter call.",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tag: "As earned",
+          tagClass: "tag-cert",
+          title: "Certifications",
+          kind: "optional",
+          intro: "Optional and not counted in Ready to apply. Weighted heavily in security hiring; projects usually matter more for SWE.",
+          groups: [
+            {
+              label: "Certifications",
+              items: [
+                {
+                  id: "isc2-certified-in-cybersecurity-cc-earned",
+                  track: "sec",
+                  label: "ISC2 Certified in Cybersecurity (CC)",
+                  note: "Entry-level, good first cert. Check ISC2 for current exam fee and annual maintenance fee.",
+                },
+                {
+                  id: "comptia-security-sy0-701-earned",
+                  track: "sec",
+                  label: "CompTIA Security+",
+                  note: "The most requested entry-level security cert, and a baseline for many government roles. Check the current exam version before studying.",
+                },
+                {
+                  id: "next-sec-cert",
+                  track: "sec",
+                  label: "Next cert chosen by direction",
+                  note: "Blue team: CySA+ or BTL1. Offensive: eJPT or PNPT. Cloud security: an AWS or Azure cert.",
+                },
+                {
+                  id: "cloud-cert-swe",
+                  track: "swe",
+                  label: "Cloud cert (optional)",
+                  note: "e.g. AWS Cloud Practitioner or Developer Associate, if your target roles mention cloud.",
+                },
+                {
+                  id: "certs-updated-everywhere",
+                  track: "all",
+                  label: "Each new cert updated everywhere",
+                  note: "Resume, LinkedIn Licenses section, portfolio. Add the credential ID or verify link; remove any \"in progress\" wording.",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tag: "Weekly",
+          tagClass: "tag-week",
+          title: "Keep the momentum",
+          kind: "weekly",
+          groups: [
+            {
+              label: "Applications",
+              items: [
+                {
+                  id: "weekly-applications",
+                  track: "all",
+                  label: "5–10 targeted applications",
+                  note: "Match the resume version to the role, mirror the posting's keywords, save the job description, log it in the tracker. Quality over volume.",
+                },
+                {
+                  id: "weekly-referral-asks",
+                  track: "all",
+                  label: "Ask for a referral at a top target",
+                  note: "Reach out to someone at the company before (or right after) applying.",
+                },
+                {
+                  id: "weekly-follow-ups",
+                  track: "all",
+                  label: "Follow-ups sent",
+                  note: "Anything with no response after 1–2 weeks gets one short, polite check-in.",
+                },
+                {
+                  id: "weekly-thank-yous",
+                  track: "all",
+                  label: "Thank-you notes within 24 hours of each interview",
+                  note: "Every person you spoke with; mention something specific from the conversation.",
+                },
+                {
+                  id: "weekly-tracker-review",
+                  track: "all",
+                  label: "Tracker reviewed",
+                  note: "Update statuses, set follow-up dates, and look at which resume and source are getting responses.",
+                },
+              ],
+            },
+            {
+              label: "Skills",
+              items: [
+                {
+                  id: "weekly-coding-problems",
+                  track: "swe",
+                  label: "5–7 coding problems",
+                  note: "About one a day. Redo any problem you couldn't solve without hints a week later.",
+                },
+                {
+                  id: "weekly-labs",
+                  track: "sec",
+                  label: "1–2 hands-on labs",
+                  note: "TryHackMe, Hack The Box, PortSwigger Web Security Academy, LetsDefend, Blue Team Labs Online.",
+                },
+                {
+                  id: "weekly-cert-study",
+                  track: "sec",
+                  label: "3–5 cert study sessions",
+                  note: "Video lessons plus practice questions. Doubles as interview prep for fundamentals.",
+                },
+                {
+                  id: "weekly-ship-something",
+                  track: "all",
+                  label: "Ship something visible",
+                  note: "A project commit, a writeup, or a blog post — keeps your GitHub and portfolio current.",
+                },
+              ],
+            },
+            {
+              label: "Networking",
+              items: [
+                {
+                  id: "weekly-connections",
+                  track: "all",
+                  label: "2–3 personalized connection requests",
+                  note: "Alumni, engineers or analysts at target companies, recruiters. Mention something specific; don't ask for a job in the first message.",
+                },
+                {
+                  id: "weekly-conversation",
+                  track: "all",
+                  label: "One real conversation",
+                  note: "A 15-minute informational chat, a reply thread, or catching up with a former classmate or coworker.",
+                },
+                {
+                  id: "weekly-event",
+                  track: "all",
+                  label: "Event found or attended",
+                  note: "Aim for one a month: local meetups, OWASP / ISSA chapters, BSides, career fairs, virtual talks, community Discords.",
+                },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const BADGE = { swe: "SWE", sec: "SEC" };
+
+      // Monday of the current week, local time, as YYYY-MM-DD.
+      function weekStart(d = new Date()) {
+        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+        return monday;
+      }
+      function isoDate(d) {
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+      const WEEK = isoDate(weekStart());
+      const WEEK_LABEL = weekStart().toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+
+      function stateKey(item, kind) {
+        return kind === "weekly" ? `week:${WEEK}:${item.id}` : item.id;
+      }
+
+      function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+
+      // Render immediately so the page isn't blank while state loads.
+      const root = document.getElementById("phases");
+      for (const phase of PHASES) {
+        const section = el("section", "phase");
+        const header = el("div", "phase-header");
+        header.append(
+          el("span", `phase-tag ${phase.tagClass}`, phase.tag),
+          el("span", "phase-title", phase.title),
+        );
+        if (phase.kind === "weekly") {
+          header.append(el("span", "phase-meta", `Week of ${WEEK_LABEL} · resets Monday`));
+        }
+        section.append(header);
+        if (phase.intro) section.append(el("p", "phase-intro", phase.intro));
+
+        for (const group of phase.groups) {
+          const g = el("div", "group");
+          g.append(el("div", "group-label", group.label));
+          for (const item of group.items) {
+            const btn = el("button", "cl-item" + (phase.kind === "weekly" ? " weekly" : ""));
+            btn.type = "button";
+            btn.setAttribute("role", "checkbox");
+            btn.setAttribute("aria-checked", "false");
+            btn.dataset.key = stateKey(item, phase.kind);
+            btn.dataset.track = item.track;
+            btn.dataset.kind = phase.kind;
+
+            const box = el("span", "checkbox");
+            box.append(el("span", "checkmark", "✓"));
+            const content = el("span", "item-content");
+            const label = el("span", "item-label", item.label);
+            label.style.display = "block";
+            if (BADGE[item.track]) {
+              label.append(el("span", `badge badge-${item.track}`, BADGE[item.track]));
+            }
+            content.append(label);
+            if (item.note) {
+              const note = el("span", "item-note", item.note);
+              note.style.display = "block";
+              content.append(note);
+            }
+            btn.append(box, content);
+            g.append(btn);
+          }
+          section.append(g);
+        }
+        root.append(section);
+      }
+
+      const items = [...document.querySelectorAll(".cl-item")];
+      const trackButtons = [...document.querySelectorAll("#track-picker button")];
+      const hideDoneInput = document.getElementById("hide-done");
+      let track = "all";
+
+      function isChecked(btn) {
+        return btn.getAttribute("aria-checked") === "true";
+      }
+
+      function applyVisibility() {
+        const hideDone = hideDoneInput.checked;
+        for (const btn of items) {
+          const onTrack = track === "all" || btn.dataset.track === "all" || btn.dataset.track === track;
+          btn.hidden = !onTrack || (hideDone && isChecked(btn));
+          btn.querySelector(".badge")?.toggleAttribute("hidden", track !== "all");
+        }
+        // Hide groups and phases with nothing left to show.
+        for (const g of document.querySelectorAll(".group")) {
+          g.hidden = !g.querySelector(".cl-item:not([hidden])");
+        }
+        for (const p of document.querySelectorAll(".phase")) {
+          p.hidden = !p.querySelector(".cl-item:not([hidden])");
+        }
+        trackButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.track === track)));
+      }
+
+      function setBar(barId, countId, list) {
+        const done = list.filter(isChecked).length;
+        const pct = list.length ? Math.round((done / list.length) * 100) : 0;
+        document.getElementById(barId).style.width = pct + "%";
+        document.getElementById(countId).textContent = `${done} / ${list.length}`;
+      }
+
+      function updateProgress() {
+        const onTrack = items.filter(
+          (b) => track === "all" || b.dataset.track === "all" || b.dataset.track === track,
+        );
+        setBar("ready-bar", "ready-count", onTrack.filter((b) => b.dataset.kind === "setup"));
+        setBar("week-bar", "week-count", onTrack.filter((b) => b.dataset.kind === "weekly"));
+      }
+
+      function refresh() {
+        applyVisibility();
+        updateProgress();
+      }
+      refresh();
 
       const state = await syncedState("job-search-checklist");
       const statusEl = document.getElementById("sync-status");
@@ -649,37 +1024,32 @@
         statusEl.className = "sync-status sync-" + status;
       });
 
-      function setChecked(el, checked) {
-        const box = el.querySelector(".checkbox");
-        const label = el.querySelector(".item-label");
-        const note = el.querySelector(".item-note");
-        box.classList.toggle("checked", checked);
-        label.classList.toggle("checked", checked);
-        if (note) note.classList.toggle("checked", checked);
+      for (const btn of items) {
+        btn.setAttribute("aria-checked", String(!!state.get(btn.dataset.key)));
+        btn.addEventListener("click", () => {
+          const checked = !isChecked(btn);
+          btn.setAttribute("aria-checked", String(checked));
+          state.set(btn.dataset.key, checked);
+          refresh();
+        });
       }
 
-      window.toggle = function (el) {
-        const checked = !el.querySelector(".checkbox").classList.contains("checked");
-        setChecked(el, checked);
-        state.set(el.dataset.id, checked);
-        updateProgress();
-      };
+      track = ["all", "swe", "sec"].includes(state.get("track")) ? state.get("track") : "all";
+      hideDoneInput.checked = !!state.get("hideDone");
 
-      function updateProgress() {
-        const all = document.querySelectorAll(".cl-item");
-        const done = document.querySelectorAll(".checkbox.checked");
-        const total = all.length;
-        const count = done.length;
-        const pct = total ? Math.round((count / total) * 100) : 0;
-        document.getElementById("prog-bar").style.width = pct + "%";
-        document.getElementById("prog-count").textContent =
-          count + " / " + total;
-      }
-
-      document.querySelectorAll(".cl-item").forEach((el) => {
-        if (state.get(el.dataset.id)) setChecked(el, true);
+      trackButtons.forEach((b) =>
+        b.addEventListener("click", () => {
+          track = b.dataset.track;
+          state.set("track", track);
+          refresh();
+        }),
+      );
+      hideDoneInput.addEventListener("change", () => {
+        state.set("hideDone", hideDoneInput.checked);
+        refresh();
       });
-      updateProgress();
+
+      refresh();
     </script>
   </body>
 </html>

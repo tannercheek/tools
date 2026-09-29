@@ -1,0 +1,844 @@
+/* ─────────────────────────────────────────────────────────────
+   Habit Tracker — flat, geometric, brutalist.
+   Four colors: black ground, white line work, one grey for
+   secondary text, one orange for a done day. The accent lives in
+   --accent so a future color picker only has to set that.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --ink: #000; /* background */
+  --paper: #fff; /* text, rules, rings */
+  --mist: #6e6e6e; /* secondary text, future days */
+  --rule-soft: rgb(255 255 255 / 0.2); /* the lines between habits */
+  --accent: #ff5a1f; /* a done day */
+
+  --rule: 1px;
+  --dot: 22px;
+  --dot-line: 1.5px;
+  --dot-gap: 2.5px; /* black gap between the ring and the fill */
+  --cell: 44px;
+  --font: "Space Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono:
+    "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  cursor: pointer;
+}
+input {
+  font: inherit;
+  color: inherit;
+}
+svg.i {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+  display: block;
+}
+[hidden] {
+  display: none !important;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--paper);
+  outline-offset: 3px;
+}
+
+/* ── Shared controls: all mono, all caps ─────────────────────── */
+
+.btn-primary,
+.text-btn,
+.week-label,
+.add-btn,
+.sync,
+.field-label,
+.gate-hint,
+.gate-error,
+.remember,
+.hero-weekday,
+.hero-left,
+.head-day,
+.toast,
+.empty {
+  font-family: var(--mono);
+}
+
+.btn-primary,
+.text-btn,
+.week-label,
+.add-btn,
+.sync,
+.field-label,
+.remember,
+.hero-weekday {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.btn-primary {
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--rule) solid var(--paper);
+  padding: 13px 22px;
+  font-size: 13px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    opacity 0.15s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.btn-primary:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.text-btn {
+  color: var(--mist);
+  font-size: 12px;
+  padding: 7px 8px;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.text-btn:hover {
+  color: var(--paper);
+}
+.text-btn[aria-pressed="true"] {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--mist);
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.icon-btn:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--paper);
+}
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.field {
+  display: block;
+}
+.field-label {
+  display: block;
+  font-size: 11px;
+  color: var(--mist);
+  margin-bottom: 8px;
+}
+.field input {
+  width: 100%;
+  background: transparent;
+  border: var(--rule) solid var(--paper);
+  border-radius: 0;
+  padding: 12px 14px;
+  font-size: 17px;
+}
+.field input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--paper);
+}
+.field input::placeholder {
+  color: var(--mist);
+}
+
+/* ── Gate ───────────────────────────────────────────────────── */
+
+.gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 26px;
+}
+.gate-inner {
+  width: min(340px, 100%);
+}
+.gate-mark {
+  width: 148px;
+  height: 20px;
+  margin: 0 0 32px;
+  display: block;
+  overflow: visible;
+}
+.gate-mark circle {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+.gate-mark .lit {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.gate-title {
+  font-weight: 500;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin: 0 0 28px;
+}
+.gate-form {
+  display: grid;
+  gap: 12px;
+}
+.gate-hint {
+  margin: 0 0 6px;
+  color: var(--mist);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gate-error {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--accent);
+  font-size: 12px;
+}
+.gate-form .btn-primary {
+  width: 100%;
+  margin-top: 8px;
+}
+.gate-form.shake {
+  animation: shake 0.3s steps(4);
+}
+@keyframes shake {
+  25%,
+  75% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--mist);
+  cursor: pointer;
+  user-select: none;
+  margin-top: 4px;
+}
+.remember input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.remember .box {
+  width: 14px;
+  height: 14px;
+  border: var(--rule) solid var(--paper);
+  position: relative;
+  flex: none;
+}
+.remember input:checked + .box::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: var(--accent);
+}
+.remember input:focus-visible + .box {
+  outline: 1.5px solid var(--paper);
+  outline-offset: 3px;
+}
+
+/* ── App layout ─────────────────────────────────────────────── */
+
+.app {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  padding: 0 28px 56px;
+}
+.app.enter {
+  animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.hero {
+  padding: clamp(48px, 10vh, 104px) 0 clamp(32px, 6vh, 56px);
+}
+.hero-weekday {
+  margin: 0 0 12px;
+  color: var(--mist);
+  font-size: 12px;
+}
+.hero-date {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(40px, 8.5vw, 72px);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+}
+.hero-left {
+  margin: 20px 0 0;
+  font-size: 13px;
+  color: var(--mist);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+.hero-left .num {
+  display: inline-block;
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+.hero-left .num.tick {
+  animation: tick 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes tick {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+.hero-left .done-check {
+  width: 18px;
+  height: 18px;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+.hero-left .done-check path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: draw 0.4s 0.1s ease-out forwards;
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* One line of controls: week picker left, sync / edit / lock right. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.week-nav {
+  display: flex;
+  align-items: center;
+  margin-left: -8px;
+}
+.week-label {
+  font-size: 12px;
+  color: var(--paper);
+  padding: 7px 4px;
+  min-width: 112px;
+  text-align: center;
+  white-space: nowrap;
+}
+.week-label:disabled {
+  cursor: default;
+}
+.week-label:hover:not(:disabled) {
+  color: var(--accent);
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: -8px;
+}
+
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--mist);
+  padding: 0 8px;
+  white-space: nowrap;
+}
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: var(--rule) solid var(--mist);
+  flex: none;
+}
+.sync[data-mode="sync"] .sync-dot {
+  background: var(--paper);
+  border-color: var(--paper);
+}
+.sync[data-mode="saving"] .sync-dot {
+  border-color: var(--paper);
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.sync[data-mode="error"] {
+  color: var(--accent);
+}
+.sync[data-mode="error"] .sync-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Row grid: label column + 7 day cells. Header and habits share it. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+}
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+}
+
+.week-head {
+  padding: 8px 0 12px;
+  border-bottom: var(--rule) solid var(--rule-soft);
+}
+.head-day {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  color: var(--mist);
+  position: relative;
+}
+.head-day b {
+  font-weight: 500;
+  font-size: 12px;
+}
+.head-day small {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.head-day.today {
+  color: var(--paper);
+}
+
+.habits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.habit {
+  min-height: 60px;
+  border-bottom: var(--rule) solid var(--rule-soft);
+  background: var(--ink);
+  position: relative;
+}
+.habit.dragging {
+  z-index: 5;
+  outline: var(--rule) solid var(--paper);
+}
+.habit.settling {
+  transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.label-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 0;
+}
+.habit-icon {
+  color: var(--paper);
+}
+.habit-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 0;
+}
+.habit.full .habit-name {
+  color: var(--accent);
+}
+button.habit-name {
+  cursor: default;
+}
+.editing button.habit-name {
+  cursor: pointer;
+  text-decoration: underline var(--mist);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+
+.handle,
+.del {
+  display: none;
+  color: var(--mist);
+  width: 32px;
+  height: 36px;
+  place-items: center;
+  flex: none;
+}
+.editing .handle,
+.editing .del {
+  display: grid;
+}
+.handle {
+  cursor: grab;
+  touch-action: none;
+  margin-left: -6px;
+}
+.handle:active {
+  cursor: grabbing;
+}
+.handle:hover {
+  color: var(--paper);
+}
+.del:hover {
+  color: var(--accent);
+}
+
+/* ── The dot: a white ring, an orange disc inside when done ─── */
+
+.cell {
+  position: relative;
+  height: 46px;
+  display: grid;
+  place-items: center;
+}
+
+/* A straight white bar joining consecutive done days, ring to ring. */
+.cell::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(50% + var(--dot) / 2);
+  width: calc(100% - var(--dot));
+  height: var(--dot-line);
+  margin-top: calc(var(--dot-line) / -2);
+  background: var(--paper);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.12s ease-in;
+  pointer-events: none;
+}
+.cell.link::after {
+  transform: scaleX(1);
+  transition: transform 0.22s 0.08s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.dot {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+.dot input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.face {
+  position: relative;
+  width: var(--dot);
+  height: var(--dot);
+  transition: transform 0.1s ease-out;
+  pointer-events: none;
+}
+.dot:active .face {
+  transform: scale(0.88);
+}
+
+.dot-ring,
+.dot-core {
+  position: absolute;
+  border-radius: 50%;
+}
+.dot-ring {
+  inset: 0;
+  border: var(--dot-line) solid var(--paper);
+}
+.dot-core {
+  inset: calc(var(--dot-line) + var(--dot-gap));
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.16s ease-in;
+}
+.dot input:checked ~ .face .dot-core {
+  transform: scale(1);
+  transition: transform 0.22s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+@media (hover: hover) {
+  .dot:hover input:not(:checked):not(:disabled) ~ .face .dot-core {
+    transform: scale(0.35);
+  }
+}
+
+.dot input:focus-visible ~ .face .dot-ring {
+  outline: 1.5px solid var(--paper);
+  outline-offset: 3px;
+}
+
+/* Days that haven't happened yet: a single grey point. */
+.dot.future {
+  cursor: default;
+}
+.dot.future .dot-ring {
+  inset: 8px;
+  border: 0;
+  background: var(--mist);
+}
+
+/* ── Empty state, add button ────────────────────────────────── */
+
+.empty {
+  padding: 28px 0 8px;
+  color: var(--mist);
+  font-size: 13px;
+}
+.empty p {
+  margin: 0;
+}
+
+.add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 8px 14px 8px 0;
+  color: var(--mist);
+  font-size: 12px;
+  transition: color 0.15s;
+}
+.add-btn:hover {
+  color: var(--paper);
+}
+.add-icon {
+  width: var(--dot);
+  height: var(--dot);
+  border: var(--dot-line) solid currentColor;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.add-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  stroke-linecap: square;
+}
+
+/* ── Dialog ─────────────────────────────────────────────────── */
+
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  background: var(--ink);
+  color: var(--paper);
+  border: var(--rule) solid var(--paper);
+  border-radius: 0;
+  padding: 26px;
+}
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.82);
+}
+.dialog[open] {
+  animation: rise 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.dialog-title {
+  margin: 0 0 22px;
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: -0.03em;
+}
+.icon-picker {
+  border: 0;
+  margin: 22px 0 0;
+  padding: 0;
+}
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 4px;
+}
+.icon-opt {
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: var(--rule) solid transparent;
+  color: var(--mist);
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+.icon-opt:hover {
+  color: var(--paper);
+}
+.icon-opt[aria-checked="true"] {
+  color: var(--ink);
+  background: var(--paper);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+/* ── Toast ──────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--ink);
+  border: var(--rule) solid var(--paper);
+  padding: 6px 6px 6px 16px;
+  font-size: 12px;
+  white-space: nowrap;
+  animation: rise 0.2s ease-out;
+  z-index: 10;
+}
+.toast .text-btn {
+  color: var(--ink);
+  background: var(--paper);
+}
+.toast .text-btn:hover {
+  background: var(--accent);
+}
+
+/* ── Narrow screens: name above, dots span the full width ───── */
+
+@media (max-width: 600px) {
+  .app {
+    padding: 0 26px 40px;
+  }
+  .row {
+    grid-template-columns: 1fr;
+  }
+  /* Widen the 7 equal cells past the row by half a gutter on each side,
+     so the first ring sits flush with the habit title and the last
+     ring with the right edge: width = 7(W − dot)/6. */
+  .days {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    width: calc((100% - var(--dot)) * 7 / 6);
+    margin-left: calc((7 * var(--dot) - 100%) / 12);
+  }
+  .week-head .label-col {
+    display: none;
+  }
+  .habit {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .label-col {
+    padding: 8px 0 0;
+  }
+  .editing .label-col {
+    padding-top: 2px;
+  }
+  .cell {
+    height: 44px;
+  }
+  .week-label {
+    min-width: 96px;
+  }
+}
+
+@media (max-width: 420px) {
+  .sync-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

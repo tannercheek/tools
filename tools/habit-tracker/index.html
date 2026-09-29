@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Habit Tracker</title>
+  <meta name="description" content="A weekly grid of daily habits">
+  <meta name="icon" content="checklist">
+  <meta name="tags" content="checklist, habits, daily, visual, privacy">
+  <meta name="theme-color" content="#000000">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+
+  <!-- Gate: nothing about your habits exists in the page until this is passed -->
+  <section id="gate" class="gate" aria-labelledby="gate-title">
+    <div class="gate-inner">
+      <svg class="gate-mark" viewBox="0 0 148 20" aria-hidden="true">
+        <circle cx="10" cy="10" r="6"/><circle cx="31" cy="10" r="6"/><circle cx="52" cy="10" r="6"/>
+        <circle cx="74" cy="10" r="6"/><circle cx="74" cy="10" r="3" class="lit"/>
+        <circle cx="96" cy="10" r="6"/><circle cx="117" cy="10" r="6"/><circle cx="138" cy="10" r="6"/>
+      </svg>
+      <h1 id="gate-title" class="gate-title">Habits</h1>
+      <form id="gate-form" class="gate-form" autocomplete="off" novalidate>
+        <p id="gate-hint" class="gate-hint">Connecting…</p>
+        <label class="field">
+          <span class="sr-only">Passphrase</span>
+          <input id="pass" type="password" placeholder="Passphrase" autocomplete="current-password" disabled>
+        </label>
+        <label class="field" id="confirm-wrap" hidden>
+          <span class="sr-only">Confirm passphrase</span>
+          <input id="pass2" type="password" placeholder="Type it again" autocomplete="new-password">
+        </label>
+        <label class="remember">
+          <input id="remember" type="checkbox">
+          <span class="box" aria-hidden="true"></span>
+          Remember on this device
+        </label>
+        <button id="unlock" class="btn-primary" type="submit" disabled>Unlock</button>
+        <p id="gate-error" class="gate-error" role="alert"></p>
+      </form>
+    </div>
+  </section>
+
+  <main id="app" class="app" hidden>
+    <header class="hero">
+      <p id="hero-weekday" class="hero-weekday"></p>
+      <h1 id="hero-date" class="hero-date"></h1>
+      <p id="hero-left" class="hero-left" aria-live="polite"></p>
+    </header>
+
+    <section class="board" aria-label="This week's habits">
+      <div class="toolbar">
+        <div class="week-nav">
+          <button id="prev-week" class="icon-btn" aria-label="Previous week"></button>
+          <button id="week-label" class="week-label" title="Back to this week"></button>
+          <button id="next-week" class="icon-btn" aria-label="Next week"></button>
+        </div>
+        <div class="tools">
+          <span id="sync" class="sync" data-mode="local" role="status">
+            <span class="sync-dot" aria-hidden="true"></span><span id="sync-text" class="sync-text">Local only</span>
+          </span>
+          <button id="edit-toggle" class="text-btn" aria-pressed="false">Edit</button>
+          <button id="lock" class="text-btn">Lock</button>
+        </div>
+      </div>
+
+      <div id="week-head" class="row week-head" aria-hidden="true">
+        <div class="label-col"></div>
+        <div id="head-days" class="days"></div>
+      </div>
+
+      <ul id="habits" class="habits"></ul>
+
+      <div id="empty" class="empty" hidden>
+        <p>Add the first thing you want to do every day.</p>
+      </div>
+
+      <button id="add-habit" class="add-btn"><span class="add-icon"></span>Add habit</button>
+    </section>
+  </main>
+
+  <dialog id="habit-dialog" class="dialog" aria-labelledby="dialog-title">
+    <form id="habit-form" method="dialog">
+      <h2 id="dialog-title" class="dialog-title">New habit</h2>
+      <label class="field">
+        <span class="field-label">Name</span>
+        <input id="habit-name" type="text" maxlength="40" placeholder="Drink water" required autocomplete="off">
+      </label>
+      <fieldset class="icon-picker">
+        <legend class="field-label">Icon</legend>
+        <div id="icon-grid" class="icon-grid" role="radiogroup"></div>
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" id="dialog-cancel" class="text-btn">Cancel</button>
+        <button type="submit" id="dialog-save" class="btn-primary">Add habit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden>
+    <span id="toast-text"></span>
+    <button id="toast-undo" class="text-btn">Undo</button>
+  </div>
+</body>
+</html>

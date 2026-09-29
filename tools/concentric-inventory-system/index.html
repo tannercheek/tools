@@ -1,46 +1,103 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Concentric Inventory System</title>
-    <meta name="description" content="Concentric Inventory rings" />
-    <meta name="icon" content="checklist" />
-    <meta name="tags" content="checklist, travel" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="app">
-      <!-- Top-left logo/title -->
-      <header class="app-header">
-        <div class="logo">
-          <span class="logo-mark">◎</span>
-          <span class="logo-text">Concentric<br />Inventory<br />System</span>
-        </div>
-      </header>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Concentric Inventory System</title>
+<meta name="description" content="Everything you own, placed by how close it stays to you">
+<meta name="icon" content="checklist">
+<meta name="tags" content="inventory, gear, travel, visual">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
 
-      <!-- Main content area: concentric rings centered -->
-      <main class="app-main">
-        <div class="rings-wrapper">
-          <div class="rings-system">
-            <!-- Central profile placeholder -->
-            <div class="profile-circle">
-              <span class="profile-initials">You</span>
-            </div>
+<header class="bar">
+  <div class="bar-left">
+    <a class="home" href="../../index.html" title="Back to tools">←</a>
+    <h1 class="logo">
+      <span class="logo-mark">◎</span>
+      <span class="logo-text">Concentric<br>Inventory<br>System</span>
+    </h1>
+  </div>
+  <div class="bar-right">
+    <span class="sync" id="sync" title="persistence status">···</span>
+    <span class="count" id="count">empty</span>
+    <button type="button" class="btn" id="add-btn" title="Add an item (N)">+ add</button>
+  </div>
+</header>
 
-            <!-- Concentric rings (static structure; interactive via CSS/JS) -->
-            <div class="ring ring-1" data-ring-id="edc"></div>
-            <div class="ring ring-2" data-ring-id="daily-backpack"></div>
-            <div class="ring ring-3" data-ring-id="go-bag"></div>
-            <div class="ring ring-4" data-ring-id="travel-luggage"></div>
-            <div class="ring ring-5" data-ring-id="hq-house"></div>
-            <div class="ring ring-6" data-ring-id="other-storage-1"></div>
-            <div class="ring ring-7" data-ring-id="other-storage-2"></div>
-          </div>
-        </div>
-      </main>
+<main class="main">
+  <div class="stage-box" id="stage-box">
+    <div class="stage" id="stage">
+      <svg class="rings" id="rings" aria-hidden="true"></svg>
+      <div class="items" id="items" role="group" aria-label="Inventory"></div>
     </div>
+  </div>
+  <p class="hint" id="hint"></p>
+</main>
 
-    <script src="script.js"></script>
-  </body>
+<div class="chip" id="chip" hidden></div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- add / edit an item -->
+<form class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" autocomplete="off" hidden>
+  <header class="sheet-head">
+    <p class="eyebrow" id="sheet-title">new item</p>
+    <button type="button" class="x" data-close aria-label="Close">×</button>
+  </header>
+
+  <div class="sheet-main">
+    <button type="button" class="emoji-btn" id="emoji-btn" title="Type or paste any emoji">📦</button>
+    <div class="sheet-fields">
+      <input id="f-name" class="f-name" placeholder="What is it?" maxlength="60" required>
+      <textarea id="f-note" class="f-note" rows="2" maxlength="280" placeholder="Notes — which pocket, why it's here…"></textarea>
+    </div>
+  </div>
+
+  <div class="palette" id="palette"></div>
+
+  <fieldset class="ring-pick">
+    <legend class="eyebrow">ring</legend>
+    <div class="pills" id="ring-pills"></div>
+    <p class="ring-hint" id="ring-hint"></p>
+  </fieldset>
+
+  <footer class="sheet-foot">
+    <button type="button" class="btn-text danger" id="delete-btn">delete</button>
+    <span class="grow"></span>
+    <button type="button" class="btn-text" data-close>cancel</button>
+    <button type="submit" class="btn" id="submit-btn">add</button>
+  </footer>
+</form>
+
+<!-- rename a ring -->
+<form class="sheet sheet-sm" id="ring-sheet" role="dialog" aria-modal="true" aria-labelledby="ring-sheet-title" autocomplete="off" hidden>
+  <header class="sheet-head">
+    <p class="eyebrow" id="ring-sheet-title">ring</p>
+    <button type="button" class="x" data-close aria-label="Close">×</button>
+  </header>
+  <label class="field">
+    <span class="eyebrow">name</span>
+    <input id="r-name" maxlength="20" required>
+  </label>
+  <label class="field">
+    <span class="eyebrow">what lives here</span>
+    <input id="r-hint" maxlength="48">
+  </label>
+  <footer class="sheet-foot">
+    <button type="button" class="btn-text" id="ring-reset">reset</button>
+    <span class="grow"></span>
+    <button type="button" class="btn-text" data-close>cancel</button>
+    <button type="submit" class="btn">save</button>
+  </footer>
+</form>
+
+<div class="toast" id="toast" role="status" hidden>
+  <span id="toast-msg"></span>
+  <button type="button" id="toast-undo">undo</button>
+</div>
+
+</body>
 </html>
