@@ -537,6 +537,58 @@ dialog::backdrop { background: var(--backdrop); }
 
 /* ── Settings ── */
 
+.swatches { display: flex; gap: 12px; }
+.swatch {
+  flex: 1;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px solid var(--divider);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-primary);
+}
+.swatch[aria-pressed="true"] { border-color: var(--border-control); }
+.swatch-dot { width: 20px; height: 20px; border-radius: 50%; }
+.swatch-cobalt { background: var(--swatch-cobalt); }
+.swatch-brick { background: var(--swatch-brick); }
+.swatch-ink { background: var(--swatch-ink); }
+
+.data-buttons { display: grid; gap: 12px; }
+.alert-actions-single { grid-template-columns: 1fr; }
+
+/* Settings → Lifts / Tags */
+.list-hint { margin-bottom: 8px; }
+.order-row { gap: 4px; }
+.order-name {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+}
+.move-buttons { display: flex; }
+.btn-move {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+.list-add { margin-top: 24px; }
+
+
 .group { display: grid; gap: 8px; margin-bottom: 32px; }
 .row {
   min-height: 56px;

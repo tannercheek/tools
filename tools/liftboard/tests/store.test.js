@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore } from '../js/store.js';
 import { newSessionId, SEED_TAGS } from '../js/schema.js';
+import { sampleData } from '../js/sample-data.js';
+import { latest, badge, isTrendingUp, comparablePR } from '../js/derive.js';
 
 /** Stands in for persist.js: a Map behind get and set, with a status feed. */
 function fakePersist(initial = {}) {
@@ -319,4 +321,94 @@ test('deleteSession: removes one session, leaves lastSets, writes only "lifts"',
   assert.deepEqual(lift.sessions.map(s => s.id), ['s-7d19mz3a']);
   assert.deepEqual(lift.lastSets, [{ weightKg: 110, reps: 5 }]);
   assert.deepEqual(p.writes, ['lifts']);
+});
+
+
+const sampleStore = (now = new Date(2026, 8, 22, 12)) => {
+  const p = fakePersist();
+  const store = createStore(p);
+  store.replaceAll(sampleData(now));
+  p.writes.length = 0;
+  return { p, store };
+};
+
+test('moveLift / moveTag: swap with the neighbour and renumber; ends do nothing', () => {
+  const { p, store } = sampleStore();
+  const order = list => [...list].sort((a, b) => a.sortOrder - b.sortOrder).map(x => x.name).slice(0, 3).join(',');
+  const bench = store.state.lifts.find(l => l.name === 'Bench Press').id;
+  store.moveLift(bench, -1);
+  assert.equal(order(store.state.lifts), 'Bench Press,Back Squat,Overhead Press');
+  store.moveLift(bench, -1);   // already first
+  assert.deepEqual(p.writes, ['lifts']);
+  assert.deepEqual(store.state.lifts.map(l => l.sortOrder).sort(), [0, 1, 2, 3, 4, 5, 6]);
+  const pull = store.state.tags.find(t => t.name === 'Pull').id;
+  store.moveTag(pull, -1);
+  assert.equal(order(store.state.tags), 'Pull,Push,Legs');
+  assert.deepEqual(p.writes, ['lifts', 'tags']);
+});
+
+test('renameTag: renames, allows a change of case, refuses a clash', () => {
+  const { p, store } = sampleStore();
+  const push = store.state.tags.find(t => t.name === 'Push').id;
+  store.renameTag(push, 'Pushing');
+  store.renameTag(push, 'PUSHING');
+  assert.equal(store.state.tags.find(t => t.id === push).name, 'PUSHING');
+  assert.throws(() => store.renameTag(push, 'legs'), /already a tag called “Legs”/);
+  assert.throws(() => store.renameTag(push, '  '));
+  assert.deepEqual(p.writes, ['tags', 'tags']);
+});
+
+test('deleteTag: removes it from tags, lifts and the filter; never deletes a lift', () => {
+  const { p, store } = sampleStore();
+  const push = store.state.tags.find(t => t.name === 'Push').id;
+  store.setSetting('filterTagIds', [push]);
+  p.writes.length = 0;
+  store.deleteTag(push);
+  assert.ok(!store.state.tags.some(t => t.id === push));
+  assert.ok(store.state.lifts.every(l => !l.tagIds.includes(push)));
+  assert.deepEqual(store.state.settings.filterTagIds, []);
+  assert.equal(store.state.lifts.length, 7);
+  assert.deepEqual(p.writes.sort(), ['lifts', 'settings', 'tags']);
+});
+
+test('pruneHistory: counts first, deletes only old non-record sessions, keeps every card the same', () => {
+  const now = new Date(2026, 8, 22, 12);
+  const { p, store } = sampleStore(now);
+  const cards = () => store.state.lifts.map(l => JSON.stringify([latest(l)?.id, comparablePR(l)?.id, badge(l, now), isTrendingUp(l)]));
+  const before = cards();
+  const count = store.countPrunable('6m', now);
+  assert.ok(count > 0, 'the sample data has sessions older than 6 months');
+  assert.deepEqual(p.writes, [], 'counting changes nothing');
+  store.setSetting('retention', '6m');
+  assert.equal(store.pruneHistory(now), count);
+  assert.deepEqual(cards(), before);
+  assert.equal(store.countPrunable('6m', now), 0);
+  p.writes.length = 0;
+  assert.equal(store.pruneHistory(now), 0);
+  assert.deepEqual(p.writes, [], 'nothing to prune writes nothing');
+});
+
+test('exportDoc / importDoc round trip; a bad import changes nothing', () => {
+  const { p, store } = sampleStore();
+  const file = JSON.parse(JSON.stringify(store.exportDoc()));
+  const target = createStore(fakePersist(validDoc()));
+  target.importDoc(file);
+  assert.deepEqual(target.state.lifts.map(l => l.name), store.state.lifts.map(l => l.name));
+  assert.deepEqual(target.state.settings.unit, 'kg', 'settings are kept');
+  const bad = { ...file, schemaVersion: 99 };
+  p.writes.length = 0;
+  assert.throws(() => store.importDoc(bad), /newer version/);
+  assert.equal(store.state.lifts.length, 7);
+  assert.deepEqual(p.writes, []);
+});
+
+test('deleteAll: a fresh start, saving all four keys', () => {
+  const { p, store } = sampleStore();
+  store.setSetting('accent', 'ink');
+  p.writes.length = 0;
+  store.deleteAll();
+  assert.deepEqual(store.state.lifts, []);
+  assert.deepEqual(store.state.tags.map(t => t.name), SEED_TAGS);
+  assert.equal(store.state.settings.accent, 'cobalt');
+  assert.deepEqual(p.writes.sort(), ['lifts', 'schemaVersion', 'settings', 'tags']);
 });

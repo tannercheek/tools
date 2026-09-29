@@ -2,6 +2,8 @@
 // run is seeded, how older data is upgraded (migrate), and how saved data is
 // checked before it's trusted (validate). Pure; store.js does the saving.
 
+import { PATTERNS } from './library.js';
+
 export const SCHEMA_VERSION = 1;
 
 /** The four persist.js keys. There's no way to list keys, so these are fixed. */
@@ -38,6 +40,33 @@ export function newSessionId(taken = new Set()) {
     }
     if (!taken.has(id)) return id;
   }
+}
+
+/* ── Tidying and ordering (used by store.js) ── */
+
+/** The editable fields of a lift, tidied: a trimmed, non-empty name and a
+ *  known pattern. Throws on an empty name — the editor never allows one. */
+export function liftFields({ name, pattern, isBodyweight, notes }) {
+  const clean = {
+    name: String(name ?? '').trim(),
+    pattern: pattern in PATTERNS ? pattern : 'accessory',
+    isBodyweight: Boolean(isBodyweight),
+    notes: String(notes ?? ''),
+  };
+  if (clean.name === '') throw new Error('A lift needs a name');
+  return clean;
+}
+
+/** Moves one record up (-1) or down (+1) in custom order, then renumbers
+ *  sortOrder 0, 1, 2… Returns false when it's already at that end. */
+export function moveInOrder(list, id, direction) {
+  const ordered = [...list].sort((a, b) => a.sortOrder - b.sortOrder);
+  const i = ordered.findIndex(r => r.id === id);
+  const j = i + direction;
+  if (i < 0 || j < 0 || j >= ordered.length) return false;
+  [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+  ordered.forEach((r, n) => { r.sortOrder = n; });
+  return true;
 }
 
 /* ── First run ── */

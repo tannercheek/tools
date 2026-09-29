@@ -79,6 +79,20 @@ export function confirmDialog(message, actionLabel, { destructive = false } = {}
   });
 }
 
+/** A small dialog with a message and one OK button. Resolves when dismissed. */
+export function alertDialog(message) {
+  return new Promise(resolve => {
+    const dialog = h('dialog', { class: 'alert', 'aria-label': message },
+      h('p', { class: 't-row-label' }, message),
+      h('div', { class: 'alert-actions alert-actions-single' },
+        h('button', { type: 'button', class: 'btn-primary t-button', onclick: () => dialog.close() }, 'OK')));
+    onBackdropTap(dialog, () => dialog.close());
+    removeOnClose(dialog, resolve);
+    document.body.append(dialog);
+    dialog.showModal();
+  });
+}
+
 /** A small dialog asking for one line of text. Resolves the trimmed text, or
  *  null when cancelled. Save is disabled while the field is blank. */
 export function promptDialog(title, initialValue = '') {

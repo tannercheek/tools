@@ -89,7 +89,10 @@ async function main() {
     return;
   }
 
-  document.documentElement.dataset.accent = store.state.settings.accent;
+  store.pruneHistory();   // Keep history applies at every startup
+  const applyAccent = () => { document.documentElement.dataset.accent = store.state.settings.accent; };
+  applyAccent();
+  store.subscribe(applyAccent);   // Settings → Accent recolors everything at once
   buildTabbar();
   screen.hidden = true;
   view.hidden = false;

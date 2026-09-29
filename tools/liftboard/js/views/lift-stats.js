@@ -6,6 +6,7 @@ import { h, fill } from '../dom.js';
 import { confirmDialog } from '../dialogs.js';
 import { icon } from '../icons.js';
 import { drawChart } from '../chart.js';
+import { segmented } from './controls.js';
 import {
   metricsFor, defaultMetric, isWeightMetric, series, rangeStart, inRange, summaryFigures, history,
 } from '../derive.js';
@@ -20,13 +21,6 @@ const UNIT_WORDS = { lb: 'pounds', kg: 'kilograms' };
 
 /** The chosen metric and range per lift, kept while the page is open. */
 const choices = new Map();
-
-function segmented(label, options, current, onPick) {
-  return h('div', { class: 'segmented', role: 'group', 'aria-label': label },
-    options.map(([value, text]) => h('button', {
-      type: 'button', class: 'segment t-chip', 'aria-pressed': String(value === current), onclick: () => onPick(value),
-    }, text)));
-}
 
 /** "Sep 14 · 225 × 5 · e1RM 263", or "Sep 14 · BW+15 × 8" on a bodyweight lift. */
 function sessionText(s, lift, unit) {

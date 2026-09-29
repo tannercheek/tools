@@ -3,22 +3,11 @@
 // it, seeds a first run, and saves the keys each change touches. Views read
 // `store.state`, call store operations, and re-render on `subscribe`.
 
-import { KEYS, CHOICES, freshDoc, migrate, validate, newLiftId, newTagId, newSessionId } from './schema.js';
-import { PATTERNS } from './library.js';
-import { round2, summarizeSession } from './derive.js';
-
-/** The editable fields of a lift, tidied: a trimmed, non-empty name and a
- *  known pattern. Throws on an empty name — the editor never allows one. */
-function liftFields({ name, pattern, isBodyweight, notes }) {
-  const clean = {
-    name: String(name ?? '').trim(),
-    pattern: pattern in PATTERNS ? pattern : 'accessory',
-    isBodyweight: Boolean(isBodyweight),
-    notes: String(notes ?? ''),
-  };
-  if (clean.name === '') throw new Error('A lift needs a name');
-  return clean;
-}
+import {
+  KEYS, CHOICES, freshDoc, migrate, validate, newLiftId, newTagId, newSessionId, liftFields, moveInOrder,
+} from './schema.js';
+import { round2, summarizeSession, pruneSessions, RETENTION_MONTHS } from './derive.js';
+import { toExportFile, fromExportFile } from './transfer.js';
 
 /** @param persist  what syncedState('liftboard') returned (or a test fake) */
 export function createStore(persist) {
@@ -181,6 +170,73 @@ export function createStore(persist) {
       doc = migrate({ ...doc, tags: structuredClone(tags), lifts: structuredClone(lifts) });
       doc.settings.filterTagIds = [];
       commit(['settings', 'tags', 'lifts']);
+    },
+
+    /** Moves a lift up (-1) or down (+1) in custom order. */
+    moveLift(id, direction) {
+      if (moveInOrder(doc.lifts, id, direction)) commit(['lifts']);
+    },
+
+    /** Moves a tag up (-1) or down (+1) in order. */
+    moveTag(id, direction) {
+      if (moveInOrder(doc.tags, id, direction)) commit(['tags']);
+    },
+
+    /** Renames a tag. Throws if another tag already has that name (ignoring case). */
+    renameTag(id, name) {
+      const tag = doc.tags.find(t => t.id === id);
+      const clean = String(name ?? '').trim();
+      if (!tag || clean === '') throw new Error('A tag needs a name');
+      const clash = doc.tags.find(t => t.id !== id && t.name.toLowerCase() === clean.toLowerCase());
+      if (clash) throw new Error(`There’s already a tag called “${clash.name}”.`);
+      tag.name = clean;
+      commit(['tags']);
+    },
+
+    /** Deletes a tag: from the tag list, from every lift, and from the filter.
+     *  Never deletes a lift. */
+    deleteTag(id) {
+      doc.tags = doc.tags.filter(t => t.id !== id);
+      for (const l of doc.lifts) l.tagIds = l.tagIds.filter(t => t !== id);
+      doc.settings.filterTagIds = doc.settings.filterTagIds.filter(t => t !== id);
+      commit(['tags', 'lifts', 'settings']);
+    },
+
+    /** How many sessions a Keep history window would delete. Changes nothing. */
+    countPrunable(retention, now = new Date()) {
+      const months = RETENTION_MONTHS[retention];
+      return doc.lifts.reduce((n, l) => n + pruneSessions(l, months, now).removed, 0);
+    },
+
+    /** Deletes sessions older than the Keep history window, keeping each lift's
+     *  latest and record sessions. Saves only if something went. Returns the count. */
+    pruneHistory(now = new Date()) {
+      const months = RETENTION_MONTHS[doc.settings.retention];
+      let removed = 0;
+      for (const lift of doc.lifts) {
+        const result = pruneSessions(lift, months, now);
+        if (result.removed) { lift.sessions = result.kept; removed += result.removed; }
+      }
+      if (removed) commit(['lifts']);
+      return removed;
+    },
+
+    /** The export file as an object. */
+    exportDoc(now = new Date()) {
+      return toExportFile(doc, now);
+    },
+
+    /** Replaces everything with an export file's contents (throws an
+     *  ImportError, changing nothing, if the file is bad), then prunes. */
+    importDoc(data, now = new Date()) {
+      this.replaceAll(fromExportFile(data, now));
+      this.pruneHistory(now);
+    },
+
+    /** Back to a fresh start: default settings, the seeded tags, no lifts. */
+    deleteAll() {
+      doc = freshDoc();
+      commit(KEYS);
     },
 
     /** Deletes a lift and its sessions. Tags are left alone. */
