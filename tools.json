@@ -1,14 +1,17 @@
 [
   {
     "name": "Concentric Inventory System",
-    "desc": "Concentric Inventory rings",
+    "desc": "Everything you own, placed by how close it stays to you",
     "icon": "checklist",
     "tags": [
-      "checklist",
-      "travel"
+      "inventory",
+      "gear",
+      "travel",
+      "visual"
     ],
     "url": "tools/concentric-inventory-system/",
-    "updated": "2026-09-14T23:16:41-07:00"
+    "updated": "2026-09-28T20:11:18-07:00",
+    "synced": true
   },
   {
     "name": "Daily Flow",
@@ -29,7 +32,7 @@
   },
   {
     "name": "Digital Minimalism",
-    "desc": "Map your life, prune what doesn't serve it",
+    "desc": "Prune the tools and accounts that don't serve you",
     "icon": "compass",
     "tags": [
       "checklist",
@@ -37,19 +40,47 @@
       "privacy"
     ],
     "url": "tools/digital-minimalism/",
-    "updated": "2026-09-15T23:36:18-07:00",
+    "updated": "2026-09-28T20:11:18-07:00",
+    "synced": true
+  },
+  {
+    "name": "Habit Tracker",
+    "desc": "A weekly grid of daily habits",
+    "icon": "checklist",
+    "tags": [
+      "checklist",
+      "habits",
+      "daily",
+      "visual",
+      "privacy"
+    ],
+    "url": "tools/habit-tracker/",
+    "updated": "2026-09-28T20:11:18-07:00",
     "synced": true
   },
   {
     "name": "Job Search Checklist",
-    "desc": "Track job-search readiness tasks and progress",
+    "desc": "Setup, interview prep, and weekly habits for SWE and cybersecurity job searches",
     "icon": "checklist",
     "tags": [
       "checklist",
       "career"
     ],
     "url": "tools/Tanner_Job_Search_Checklist.html",
-    "updated": "2026-09-14T00:00:27-07:00",
+    "updated": "2026-09-28T20:11:18-07:00",
+    "synced": true
+  },
+  {
+    "name": "LiftBoard",
+    "desc": "Log lifts and see your PRs at a glance",
+    "icon": "chart",
+    "tags": [
+      "fitness",
+      "tracker",
+      "chart"
+    ],
+    "url": "tools/liftboard/",
+    "updated": "2026-09-27T19:58:32-07:00",
     "synced": true
   }
 ]
