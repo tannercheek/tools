@@ -63,7 +63,7 @@ export function openSheet({ title, actions = [], canClose = null }) {
 export function confirmDialog(message, actionLabel, { destructive = false } = {}) {
   return new Promise(resolve => {
     let result = false;
-    const dialog = h('dialog', { class: 'alert', 'aria-label': message },
+    const dialog = h('dialog', { class: 'alert', role: 'alertdialog', 'aria-label': message },
       h('p', { class: 't-row-label' }, message),
       h('div', { class: 'alert-actions' },
         h('button', { type: 'button', class: 'btn-secondary t-button', onclick: () => dialog.close() }, 'Cancel'),
@@ -82,7 +82,7 @@ export function confirmDialog(message, actionLabel, { destructive = false } = {}
 /** A small dialog with a message and one OK button. Resolves when dismissed. */
 export function alertDialog(message) {
   return new Promise(resolve => {
-    const dialog = h('dialog', { class: 'alert', 'aria-label': message },
+    const dialog = h('dialog', { class: 'alert', role: 'alertdialog', 'aria-label': message },
       h('p', { class: 't-row-label' }, message),
       h('div', { class: 'alert-actions alert-actions-single' },
         h('button', { type: 'button', class: 'btn-primary t-button', onclick: () => dialog.close() }, 'OK')));

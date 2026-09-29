@@ -11,10 +11,13 @@ import { openAddLift } from './add-lift.js';
 import { openLogSheet } from './log-sheet.js';
 import { liftCard } from './card.js';
 
-/** A short pop on the card just logged, found after the board re-renders. */
+/** A short pop on the card just logged, found after the board re-renders.
+ *  Focus goes to it too, so a keyboard or screen reader user isn't left at the
+ *  top of the page. */
 function pop(liftId) {
   const card = document.querySelector(`.card[data-lift-id="${CSS.escape(liftId)}"]`);
   if (!card) return;
+  card.focus({ preventScroll: true });
   card.classList.remove('pop');
   void card.offsetWidth;   // restart the animation if it's already run
   card.classList.add('pop');
@@ -55,18 +58,22 @@ const SYNC_TEXT = {
   offline: 'Offline — saved on this device',
 };
 
+/** The sync dot is made once and reused by every render, so its live region
+ *  survives re-renders and screen readers hear each status change. */
+let syncEl = null;
 function syncDot(store) {
+  if (syncEl) return syncEl;
   const spoken = h('span', { class: 'visually-hidden' });
   const label = h('span', { class: 't-subtitle sync-label', 'aria-hidden': 'true' }, 'Offline');
-  const el = h('span', { class: 'sync', role: 'status' }, h('span', { class: 'sync-dot' }), label, spoken);
-  const stop = store.onSyncStatus(status => {
-    el.dataset.status = status;
+  syncEl = h('span', { class: 'sync', role: 'status' }, h('span', { class: 'sync-dot' }), label, spoken);
+  store.onSyncStatus(status => {   // for the life of the page
+    syncEl.dataset.status = status;
     spoken.textContent = SYNC_TEXT[status] ?? '';
   });
-  return { el, stop };
+  return syncEl;
 }
 
-/** Renders into root; returns a cleanup function for when the view is left. */
+/** Renders the Board into root. */
 export function renderBoard(root, store) {
   const all = store.state.lifts;
   const { unit, sort, filterTagIds } = store.state.settings;
@@ -84,7 +91,7 @@ export function renderBoard(root, store) {
       h('div', { class: 'brand' },
         h('span', { class: 'logo-mark', 'aria-hidden': 'true' }),
         h('h1', { class: 't-wordmark' }, 'LiftBoard'),
-        sync.el),
+        sync),
       h('div', { class: 'header-actions' },
         sortControl(store),
         h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Add lift', onclick: add, html: icon('plus') }))),
@@ -102,5 +109,4 @@ export function renderBoard(root, store) {
   fill(root, header, all.length ? filterChips(store, active) : null, body);
   const chips = root.querySelector('.chip-row');
   if (chips) chips.scrollLeft = chipScroll;   // tapping a chip re-renders; keep the row where it was
-  return sync.stop;
 }

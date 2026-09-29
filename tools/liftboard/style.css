@@ -60,9 +60,9 @@ html:has(dialog[open]) { overflow: hidden; }
 .sort-control { position: relative; }
 .sort-select {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -3px;   /* over the 3px border too, so the whole 44px button opens the picker */
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
   opacity: 0;
   cursor: pointer;
   font-size: var(--field-min);   /* iOS zooms on focus below 16px, even when invisible */
@@ -503,7 +503,7 @@ dialog::backdrop { background: var(--backdrop); }
 }
 .segment {
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   border-radius: 9px;
   background: transparent;
