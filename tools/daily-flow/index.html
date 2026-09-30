@@ -15,6 +15,7 @@
       content="daily, schedule, routine, checklist, time-blocking, planner, habits"
     />
 
+    <link rel="stylesheet" href="design/tokens.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -56,7 +57,7 @@
           <div class="section-title">Morning</div>
           <ul class="item-list" id="list-morning"></ul>
           <div class="add-row">
-            <input type="text" id="input-morning" placeholder="Add item…" />
+            <input type="text" id="input-morning" placeholder="Add item…" aria-label="Add morning item" />
             <button id="add-morning" aria-label="Add">+</button>
           </div>
         </div>
@@ -72,7 +73,7 @@
           <div class="section-title">Night</div>
           <ul class="item-list" id="list-night"></ul>
           <div class="add-row">
-            <input type="text" id="input-night" placeholder="Add item…" />
+            <input type="text" id="input-night" placeholder="Add item…" aria-label="Add night item" />
             <button id="add-night" aria-label="Add">+</button>
           </div>
         </div>

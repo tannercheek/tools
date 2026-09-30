@@ -8,7 +8,7 @@ const CACHE_KEY  = "dailyFlow.cache";   // local mirror + standalone fallback
 const VIEW_KEY   = "dailyFlow.view";    // which day is open (per-device, not synced)
 const LEGACY_KEYS = ["dailyFlow.v2", "dailyFlow.v1"];
 
-// Add a type here plus a matching --type-KEY / .block-KEY rule in styles.css.
+// Add a type here plus a matching --type-KEY in design/tokens.css and .block-KEY rule in styles.css.
 const BLOCK_TYPES = [
   { key: "work",    label: "Work" },
   { key: "lunch",   label: "Lunch" },
