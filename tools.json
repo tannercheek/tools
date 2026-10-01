@@ -59,12 +59,13 @@
     "synced": true
   },
   {
-    "name": "Job Search Checklist",
-    "desc": "Setup, interview prep, and weekly habits for SWE and cybersecurity job searches",
+    "name": "Job Search Plan",
+    "desc": "One-time prep checklist plus a daily and weekly search plan for SWE and cybersecurity roles",
     "icon": "checklist",
     "tags": [
       "checklist",
-      "career"
+      "career",
+      "weekly"
     ],
     "url": "tools/Tanner_Job_Search_Checklist.html",
     "updated": "2026-09-28T20:11:18-07:00",

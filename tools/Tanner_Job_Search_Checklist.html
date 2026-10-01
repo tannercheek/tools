@@ -2,413 +2,293 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Job Search Checklist</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Job Search Plan</title>
     <meta
       name="description"
-      content="Setup, interview prep, and weekly habits for SWE and cybersecurity job searches"
+      content="One-time prep checklist plus a daily and weekly search plan for SWE and cybersecurity roles"
     />
     <meta name="icon" content="checklist" />
-    <meta name="tags" content="checklist, career" />
+    <meta name="tags" content="checklist, career, weekly" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
       :root {
-        --bg: #f5f5f2;
-        --surface: #ffffff;
-        --border: #e5e5e0;
-        --hover: #ededea;
-        --text: #1a1a18;
-        --muted: #6b6b68;
-        --faint: #b0b0ab;
-        --box-border: #ccccc7;
-        --track: #eeeee9;
-        --accent: #2563eb;
-        --accent-weekly: #15803d;
-        --green: #15803d;
-        --amber: #b45309;
-        --red: #dc2626;
-        --tag-setup-bg: #fef2f2;
-        --tag-setup-fg: #dc2626;
-        --tag-prep-bg: #fff7ed;
-        --tag-prep-fg: #c2410c;
-        --tag-cert-bg: #eff6ff;
-        --tag-cert-fg: #1d4ed8;
-        --tag-week-bg: #f0fdf4;
-        --tag-week-fg: #15803d;
-        --badge-swe-bg: #eef2ff;
-        --badge-swe-fg: #4338ca;
-        --badge-sec-bg: #fdf4ff;
-        --badge-sec-fg: #a21caf;
+        --bg: #f2f5f3;
+        --panel: #e6ece8;
+        --ink: #14201b;
+        --ink-soft: #4a5b54;
+        --rule: #cbd6d0;
+        --accent: #1e5b4c;
+        --accent-ink: #ffffff;
+        --signal-bg: #f3e4c8;
+        --signal-ink: #7a4a08;
+        --bad: #b42318;
+        --swe-bg: #e3e7f6;
+        --swe-ink: #37458f;
+        --sec-bg: #f1e3f0;
+        --sec-ink: #86307c;
+        --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+        --text: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) {
-          --bg: #161615;
-          --surface: #1f1f1d;
-          --border: #2e2e2b;
-          --hover: #262624;
-          --text: #ececea;
-          --muted: #a3a39e;
-          --faint: #6b6b67;
-          --box-border: #55554f;
-          --track: #2e2e2b;
-          --accent: #3b82f6;
-          --accent-weekly: #22c55e;
-          --green: #4ade80;
-          --amber: #fbbf24;
-          --red: #f87171;
-          --tag-setup-bg: #3b1717;
-          --tag-setup-fg: #fca5a5;
-          --tag-prep-bg: #3a2210;
-          --tag-prep-fg: #fdba74;
-          --tag-cert-bg: #172554;
-          --tag-cert-fg: #93c5fd;
-          --tag-week-bg: #14301f;
-          --tag-week-fg: #86efac;
-          --badge-swe-bg: #1e1b4b;
-          --badge-swe-fg: #a5b4fc;
-          --badge-sec-bg: #3b0a3f;
-          --badge-sec-fg: #f0abfc;
+          --bg: #0f1613;
+          --panel: #18231e;
+          --ink: #e4ebe7;
+          --ink-soft: #9db0a7;
+          --rule: #2a3932;
+          --accent: #5fbfa3;
+          --accent-ink: #0f1613;
+          --signal-bg: #3a2e17;
+          --signal-ink: #f0c87e;
+          --bad: #f59a8f;
+          --swe-bg: #232a47;
+          --swe-ink: #b4bff0;
+          --sec-bg: #3a2237;
+          --sec-ink: #efb0e6;
         }
       }
-
+      :root[data-theme="dark"] {
+        --bg: #0f1613;
+        --panel: #18231e;
+        --ink: #e4ebe7;
+        --ink-soft: #9db0a7;
+        --rule: #2a3932;
+        --accent: #5fbfa3;
+        --accent-ink: #0f1613;
+        --signal-bg: #3a2e17;
+        --signal-ink: #f0c87e;
+        --bad: #f59a8f;
+        --swe-bg: #232a47;
+        --swe-ink: #b4bff0;
+        --sec-bg: #3a2237;
+        --sec-ink: #efb0e6;
+      }
+      html { scroll-padding-top: 8rem; }
+      *, *::before, *::after { box-sizing: border-box; }
+      [hidden] { display: none !important; }
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-          Arial, sans-serif;
+        margin: 0;
         background: var(--bg);
-        color: var(--text);
-        line-height: 1.6;
-        padding: 2.5rem 1.25rem;
-        min-height: 100vh;
+        color: var(--ink);
+        font-family: var(--text);
+        font-size: 1rem;
+        line-height: 1.55;
+        -webkit-text-size-adjust: 100%;
       }
+      main { max-width: 46rem; margin: 0 auto; padding: 0 1rem 4rem; }
 
-      .container {
-        max-width: 700px;
-        margin: 0 auto;
-      }
-
-      .header {
-        margin-bottom: 1.5rem;
-      }
-      .header h1 {
-        font-size: 21px;
-        font-weight: 600;
-        margin-bottom: 4px;
-      }
-      .header p {
-        font-size: 13.5px;
-        color: var(--muted);
-      }
-
-      .controls {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 1rem;
-      }
-      .segmented {
-        display: inline-flex;
-        background: var(--track);
-        border-radius: 9px;
-        padding: 3px;
-      }
-      .segmented button {
-        font: inherit;
-        font-size: 12.5px;
-        border: 0;
-        background: none;
-        color: var(--muted);
-        padding: 4px 12px;
-        border-radius: 7px;
-        cursor: pointer;
-      }
-      .segmented button[aria-pressed="true"] {
-        background: var(--surface);
-        color: var(--text);
-        font-weight: 500;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-      }
-      .toggle-done {
-        font-size: 12.5px;
-        color: var(--muted);
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-      }
-
-      .progress-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 12px 18px;
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 8px 14px;
-        margin-bottom: 0.5rem;
-      }
-      .progress-label {
-        font-size: 13px;
-        color: var(--muted);
-        white-space: nowrap;
-      }
-      .progress-bar-wrap {
-        height: 6px;
-        background: var(--track);
-        border-radius: 3px;
-        overflow: hidden;
-      }
-      .progress-bar {
-        height: 100%;
-        background: var(--accent);
-        border-radius: 3px;
-        transition: width 0.35s ease;
-        width: 0%;
-      }
-      .progress-bar.weekly {
-        background: var(--accent-weekly);
-      }
-      .progress-count {
-        font-size: 13px;
-        font-weight: 500;
-        white-space: nowrap;
-        min-width: 48px;
-        text-align: right;
-      }
-      .sync-status {
-        font-size: 11px;
-        color: var(--faint);
-        min-height: 14px;
-        margin: 0 2px 2rem;
-      }
-      .sync-status.sync-synced {
-        color: var(--green);
-      }
-      .sync-status.sync-saved-locally {
-        color: var(--amber);
-      }
-      .sync-status.sync-offline {
-        color: var(--red);
-      }
-
-      .phase {
-        margin-bottom: 2rem;
-        padding-bottom: 1.75rem;
-        border-bottom: 1px solid var(--border);
-      }
-      .phase:last-child {
-        border-bottom: 0;
-      }
-      .phase-header {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px 10px;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid var(--border);
-      }
-      .phase-tag {
-        font-size: 11px;
-        font-weight: 600;
-        padding: 3px 11px;
-        border-radius: 20px;
-        letter-spacing: 0.04em;
-      }
-      .tag-setup {
-        background: var(--tag-setup-bg);
-        color: var(--tag-setup-fg);
-      }
-      .tag-prep {
-        background: var(--tag-prep-bg);
-        color: var(--tag-prep-fg);
-      }
-      .tag-cert {
-        background: var(--tag-cert-bg);
-        color: var(--tag-cert-fg);
-      }
-      .tag-week {
-        background: var(--tag-week-bg);
-        color: var(--tag-week-fg);
-      }
-      .phase-title {
-        font-size: 15px;
-        font-weight: 500;
-      }
-      .phase-meta {
-        font-size: 12px;
-        color: var(--muted);
-        margin-left: auto;
-      }
-      .phase-intro {
-        font-size: 12.5px;
-        color: var(--muted);
-        margin: -0.5rem 3px 1rem;
-      }
-
-      .group {
-        margin-bottom: 1.25rem;
-      }
-      .group-label {
-        font-size: 10.5px;
+      .intro { padding: 2.25rem 0 1rem; }
+      h1 {
+        font-family: var(--display);
         font-weight: 700;
-        color: var(--faint);
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        margin-bottom: 5px;
-        padding-left: 3px;
+        font-size: clamp(2rem, 6vw, 2.75rem);
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.6rem;
       }
+      .intro p { margin: 0; color: var(--ink-soft); max-width: 36rem; }
+      .sync { font-size: 0.8rem; color: var(--ink-soft); min-height: 1.3em; margin-top: 0.4rem !important; }
+      .sync.synced { color: var(--accent); }
+      .sync.saved-locally { color: var(--signal-ink); }
+      .sync.offline { color: var(--bad); }
 
-      .cl-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 11px;
-        width: 100%;
-        padding: 7px 8px;
-        border: 0;
-        border-radius: 8px;
+      button { font: inherit; color: inherit; cursor: pointer; }
+      :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+      /* Sticky tabs + progress */
+      .bar {
+        position: sticky;
+        top: env(safe-area-inset-top, 0px);
+        z-index: 5;
+        background: var(--bg);
+        border-bottom: 1px solid var(--rule);
+        padding: 0.35rem 0 0.8rem;
+        margin-bottom: 1rem;
+      }
+      .tabs { display: flex; gap: 1.5rem; }
+      .tab {
         background: none;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-        transition: background 0.1s;
-        user-select: none;
-      }
-      .cl-item:hover {
-        background: var(--hover);
-      }
-      .cl-item:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 1px;
-      }
-      [hidden] {
-        display: none !important;
-      }
-
-      .checkbox {
-        width: 18px;
-        height: 18px;
-        min-width: 18px;
-        border: 1.5px solid var(--box-border);
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-top: 2px;
-        transition: all 0.15s;
-        background: var(--surface);
-      }
-      .checkmark {
-        display: none;
-        color: #fff;
-        font-size: 11px;
-        font-weight: 800;
-        line-height: 1;
-      }
-      .cl-item[aria-checked="true"] .checkbox {
-        background: var(--accent);
-        border-color: var(--accent);
-      }
-      .cl-item.weekly[aria-checked="true"] .checkbox {
-        background: var(--accent-weekly);
-        border-color: var(--accent-weekly);
-      }
-      .cl-item[aria-checked="true"] .checkmark {
-        display: block;
-      }
-
-      .item-content {
-        flex: 1;
-        min-width: 0;
-      }
-      .item-label {
-        font-size: 14px;
-        line-height: 1.5;
-      }
-      .item-note {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 2px;
-        line-height: 1.45;
-      }
-      .cl-item[aria-checked="true"] .item-label {
-        color: var(--faint);
-        text-decoration: line-through;
-      }
-      .cl-item[aria-checked="true"] .item-note {
-        color: var(--faint);
-      }
-      .badge {
-        display: inline-block;
-        font-size: 10px;
+        border: 0;
+        border-bottom: 3px solid transparent;
+        padding: 0.45rem 0 0.35rem;
+        font-family: var(--display);
         font-weight: 600;
-        letter-spacing: 0.04em;
-        padding: 0 6px;
-        border-radius: 4px;
-        margin-left: 6px;
-        vertical-align: 1px;
+        font-size: 1.15rem;
+        letter-spacing: -0.01em;
+        color: var(--ink-soft);
       }
-      .badge-swe {
-        background: var(--badge-swe-bg);
-        color: var(--badge-swe-fg);
-      }
-      .badge-sec {
-        background: var(--badge-sec-bg);
-        color: var(--badge-sec-fg);
-      }
-      .badge-opt {
-        background: var(--track);
-        color: var(--muted);
-      }
+      .tab:hover { color: var(--ink); }
+      .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+      .bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: 0.55rem; font-size: 0.9rem; }
+      .bar-label { color: var(--ink-soft); }
+      .bar-count { font-weight: 600; font-variant-numeric: tabular-nums; }
+      .meter { height: 8px; background: var(--panel); border-radius: 999px; overflow: hidden; margin-top: 0.4rem; }
+      .fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
 
-      @media (max-width: 480px) {
-        body {
-          padding: 1.25rem 1rem;
-        }
-        .header h1 {
-          font-size: 18px;
-        }
-        .progress-card {
-          padding: 12px 14px;
-        }
-        .phase-meta {
-          margin-left: 0;
-          width: 100%;
-        }
+      .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; margin-bottom: 1.75rem; }
+      .segmented { display: inline-flex; background: var(--panel); border-radius: 8px; padding: 3px; }
+      .segmented button { border: 0; background: none; padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.875rem; color: var(--ink-soft); }
+      .segmented button[aria-pressed="true"] { background: var(--bg); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+      .toggle { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--ink-soft); cursor: pointer; }
+      .toggle input[type="checkbox"] { width: 1.1rem; height: 1.1rem; margin: 0; }
+
+      .ghost {
+        background: none;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        padding: 0.3rem 0.7rem;
+        font-size: 0.875rem;
+        color: var(--ink-soft);
+      }
+      .ghost:hover { border-color: var(--ink-soft); color: var(--ink); }
+
+      /* Sections */
+      .phase { margin-bottom: 2.5rem; }
+      .phase-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem 1rem; margin-bottom: 0.3rem; }
+      .phase-title { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+      h2 { font-family: var(--display); font-weight: 600; font-size: 1.45rem; letter-spacing: -0.01em; margin: 0; line-height: 1.2; }
+      h3 { font-family: var(--display); font-weight: 600; font-size: 1.12rem; letter-spacing: -0.01em; margin: 0; line-height: 1.25; }
+      .meta { color: var(--ink-soft); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+      .phase-intro { color: var(--ink-soft); margin: 0 0 0.6rem; max-width: 38rem; }
+      .tag { background: var(--signal-bg); color: var(--signal-ink); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.6rem; border-radius: 999px; font-family: var(--text); letter-spacing: 0; }
+
+      /* This-week counters */
+      .week { background: var(--panel); border-radius: 14px; padding: 1rem 1.25rem 0.6rem; margin-bottom: 2.5rem; }
+      .week .phase-head { margin-bottom: 0.25rem; }
+      .counter { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 0; border-top: 1px solid var(--rule); }
+      .week .phase-head + .counter { border-top: 0; }
+      .counter-name { font-weight: 600; }
+      .counter-goal { color: var(--ink-soft); font-size: 0.9rem; max-width: 26rem; }
+      .last { display: block; font-size: 0.85rem; }
+      .stepper { display: flex; align-items: center; gap: 0.6rem; flex: none; }
+      .step {
+        width: 2.5rem; height: 2.5rem;
+        border-radius: 50%;
+        border: 1.5px solid var(--ink-soft);
+        background: var(--bg);
+        font-size: 1.3rem; line-height: 1;
+        display: grid; place-items: center;
+      }
+      .step:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+      .step:disabled { opacity: 0.45; cursor: progress; }
+      .count { min-width: 2.2rem; text-align: center; font-family: var(--display); font-weight: 700; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+      .count.met { color: var(--accent); }
+
+      /* Accordions */
+      details { border-top: 1px solid var(--rule); }
+      details:last-of-type { border-bottom: 1px solid var(--rule); }
+      summary {
+        list-style: none;
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 0.95rem 0;
+        cursor: pointer;
+      }
+      summary::-webkit-details-marker { display: none; }
+      .sum-left { display: flex; align-items: center; gap: 0.75rem; }
+      .sum-title { display: flex; align-items: center; gap: 0.3rem 0.75rem; flex-wrap: wrap; }
+      .chev { width: 0.6rem; height: 0.6rem; border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: rotate(-45deg); transition: transform 0.15s ease; flex: none; }
+      details[open] .chev { transform: rotate(45deg); }
+      .sec-count { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 0.95rem; white-space: nowrap; }
+      .sec-count.done { color: var(--accent); font-weight: 600; }
+      .body { padding: 0 0 1.2rem 1.35rem; }
+      .why { margin: 0 0 0.8rem; color: var(--ink-soft); max-width: 38rem; }
+      .links { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin: 0 0 0.5rem; }
+      .links a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
+      .routine { margin: 0.7rem 0 0; padding-left: 0.8rem; border-left: 3px solid var(--accent); font-size: 0.95rem; max-width: 38rem; }
+      .routine strong { font-weight: 600; }
+
+      /* Plain grouped lists (Today, Weekly rounds) */
+      .group-label { font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.07em; margin: 1.1rem 0 0.1rem; }
+      .empty { color: var(--ink-soft); margin: 0.6rem 0 0; }
+
+      /* Checklist items */
+      ul.items { list-style: none; margin: 0; padding: 0; }
+      ul.items li { border-top: 1px dashed var(--rule); }
+      ul.items li:first-child { border-top: 0; }
+      label.item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.65rem 0; cursor: pointer; }
+      input[type="checkbox"] {
+        appearance: none; -webkit-appearance: none;
+        flex: none;
+        width: 1.35rem; height: 1.35rem;
+        margin: 0.12rem 0 0;
+        border: 2px solid var(--ink-soft);
+        border-radius: 5px;
+        background: var(--bg);
+        display: grid; place-items: center;
+        cursor: pointer;
+      }
+      input[type="checkbox"]:disabled { opacity: 0.45; cursor: progress; }
+      input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+      input[type="checkbox"]:checked::after {
+        content: "";
+        width: 0.32rem; height: 0.65rem;
+        border: solid var(--accent-ink);
+        border-width: 0 2.5px 2.5px 0;
+        transform: rotate(45deg) translate(-1px, -1px);
+      }
+      .item-text { display: block; min-width: 0; }
+      .item-label { display: block; font-weight: 500; }
+      .item-note { display: block; color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.1rem; max-width: 36rem; }
+      input:checked + .item-text .item-label { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--rule); }
+      .badge { display: inline-block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; padding: 0 0.4rem; border-radius: 4px; margin-left: 0.45rem; vertical-align: 0.1em; }
+      .badge-swe { background: var(--swe-bg); color: var(--swe-ink); }
+      .badge-sec { background: var(--sec-bg); color: var(--sec-ink); }
+
+      .extras { padding: 0 0 0.8rem 2.15rem; }
+      .extras .links { margin: 0 0 0.3rem; }
+      .chips-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0.2rem 0 0.45rem; font-size: 0.9rem; color: var(--ink-soft); }
+      .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+      .chips li { background: var(--panel); border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.9rem; }
+
+      footer { margin-top: 2rem; color: var(--ink-soft); font-size: 0.9rem; }
+      .panel > footer { margin-top: 0; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .fill, .chev { transition: none; }
+      }
+      @media (max-width: 30rem) {
+        .body { padding-left: 0; }
+        .extras { padding-left: 0; }
+        .counter { flex-wrap: wrap; }
+        .week { padding-inline: 1rem; }
       }
       @media print {
-        body {
-          background: #fff;
-        }
-        .cl-item:hover {
-          background: none;
-        }
-        .controls,
-        .sync-status {
-          display: none;
-        }
+        .bar, .controls, .sync, .step { display: none; }
+        details > .body { display: block; }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <h1>Job Search Checklist</h1>
+    <main>
+      <header class="intro">
+        <h1>Job search plan</h1>
         <p>
-          For entry-level software engineering and cybersecurity roles. Pick
-          your track; setup items stay checked, weekly items reset every Monday.
+          Prepare once, then work the search every day and week. For entry-level software
+          engineering and cybersecurity roles.
         </p>
+        <p class="sync" id="sync-status" aria-live="polite"></p>
+      </header>
+
+      <div class="bar">
+        <div class="tabs" role="tablist" aria-label="Plan">
+          <button class="tab" type="button" role="tab" id="tab-prepare" data-tab="prepare" aria-controls="panel-prepare" aria-selected="true">Prepare</button>
+          <button class="tab" type="button" role="tab" id="tab-search" data-tab="search" aria-controls="panel-search" aria-selected="false" tabindex="-1">Search</button>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" id="bar-label">Ready to apply</span>
+          <span class="bar-count" id="bar-count">0 of 0</span>
+        </div>
+        <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="bar-label" id="meter">
+          <div class="fill" id="fill"></div>
+        </div>
       </div>
 
       <div class="controls">
@@ -417,39 +297,69 @@
           <button type="button" data-track="swe">Software eng.</button>
           <button type="button" data-track="sec">Cybersecurity</button>
         </div>
-        <label class="toggle-done">
-          <input type="checkbox" id="hide-done" /> Hide completed
-        </label>
+        <label class="toggle"><input type="checkbox" id="hide-done" /> Hide completed</label>
       </div>
 
-      <div class="progress-card">
-        <span class="progress-label">Ready to apply</span>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar" id="ready-bar"></div>
-        </div>
-        <span class="progress-count" id="ready-count">0 / 0</span>
+      <section class="panel" id="panel-prepare" role="tabpanel" aria-labelledby="tab-prepare"></section>
 
-        <span class="progress-label">This week</span>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar weekly" id="week-bar"></div>
-        </div>
-        <span class="progress-count" id="week-count">0 / 0</span>
-      </div>
-      <div class="sync-status" id="sync-status"></div>
+      <section class="panel" id="panel-search" role="tabpanel" aria-labelledby="tab-search" hidden>
+        <section class="week" aria-labelledby="week-h">
+          <div class="phase-head">
+            <h2 id="week-h">This week</h2>
+            <span class="meta" id="week-meta"></span>
+          </div>
+          <div class="counter">
+            <div>
+              <div class="counter-name">Applications sent</div>
+              <div class="counter-goal">
+                Goal: 10–15, aimed at roles that fit. Tailor the resume version and log each one in the tracker.
+                <span class="last" id="last-apps"></span>
+              </div>
+            </div>
+            <div class="stepper">
+              <button class="step" type="button" data-counter="apps" data-delta="-1" aria-label="Remove one application" disabled>−</button>
+              <span class="count" id="count-apps" aria-live="polite">0</span>
+              <button class="step" type="button" data-counter="apps" data-delta="1" aria-label="Add one application" disabled>+</button>
+            </div>
+          </div>
+          <div class="counter">
+            <div>
+              <div class="counter-name">Outreach messages sent</div>
+              <div class="counter-goal">
+                Goal: 3–5, to alumni, past contacts and people at target companies. Be specific, and don't ask for a job in the first message.
+                <span class="last" id="last-outreach"></span>
+              </div>
+            </div>
+            <div class="stepper">
+              <button class="step" type="button" data-counter="outreach" data-delta="-1" aria-label="Remove one outreach message" disabled>−</button>
+              <span class="count" id="count-outreach" aria-live="polite">0</span>
+              <button class="step" type="button" data-counter="outreach" data-delta="1" aria-label="Add one outreach message" disabled>+</button>
+            </div>
+          </div>
+        </section>
 
-      <div id="phases"></div>
-    </div>
+        <div id="rounds"></div>
+
+        <section class="phase" aria-labelledby="where-h">
+          <div class="phase-head"><h2 id="where-h">Where to look</h2></div>
+          <p class="phase-intro">In order of payoff. First-pass tasks here stay checked; the recurring checks live in your daily and weekly rounds above.</p>
+          <div id="channels"></div>
+        </section>
+
+        <footer>
+          One referral usually does more than 30 cold applications, so keep warm contacts moving even on weeks when the boards are busy.
+        </footer>
+      </section>
+    </main>
 
     <script type="module">
       import { syncedState } from "../shared/persist.js";
 
-      // track: "all" | "swe" | "sec". kind: "setup" (counts toward
-      // Ready to apply), "optional" (one-time, not counted), "weekly" (resets
-      // each Monday, counts toward This week).
-      const PHASES = [
+      // ── Prepare tab ───────────────────────────────────────
+      // One-time items. kind "setup" counts toward Ready to apply;
+      // "optional" doesn't. track: "all" | "swe" | "sec".
+      const PREPARE = [
         {
-          tag: "Set up",
-          tagClass: "tag-setup",
           title: "Before you apply",
           kind: "setup",
           groups: [
@@ -470,33 +380,28 @@
                 },
                 {
                   id: "resume-reviewed-and-parse-tested",
-                  track: "all",
                   label: "Resume reviewed and parse-tested",
                   note: "Have a mentor, peer, or career center review it. Copy text out of the PDF into a plain-text editor — if it comes out garbled, so will the ATS.",
                 },
                 {
                   id: "cover-letter-template",
-                  track: "all",
                   label: "Cover letter template",
                   note: "Three short paragraphs: why this company, the one most relevant thing you've done, a brief close. Rewrite the first line every time.",
                 },
                 {
                   id: "set-up-a-permanent-professional-email",
-                  track: "all",
                   label: "Permanent professional email",
                   note: "firstname.lastname@… — not a school or work address that will expire. Use it everywhere below.",
                 },
                 {
                   id: "references-lined-up",
-                  track: "all",
                   label: "2–3 references lined up",
                   note: "Ask first. Keep their current title, email, phone, and how they know you in one doc.",
                 },
                 {
                   id: "elevator-pitch",
-                  track: "all",
                   label: "30-second pitch",
-                  note: "Who you are, what you've built, what you're looking for. Say it out loud until it sounds natural — it's also your networking intro.",
+                  note: "Who you are, what you've built, what you're looking for. Say it out loud until it sounds natural — it's also your outreach intro.",
                 },
               ],
             },
@@ -505,51 +410,33 @@
               items: [
                 {
                   id: "linkedin-headline",
-                  track: "all",
                   label: "Headline names the role you want",
                   note: "e.g. \"Software Engineer | Full-Stack (React, Python)\" or \"Security Analyst | SOC & Network Security | Security+\". Recruiters search these words.",
                 },
                 {
                   id: "linkedin-photo-url",
-                  track: "all",
                   label: "Photo, banner, and custom URL",
                   note: "Clear headshot; set linkedin.com/in/firstname-lastname and use that link on your resume.",
                 },
                 {
                   id: "write-and-publish-about-section",
-                  track: "all",
                   label: "About section written",
                   note: "3–5 sentences: what you do, what you've built, what you're looking for, how to reach you.",
                 },
                 {
                   id: "linkedin-experience-projects",
-                  track: "all",
                   label: "Experience and projects match your resume",
                   note: "Treat major projects like jobs — role, dates, the same bullets. Mismatches between resume and profile raise questions.",
                 },
                 {
                   id: "linkedin-skills-featured",
-                  track: "all",
                   label: "Skills and Featured sections filled in",
                   note: "Pin the 3 skills that appear most in your target postings. Feature your best project and your portfolio link.",
                 },
                 {
                   id: "turn-on-open-to-work",
-                  track: "all",
                   label: "Open to Work turned on",
                   note: "Add every title you'd accept, plus locations and remote. Use \"recruiters only\" if you're currently employed.",
-                },
-                {
-                  id: "job-alerts-swe",
-                  track: "swe",
-                  label: "SWE job alerts set up",
-                  note: "Junior / Associate / New Grad Software Engineer, Backend, Frontend, Full-Stack Developer — on LinkedIn plus one or two other boards.",
-                },
-                {
-                  id: "job-alerts-sec",
-                  track: "sec",
-                  label: "Security job alerts set up",
-                  note: "SOC Analyst, Security Analyst, Junior Penetration Tester, IT Security Specialist, GRC Analyst. Also check USAJobs and defense contractors if you can get clearance.",
                 },
               ],
             },
@@ -558,19 +445,16 @@
               items: [
                 {
                   id: "profile-readme-is-up-to-date",
-                  track: "all",
                   label: "GitHub profile README",
                   note: "Short bio, current focus, links to portfolio and LinkedIn.",
                 },
                 {
                   id: "pinned-repos-presentable",
-                  track: "all",
                   label: "4–6 best repos pinned and presentable",
                   note: "Each README says what it is, why it exists, how to run it, and has a screenshot or demo link. Best project first.",
                 },
                 {
                   id: "repos-scrubbed-for-secrets",
-                  track: "all",
                   label: "Public repos scrubbed for secrets",
                   note: "No API keys, .env files, or credentials — in current code or commit history. Run a scanner like gitleaks or trufflehog to check.",
                 },
@@ -588,15 +472,82 @@
                 },
                 {
                   id: "portfolio-site-is-live-and-updated",
-                  track: "all",
                   label: "Portfolio site live",
                   note: "Projects, resume PDF, and a visible contact method. Click every link and check it on your phone.",
                 },
                 {
                   id: "online-presence-audit",
-                  track: "all",
                   label: "Online presence audited",
                   note: "Search your name. Clean up or make private anything you wouldn't want a hiring manager to see.",
+                },
+              ],
+            },
+            {
+              label: "Job boards and alerts",
+              items: [
+                {
+                  id: "job-alerts-swe",
+                  track: "swe",
+                  label: "LinkedIn and Indeed alerts set up",
+                  note: "Filter to Entry level, Past week, Portland and Remote, then turn on a daily alert for each title below. Many junior roles don't say \"Software Engineer\" in the title.",
+                  links: [
+                    { text: "LinkedIn Jobs", href: "https://www.linkedin.com/jobs/" },
+                    { text: "Indeed", href: "https://www.indeed.com" },
+                  ],
+                  chips: [
+                    "Junior Software Engineer",
+                    "Associate Software Engineer",
+                    "New Grad Software Engineer",
+                    "Software Developer I",
+                    "Web Developer",
+                    "Front-End Developer",
+                    "Full-Stack Developer",
+                    "Application Developer",
+                    "Programmer Analyst",
+                    "QA Engineer",
+                    "Implementation Engineer",
+                    "Solutions Engineer",
+                    "Technical Support Engineer",
+                  ],
+                },
+                {
+                  id: "job-alerts-sec",
+                  track: "sec",
+                  label: "Security job alerts set up",
+                  note: "Same filters, a daily alert for each title below. Also check USAJobs and defense contractors if you can get clearance.",
+                  chips: [
+                    "SOC Analyst",
+                    "Security Analyst",
+                    "Junior Penetration Tester",
+                    "IT Security Specialist",
+                    "GRC Analyst",
+                  ],
+                },
+                {
+                  id: "handshake-set-up",
+                  label: "Handshake set up",
+                  note: "Confirm your login still works, then set preferences and alerts: entry level, Portland and remote. Employers there came looking for your school's grads.",
+                  links: [{ text: "Open Handshake", href: "https://joinhandshake.com" }],
+                },
+                {
+                  id: "oregon-jobs-account",
+                  label: "State of Oregon jobs account created",
+                  note: "Keep the work history in the profile current, and attach a resume and cover letter.",
+                  links: [{ text: "State of Oregon jobs", href: "https://www.oregon.gov/jobs" }],
+                },
+                {
+                  id: "wellfound-profile",
+                  label: "Wellfound profile with role and location filters",
+                  links: [{ text: "Open Wellfound", href: "https://wellfound.com" }],
+                },
+                {
+                  id: "newgrad-lists-bookmarked",
+                  label: "Two freshest new-grad lists bookmarked",
+                  note: "Search GitHub for these and bookmark the two most recently updated. They go stale fast.",
+                  links: [
+                    { text: "Search “New-Grad-2026”", href: "https://github.com/search?q=New-Grad-2026&type=repositories" },
+                    { text: "Search “New-Grad-2027”", href: "https://github.com/search?q=New-Grad-2027&type=repositories" },
+                  ],
                 },
               ],
             },
@@ -605,29 +556,24 @@
               items: [
                 {
                   id: "notion-tracker-set-up-with-all-properties",
-                  track: "all",
                   label: "Application tracker set up",
                   note: "Spreadsheet, Notion, Huntr, etc. Fields: Company, Role, Resume version, Date applied, Source, Status, Contact, Follow-up date, Notes.",
                 },
                 {
                   id: "board-view-configured-grouped-by-status",
-                  track: "all",
                   label: "Status pipeline defined",
                   note: "Saved → Applied → Screen → Interview → Offer / Rejected / No response. A board view grouped by status makes this easy to scan.",
                 },
                 {
                   id: "target-company-list",
-                  track: "all",
                   label: "Target company list (20–30)",
-                  note: "A mix of reach and realistic. Note anyone you know at each — referrals get far more responses than cold applications.",
+                  note: "A mix of reach and realistic, including the big local employers on the Search tab. Note anyone you know at each — referrals get far more responses than cold applications.",
                 },
               ],
             },
           ],
         },
         {
-          tag: "Prepare",
-          tagClass: "tag-prep",
           title: "Interview readiness",
           kind: "setup",
           intro: "Start these before the first interview is booked — there's often less than a week of notice.",
@@ -637,25 +583,21 @@
               items: [
                 {
                   id: "star-stories",
-                  track: "all",
                   label: "5–6 STAR stories written",
                   note: "Conflict, failure, leadership, tight deadline, learning something fast, a project you're proud of. Each under 2 minutes; most can be reused across questions.",
                 },
                 {
                   id: "tell-me-about-yourself",
-                  track: "all",
                   label: "\"Tell me about yourself\" and \"Why this role?\"",
                   note: "Rehearsed, 60–90 seconds each. Tailor the \"why\" to each company.",
                 },
                 {
                   id: "project-deep-dive",
-                  track: "all",
                   label: "Project deep-dive ready",
                   note: "Walk through your main project: architecture, tradeoffs, hardest bug, what you'd do differently.",
                 },
                 {
                   id: "questions-to-ask",
-                  track: "all",
                   label: "Questions to ask interviewers",
                   note: "3–5 per stage — about the team, onboarding, what success looks like at 90 days. Never \"no questions.\"",
                 },
@@ -730,13 +672,11 @@
               items: [
                 {
                   id: "interview-setup",
-                  track: "all",
                   label: "Video interview setup tested",
                   note: "Quiet space, stable internet, camera at eye level, Zoom / Teams / Meet all installed and tested.",
                 },
                 {
                   id: "salary-research",
-                  track: "all",
                   label: "Salary range researched",
                   note: "Levels.fyi, Glassdoor, and BLS data for your location and role. Know your number before the first recruiter call.",
                 },
@@ -745,11 +685,10 @@
           ],
         },
         {
-          tag: "As earned",
-          tagClass: "tag-cert",
           title: "Certifications",
+          tag: "Optional",
           kind: "optional",
-          intro: "Optional and not counted in Ready to apply. Weighted heavily in security hiring; projects usually matter more for SWE.",
+          intro: "Not counted in Ready to apply. Weighted heavily in security hiring; projects usually matter more for SWE.",
           groups: [
             {
               label: "Certifications",
@@ -775,12 +714,11 @@
                 {
                   id: "cloud-cert-swe",
                   track: "swe",
-                  label: "Cloud cert (optional)",
+                  label: "Cloud cert",
                   note: "e.g. AWS Cloud Practitioner or Developer Associate, if your target roles mention cloud.",
                 },
                 {
                   id: "certs-updated-everywhere",
-                  track: "all",
                   label: "Each new cert updated everywhere",
                   note: "Resume, LinkedIn Licenses section, portfolio. Add the credential ID or verify link; remove any \"in progress\" wording.",
                 },
@@ -788,42 +726,71 @@
             },
           ],
         },
+      ];
+
+      // ── Search tab ────────────────────────────────────────
+      // Rounds reset on their own: "daily" each day, "weekly" each Monday.
+      const ROUNDS = [
         {
-          tag: "Weekly",
-          tagClass: "tag-week",
-          title: "Keep the momentum",
+          title: "Today",
+          kind: "daily",
+          groups: [
+            {
+              items: [
+                {
+                  id: "daily-alerts",
+                  label: "New alerts checked, fresh postings applied to",
+                  note: "LinkedIn, Indeed and Handshake. Apply within 24–48 hours of a posting going live, while few people have applied.",
+                },
+                {
+                  id: "daily-coding-problem",
+                  track: "swe",
+                  label: "One coding problem",
+                  note: "Redo any problem you couldn't solve without hints a week later.",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          title: "Weekly rounds",
           kind: "weekly",
           groups: [
             {
-              label: "Applications",
+              label: "Find",
               items: [
                 {
-                  id: "weekly-applications",
-                  track: "all",
-                  label: "5–10 targeted applications",
-                  note: "Match the resume version to the role, mirror the posting's keywords, save the job description, log it in the tracker. Quality over volume.",
+                  id: "weekly-newgrad-lists",
+                  label: "New-grad lists scanned",
+                  note: "Every few days. Look for remote and Pacific Northwest roles, and apply to the freshest postings first.",
+                },
+                {
+                  id: "weekly-careers-pages",
+                  label: "Careers pages rechecked",
+                  note: "The big local employers and Oregon public-sector sites under Where to look. Not everything they post reaches the boards.",
                 },
                 {
                   id: "weekly-referral-asks",
-                  track: "all",
                   label: "Ask for a referral at a top target",
                   note: "Reach out to someone at the company before (or right after) applying.",
                 },
+              ],
+            },
+            {
+              label: "Follow through",
+              items: [
                 {
                   id: "weekly-follow-ups",
-                  track: "all",
                   label: "Follow-ups sent",
                   note: "Anything with no response after 1–2 weeks gets one short, polite check-in.",
                 },
                 {
                   id: "weekly-thank-yous",
-                  track: "all",
                   label: "Thank-you notes within 24 hours of each interview",
                   note: "Every person you spoke with; mention something specific from the conversation.",
                 },
                 {
                   id: "weekly-tracker-review",
-                  track: "all",
                   label: "Tracker reviewed",
                   note: "Update statuses, set follow-up dates, and look at which resume and source are getting responses.",
                 },
@@ -832,12 +799,6 @@
             {
               label: "Skills",
               items: [
-                {
-                  id: "weekly-coding-problems",
-                  track: "swe",
-                  label: "5–7 coding problems",
-                  note: "About one a day. Redo any problem you couldn't solve without hints a week later.",
-                },
                 {
                   id: "weekly-labs",
                   track: "sec",
@@ -852,30 +813,21 @@
                 },
                 {
                   id: "weekly-ship-something",
-                  track: "all",
                   label: "Ship something visible",
                   note: "A project commit, a writeup, or a blog post — keeps your GitHub and portfolio current.",
                 },
               ],
             },
             {
-              label: "Networking",
+              label: "Network",
               items: [
                 {
-                  id: "weekly-connections",
-                  track: "all",
-                  label: "2–3 personalized connection requests",
-                  note: "Alumni, engineers or analysts at target companies, recruiters. Mention something specific; don't ask for a job in the first message.",
-                },
-                {
                   id: "weekly-conversation",
-                  track: "all",
                   label: "One real conversation",
                   note: "A 15-minute informational chat, a reply thread, or catching up with a former classmate or coworker.",
                 },
                 {
                   id: "weekly-event",
-                  track: "all",
                   label: "Event found or attended",
                   note: "Aim for one a month: local meetups, OWASP / ISSA chapters, BSides, career fairs, virtual talks, community Discords.",
                 },
@@ -885,28 +837,123 @@
         },
       ];
 
+      // Where to look, in order of payoff. Items are first-pass tasks and stay checked.
+      const CHANNELS = [
+        {
+          id: "contacts",
+          title: "Warm contacts",
+          tag: "Highest payoff",
+          open: true,
+          why: "A referral gets your resume read by a person. Start here, and keep it going every week.",
+          items: [
+            { id: "contacts-inr-recommendation", label: "Ask your Institute for Natural Resources contact for a LinkedIn recommendation" },
+            { id: "contacts-inr-hiring", label: "Ask that same contact whether they know anyone who is hiring" },
+            { id: "contacts-capstone", label: "Email your capstone advisor and ask who they would introduce you to" },
+            { id: "contacts-professors", label: "Email 2–3 PSU professors you did well with" },
+            { id: "contacts-alumni", label: "Use LinkedIn's alumni search to find PSU grads at companies on your target list" },
+          ],
+          routine: "Every week: 3–5 short, specific outreach messages, counted above.",
+        },
+        {
+          id: "psu",
+          title: "PSU Career Services and Handshake",
+          open: true,
+          why: "Employers on Handshake came looking for graduates of your school, so the pool is friendlier than LinkedIn's.",
+          links: [{ text: "Open Handshake", href: "https://joinhandshake.com" }],
+          items: [
+            { id: "psu-counselor", label: "Book a meeting with a PSU career counselor" },
+            { id: "psu-local-employers", label: "Ask which local employers hire PSU grads every year" },
+          ],
+          routine: "Daily: check Handshake alerts with the others.",
+        },
+        {
+          id: "github",
+          title: "New-grad lists on GitHub",
+          why: "Community-maintained tables of genuinely entry-level roles. They update almost daily, so listings go stale fast.",
+          links: [
+            { text: "Search “New-Grad-2026”", href: "https://github.com/search?q=New-Grad-2026&type=repositories" },
+            { text: "Search “New-Grad-2027”", href: "https://github.com/search?q=New-Grad-2027&type=repositories" },
+          ],
+          routine: "Every few days: scan your two bookmarked lists for remote and Pacific Northwest roles, and apply to the freshest postings first.",
+        },
+        {
+          id: "oregon",
+          title: "Oregon public sector",
+          why: "Steady hiring, less fixated on certificates, and often remote or hybrid. Aim for Information Systems Specialist 3–5 (ISS 3–5). Many postings say to apply even if you don't meet every qualification.",
+          links: [{ text: "State of Oregon jobs", href: "https://www.oregon.gov/jobs" }],
+          items: [
+            { id: "oregon-iss-search", label: "Search Information Systems Specialist (ISS) 3, 4 and 5" },
+            { id: "oregon-portland-multnomah", label: "Check City of Portland and Multnomah County" },
+            { id: "oregon-metro-trimet-pps", label: "Check Metro, TriMet and Portland Public Schools" },
+            { id: "oregon-ohsu-psu", label: "Check OHSU and PSU's own IT department" },
+          ],
+          routine: "Weekly: recheck these with the other careers pages.",
+        },
+        {
+          id: "boards",
+          title: "LinkedIn and Indeed, used narrowly",
+          why: "Filter hard, set alerts, and apply while few people have applied. Many junior roles don't say “Software Engineer” in the title.",
+          links: [
+            { text: "LinkedIn Jobs", href: "https://www.linkedin.com/jobs/" },
+            { text: "Indeed", href: "https://www.indeed.com" },
+          ],
+          routine: "Daily: work through new alerts and apply within 24–48 hours. Filters and the title list are under Prepare → Job boards and alerts.",
+        },
+        {
+          id: "wellfound",
+          title: "Wellfound for startups",
+          why: "Built around startups and lean teams, and it tends to connect you directly with founders and hiring managers.",
+          links: [{ text: "Open Wellfound", href: "https://wellfound.com" }],
+          items: [
+            { id: "wellfound-apply-three", label: "Apply to three startups" },
+            { id: "wellfound-message-founder", label: "Message one founder or hiring manager directly" },
+          ],
+        },
+        {
+          id: "employers",
+          title: "Big local employers",
+          why: "Not everything they post reaches the boards, so check their career pages directly.",
+          items: [
+            ["nike", "Nike"],
+            ["intel", "Intel"],
+            ["daimler", "Daimler Truck North America"],
+            ["providence", "Providence"],
+            ["kaiser", "Kaiser Permanente"],
+            ["columbia", "Columbia Sportswear"],
+            ["tsmc", "TSMC Washington"],
+          ].map(([id, name]) => ({ id: `employer-${id}`, label: `Check the ${name} careers page` })),
+          routine: "Weekly: recheck these with the other careers pages.",
+        },
+      ];
+
+      const COUNTERS = { apps: 10, outreach: 3 }; // low end of each goal
       const BADGE = { swe: "SWE", sec: "SEC" };
 
-      // Monday of the current week, local time, as YYYY-MM-DD.
+      // ── Dates ─────────────────────────────────────────────
+      function isoDate(d) {
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+      // Monday of the week containing d, local time.
       function weekStart(d = new Date()) {
         const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
         return monday;
       }
-      function isoDate(d) {
-        const pad = (n) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      }
-      const WEEK = isoDate(weekStart());
-      const WEEK_LABEL = weekStart().toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-      });
+      const NOW = new Date();
+      const TODAY = isoDate(NOW);
+      const MONDAY = weekStart(NOW);
+      const WEEK = isoDate(MONDAY);
+      const PREV_WEEK = isoDate(new Date(MONDAY.getFullYear(), MONDAY.getMonth(), MONDAY.getDate() - 7));
 
-      function stateKey(item, kind) {
-        return kind === "weekly" ? `week:${WEEK}:${item.id}` : item.id;
+      function stateKey(id, kind) {
+        if (kind === "weekly") return `week:${WEEK}:${id}`;
+        if (kind === "daily") return `day:${TODAY}:${id}`;
+        if (kind === "plan") return `plan:${id}`;
+        return id; // setup / optional: unchanged from the original checklist
       }
 
+      // ── Rendering ─────────────────────────────────────────
       function el(tag, className, text) {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -914,129 +961,318 @@
         return node;
       }
 
-      // Render immediately so the page isn't blank while state loads.
-      const root = document.getElementById("phases");
-      for (const phase of PHASES) {
-        const section = el("section", "phase");
-        const header = el("div", "phase-header");
-        header.append(
-          el("span", `phase-tag ${phase.tagClass}`, phase.tag),
-          el("span", "phase-title", phase.title),
-        );
-        if (phase.kind === "weekly") {
-          header.append(el("span", "phase-meta", `Week of ${WEEK_LABEL} · resets Monday`));
+      function linksNode(links) {
+        const wrap = el("div", "links");
+        for (const l of links) {
+          const a = el("a", null, l.text);
+          a.href = l.href;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          wrap.append(a);
         }
-        section.append(header);
+        return wrap;
+      }
+
+      function chipsNode(chips) {
+        const wrap = el("div");
+        const head = el("div", "chips-head");
+        const copy = el("button", "ghost", "Copy titles");
+        copy.type = "button";
+        copy.addEventListener("click", () => {
+          const done = (msg) => {
+            copy.textContent = msg;
+            setTimeout(() => (copy.textContent = "Copy titles"), 2000);
+          };
+          try {
+            navigator.clipboard.writeText(chips.join("\n")).then(
+              () => done("Copied"),
+              () => done("Copy blocked: select the text"),
+            );
+          } catch {
+            done("Copy blocked: select the text");
+          }
+        });
+        head.append(el("span", null, "Titles to set alerts for"), copy);
+        const ul = el("ul", "chips");
+        for (const c of chips) ul.append(el("li", null, c));
+        wrap.append(head, ul);
+        return wrap;
+      }
+
+      function itemNode(item, kind) {
+        const track = item.track || "all";
+        const li = el("li");
+        li.dataset.track = track;
+
+        const label = el("label", "item");
+        const box = el("input");
+        box.type = "checkbox";
+        box.disabled = true; // enabled once saved state has loaded
+        box.dataset.key = stateKey(item.id, kind);
+        box.dataset.kind = kind;
+
+        const text = el("span", "item-text");
+        const name = el("span", "item-label", item.label);
+        if (BADGE[track]) name.append(el("span", `badge badge-${track}`, BADGE[track]));
+        text.append(name);
+        if (item.note) text.append(el("span", "item-note", item.note));
+        label.append(box, text);
+        li.append(label);
+
+        if (item.links || item.chips) {
+          const extras = el("div", "extras");
+          if (item.links) extras.append(linksNode(item.links));
+          if (item.chips) extras.append(chipsNode(item.chips));
+          li.append(extras);
+        }
+        return li;
+      }
+
+      function listNode(items, kind) {
+        const ul = el("ul", "items");
+        for (const item of items) ul.append(itemNode(item, kind));
+        return ul;
+      }
+
+      function summaryNode(title, tag) {
+        const summary = el("summary");
+        const left = el("span", "sum-left");
+        const chev = el("span", "chev");
+        chev.setAttribute("aria-hidden", "true");
+        const name = el("span", "sum-title");
+        name.append(el("h3", null, title));
+        if (tag) name.append(el("span", "tag", tag));
+        left.append(chev, name);
+        summary.append(left, el("span", "sec-count"));
+        return summary;
+      }
+
+      // Prepare: a heading per phase, an accordion per group.
+      const preparePanel = document.getElementById("panel-prepare");
+      for (const phase of PREPARE) {
+        const section = el("section", "phase");
+        section.dataset.phase = "";
+        const head = el("div", "phase-head");
+        const title = el("div", "phase-title");
+        title.append(el("h2", null, phase.title));
+        if (phase.tag) title.append(el("span", "tag", phase.tag));
+        head.append(title);
+        section.append(head);
         if (phase.intro) section.append(el("p", "phase-intro", phase.intro));
 
         for (const group of phase.groups) {
-          const g = el("div", "group");
-          g.append(el("div", "group-label", group.label));
-          for (const item of group.items) {
-            const btn = el("button", "cl-item" + (phase.kind === "weekly" ? " weekly" : ""));
-            btn.type = "button";
-            btn.setAttribute("role", "checkbox");
-            btn.setAttribute("aria-checked", "false");
-            btn.dataset.key = stateKey(item, phase.kind);
-            btn.dataset.track = item.track;
-            btn.dataset.kind = phase.kind;
-
-            const box = el("span", "checkbox");
-            box.append(el("span", "checkmark", "✓"));
-            const content = el("span", "item-content");
-            const label = el("span", "item-label", item.label);
-            label.style.display = "block";
-            if (BADGE[item.track]) {
-              label.append(el("span", `badge badge-${item.track}`, BADGE[item.track]));
-            }
-            content.append(label);
-            if (item.note) {
-              const note = el("span", "item-note", item.note);
-              note.style.display = "block";
-              content.append(note);
-            }
-            btn.append(box, content);
-            g.append(btn);
-          }
-          section.append(g);
+          const details = el("details");
+          details.open = true;
+          details.dataset.group = "";
+          details.dataset.countable = "";
+          const body = el("div", "body");
+          body.append(listNode(group.items, phase.kind));
+          details.append(summaryNode(group.label), body);
+          section.append(details);
         }
-        root.append(section);
+        preparePanel.append(section);
       }
 
-      const items = [...document.querySelectorAll(".cl-item")];
+      // Search: today + weekly rounds as plain grouped lists.
+      const roundsHost = document.getElementById("rounds");
+      const dayLabel = NOW.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      const weekLabel = MONDAY.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      document.getElementById("week-meta").textContent = `Week of ${weekLabel} · resets Monday`;
+
+      for (const round of ROUNDS) {
+        const section = el("section", "phase");
+        section.dataset.countable = "";
+        const head = el("div", "phase-head");
+        head.append(el("h2", null, round.title));
+        const meta = el("span", "meta");
+        meta.append(
+          el("span", null, round.kind === "daily" ? `${dayLabel} · ` : "Resets Monday · "),
+          el("span", "sec-count"),
+        );
+        head.append(meta);
+        section.append(head);
+        for (const group of round.groups) {
+          const wrap = el("div");
+          wrap.dataset.group = "";
+          if (group.label) wrap.append(el("div", "group-label", group.label));
+          wrap.append(listNode(group.items, round.kind));
+          section.append(wrap);
+        }
+        const empty = el("p", "empty", round.kind === "daily" ? "All done for today." : "All done for this week.");
+        empty.hidden = true;
+        section.append(empty);
+        roundsHost.append(section);
+      }
+
+      // Search: where to look.
+      const channelsHost = document.getElementById("channels");
+      for (const ch of CHANNELS) {
+        const details = el("details");
+        details.open = !!ch.open;
+        details.dataset.channel = ch.id;
+        if (ch.items) details.dataset.countable = "";
+        const body = el("div", "body");
+        body.append(el("p", "why", ch.why));
+        if (ch.links) body.append(linksNode(ch.links));
+        if (ch.items) body.append(listNode(ch.items, "plan"));
+        if (ch.routine) body.append(el("p", "routine", ch.routine));
+        details.append(summaryNode(ch.title, ch.tag), body);
+        channelsHost.append(details);
+      }
+
+      // ── Behavior ──────────────────────────────────────────
+      const boxes = [...document.querySelectorAll("main ul.items input[type=checkbox]")];
       const trackButtons = [...document.querySelectorAll("#track-picker button")];
       const hideDoneInput = document.getElementById("hide-done");
+      const tabs = [...document.querySelectorAll("[role=tab]")];
       let track = "all";
+      let tab = "prepare";
 
-      function isChecked(btn) {
-        return btn.getAttribute("aria-checked") === "true";
-      }
+      const onTrack = (li) => track === "all" || li.dataset.track === "all" || li.dataset.track === track;
 
       function applyVisibility() {
         const hideDone = hideDoneInput.checked;
-        for (const btn of items) {
-          const onTrack = track === "all" || btn.dataset.track === "all" || btn.dataset.track === track;
-          btn.hidden = !onTrack || (hideDone && isChecked(btn));
-          btn.querySelector(".badge")?.toggleAttribute("hidden", track !== "all");
+        for (const box of boxes) {
+          const li = box.closest("li");
+          const on = onTrack(li);
+          li.dataset.on = on ? "1" : "";
+          li.hidden = !on || (hideDone && box.checked);
+          li.querySelector(".badge")?.toggleAttribute("hidden", track !== "all");
         }
         // Hide groups and phases with nothing left to show.
-        for (const g of document.querySelectorAll(".group")) {
-          g.hidden = !g.querySelector(".cl-item:not([hidden])");
+        for (const g of document.querySelectorAll("[data-group]")) {
+          g.hidden = !g.querySelector("li:not([hidden])");
         }
-        for (const p of document.querySelectorAll(".phase")) {
-          p.hidden = !p.querySelector(".cl-item:not([hidden])");
+        for (const p of document.querySelectorAll("[data-phase]")) {
+          p.hidden = !p.querySelector("[data-group]:not([hidden])");
+        }
+        // Channels keep their context; only the finished list disappears.
+        for (const ul of document.querySelectorAll("[data-channel] ul.items")) {
+          ul.hidden = !ul.querySelector("li:not([hidden])");
         }
         trackButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.track === track)));
       }
 
-      function setBar(barId, countId, list) {
-        const done = list.filter(isChecked).length;
-        const pct = list.length ? Math.round((done / list.length) * 100) : 0;
-        document.getElementById(barId).style.width = pct + "%";
-        document.getElementById(countId).textContent = `${done} / ${list.length}`;
+      function tally(scope) {
+        const list = [...scope.querySelectorAll("li[data-on='1'] input")];
+        return { done: list.filter((b) => b.checked).length, total: list.length };
       }
 
-      function updateProgress() {
-        const onTrack = items.filter(
-          (b) => track === "all" || b.dataset.track === "all" || b.dataset.track === track,
-        );
-        setBar("ready-bar", "ready-count", onTrack.filter((b) => b.dataset.kind === "setup"));
-        setBar("week-bar", "week-count", onTrack.filter((b) => b.dataset.kind === "weekly"));
+      function updateCounts() {
+        for (const scope of document.querySelectorAll("[data-countable]")) {
+          const { done, total } = tally(scope);
+          const count = scope.querySelector(".sec-count");
+          count.textContent = total ? `${done} of ${total}` : "";
+          count.classList.toggle("done", total > 0 && done === total);
+          const empty = scope.querySelector(":scope > .empty");
+          if (empty) empty.hidden = !(total > 0 && done === total && hideDoneInput.checked);
+        }
+
+        const kind = tab === "prepare" ? "setup" : "weekly";
+        const list = boxes.filter((b) => b.dataset.kind === kind && b.closest("li").dataset.on === "1");
+        const done = list.filter((b) => b.checked).length;
+        const pct = list.length ? Math.round((done / list.length) * 100) : 0;
+        document.getElementById("bar-label").textContent = tab === "prepare" ? "Ready to apply" : "Weekly rounds";
+        document.getElementById("bar-count").textContent = `${done} of ${list.length}`;
+        document.getElementById("fill").style.width = pct + "%";
+        document.getElementById("meter").setAttribute("aria-valuenow", String(pct));
       }
 
       function refresh() {
         applyVisibility();
-        updateProgress();
+        updateCounts();
       }
-      refresh();
 
-      const state = await syncedState("job-search-checklist");
-      const statusEl = document.getElementById("sync-status");
+      // Tabs: #prepare / #search in the URL, last one remembered per browser.
+      function showTab(name) {
+        tab = name === "search" ? "search" : "prepare";
+        for (const t of tabs) {
+          const selected = t.dataset.tab === tab;
+          t.setAttribute("aria-selected", String(selected));
+          t.tabIndex = selected ? 0 : -1;
+          document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
+        }
+        try {
+          localStorage.setItem("jobSearchPlan:tab", tab);
+        } catch {
+          // storage unavailable — the tab just won't be remembered
+        }
+        updateCounts();
+      }
 
-      const STATUS_TEXT = {
-        synced: "synced",
-        "saved-locally": "saved locally — will sync when reachable",
-        offline: "offline — changes saved locally",
-      };
+      function selectTab(name, focus) {
+        showTab(name);
+        history.replaceState(null, "", "#" + tab);
+        if (focus) document.getElementById("tab-" + tab).focus();
+      }
 
-      state.onStatus((status) => {
-        statusEl.textContent = STATUS_TEXT[status] || "";
-        statusEl.className = "sync-status sync-" + status;
+      tabs.forEach((t, i) => {
+        t.addEventListener("click", () => selectTab(t.dataset.tab));
+        t.addEventListener("keydown", (e) => {
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+          e.preventDefault();
+          const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+          selectTab(next.dataset.tab, true);
+        });
+      });
+      window.addEventListener("hashchange", () => {
+        showTab(location.hash.slice(1));
+        window.scrollTo({ top: 0 });
       });
 
-      for (const btn of items) {
-        btn.setAttribute("aria-checked", String(!!state.get(btn.dataset.key)));
-        btn.addEventListener("click", () => {
-          const checked = !isChecked(btn);
-          btn.setAttribute("aria-checked", String(checked));
-          state.set(btn.dataset.key, checked);
+      let savedTab = null;
+      try {
+        savedTab = localStorage.getItem("jobSearchPlan:tab");
+      } catch {
+        // ignore
+      }
+      showTab(location.hash.slice(1) || savedTab || "prepare");
+      refresh();
+
+      // ── Saved state ───────────────────────────────────────
+      const state = await syncedState("job-search-checklist");
+      const statusEl = document.getElementById("sync-status");
+      const STATUS_TEXT = {
+        synced: "Synced",
+        "saved-locally": "Saved locally — will sync when reachable",
+        offline: "Offline — changes saved locally",
+      };
+      state.onStatus((status) => {
+        statusEl.textContent = STATUS_TEXT[status] || "";
+        statusEl.className = "sync " + status;
+      });
+
+      for (const box of boxes) {
+        box.checked = !!state.get(box.dataset.key);
+        box.disabled = false;
+        box.addEventListener("change", () => {
+          state.set(box.dataset.key, box.checked);
           refresh();
         });
       }
 
+      function renderCounters() {
+        for (const [name, goal] of Object.entries(COUNTERS)) {
+          const n = state.get(`week:${WEEK}:count:${name}`) || 0;
+          const count = document.getElementById("count-" + name);
+          count.textContent = n;
+          count.classList.toggle("met", n >= goal);
+          const prev = state.get(`week:${PREV_WEEK}:count:${name}`);
+          document.getElementById("last-" + name).textContent = prev != null ? `Last week: ${prev}` : "";
+        }
+      }
+      for (const btn of document.querySelectorAll(".step")) {
+        btn.disabled = false;
+        btn.addEventListener("click", () => {
+          const key = `week:${WEEK}:count:${btn.dataset.counter}`;
+          state.set(key, Math.max(0, (state.get(key) || 0) + Number(btn.dataset.delta)));
+          renderCounters();
+        });
+      }
+      renderCounters();
+
       track = ["all", "swe", "sec"].includes(state.get("track")) ? state.get("track") : "all";
       hideDoneInput.checked = !!state.get("hideDone");
-
       trackButtons.forEach((b) =>
         b.addEventListener("click", () => {
           track = b.dataset.track;
@@ -1048,8 +1284,13 @@
         state.set("hideDone", hideDoneInput.checked);
         refresh();
       });
-
       refresh();
+
+      // Finished Prepare groups start collapsed; open the rest.
+      for (const details of preparePanel.querySelectorAll("details")) {
+        const { done, total } = tally(details);
+        details.open = !(total > 0 && done === total);
+      }
     </script>
   </body>
 </html>
