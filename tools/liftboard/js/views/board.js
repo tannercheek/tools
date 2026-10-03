@@ -6,7 +6,7 @@
 import { h, fill } from '../dom.js';
 import { plural } from '../format.js';
 import { badge, filterLifts, sortLifts } from '../derive.js';
-import { icon } from '../icons.js';
+import { icon, logoMark } from '../icons.js';
 import { openAddLift } from './add-lift.js';
 import { openLogSheet } from './log-sheet.js';
 import { liftCard } from './card.js';
@@ -89,7 +89,7 @@ export function renderBoard(root, store) {
   const header = h('header', { class: 'board-header' },
     h('div', { class: 'board-header-row' },
       h('div', { class: 'brand' },
-        h('span', { class: 'logo-mark', 'aria-hidden': 'true' }),
+        h('span', { class: 'logo-mark', html: logoMark() }),
         h('h1', { class: 't-wordmark' }, 'LiftBoard'),
         sync),
       h('div', { class: 'header-actions' },

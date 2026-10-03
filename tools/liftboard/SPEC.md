@@ -477,15 +477,15 @@ Add `<meta name="theme-color">` tags for light (`#F5F1E6`) and dark (`#121212`),
 
 ### Fonts
 
-| Slot | CSS variable | Placeholder family | Weights |
+| Slot | CSS variable | Family | Weights |
 | --- | --- | --- | --- |
-| display | `--font-display` | Anton | 400 (its only weight) |
-| ui | `--font-ui` | Archivo | 500, 700, 800 |
-| mono | `--font-mono` | Space Mono | 400, 700 |
+| display | `--font-display` | Gaegu (final) | 700 (its only self-hosted weight) |
+| ui | `--font-ui` | Archivo (placeholder) | 500, 700, 800 |
+| mono | `--font-mono` | Space Mono (placeholder) | 400, 700 |
 
-These are placeholders; final fonts will be chosen later. **Self-host them**: download the `.woff2` files once during setup with `npm pack @fontsource/<family>` into a scratch folder (nothing is installed, and no `package.json` is added), then copy the `latin` and `latin-ext` subsets of each weight into `fonts/`, with each family's license beside them as `Anton-OFL.txt`, `Archivo-OFL.txt` and `SpaceMono-OFL.txt`. Declare them with `@font-face`, `unicode-range` per subset, and `font-display: swap`. **Never link to `fonts.googleapis.com` at runtime**: that's a third-party request, and LiftBoard makes none.
+ui and mono are placeholders; final fonts for those will be chosen later. **Self-host them**: download the `.woff2` files once during setup with `npm pack @fontsource/<family>` into a scratch folder (nothing is installed, and no `package.json` is added), then copy the `latin` and `latin-ext` subsets of each weight into `fonts/`, with each family's license beside them as `Gaegu-OFL.txt`, `Archivo-OFL.txt` and `SpaceMono-OFL.txt`. Declare them with `@font-face`, `unicode-range` per subset, and `font-display: swap`. **Never link to `fonts.googleapis.com` at runtime**: that's a third-party request, and LiftBoard makes none. (Gaegu is an exception: its fontsource package ships only a `latin` subset, no `latin-ext` — only `latin` is self-hosted for it.)
 
-Give every slot a fallback stack: `'Anton', Impact, 'Arial Narrow', sans-serif`; `'Archivo', system-ui, sans-serif`; `'Space Mono', ui-monospace, Menlo, monospace`. Swapping a family later means replacing the files and one `@font-face` block.
+Give every slot a fallback stack: `'Gaegu', cursive`; `'Archivo', system-ui, sans-serif`; `'Space Mono', ui-monospace, Menlo, monospace`. Swapping a family later means replacing the files and one `@font-face` block.
 
 ### Type scale
 
@@ -493,7 +493,7 @@ Sizes are multiples of `--base: 1.0625rem` (17px at default browser size). Using
 
 | Class | Font | Weight | Size × base | Color | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `.t-wordmark` | display | 400 | 1.75 | accent | letter-spacing 0.02em, line-height 1 |
+| `.t-wordmark` | display | 700 | 1.75 | accent | letter-spacing 0.02em, line-height 1 |
 | `.t-subtitle` | ui | 500 | 0.75 | tertiary | |
 | `.t-lift-name` | ui | 700 | 0.875 | primary | up to 2 lines |
 | `.t-hero` | mono | 700 | up to 1.375 | accent | letter-spacing −0.02em, one line, never wraps, never cut off; shrinks to fit (below) |
@@ -525,7 +525,7 @@ Numbers that update in place use `font-variant-numeric: tabular-nums`, so cards 
 
 ### Components
 
-- **Lift card** — 16px radius, a 3px `--accent` border, no fill, no shadow, 16px padding. Gaps: icon row → name 8px, name → hero 4px, hero → e1RM 4px, e1RM → date 2px. The icon is 20px, in `--text-primary`; the emoji is right-aligned. The trend arrow is an icon the size of the e1RM text, in `--accent`, 4px after the number, and the `· PR 281` run that follows is `--text-tertiary`.
+- **Lift card** — 16px radius, a 3px `--accent` border, no fill, no shadow, 16px padding. Gaps: icon row → name 8px, name → hero 4px, hero → e1RM 4px, e1RM → date 2px. The icon is 24px, in `--accent`; the emoji is right-aligned. The trend arrow is an icon the size of the e1RM text, in `--accent`, 4px after the number, and the `· PR 281` run that follows is `--text-tertiary`.
 - **Header buttons** — 44 × 44px, a 3px `--border-control` border, 12px radius, 22px icons.
 - **Filter chips** — a full pill, 36px tall with a 44px hit area, 16px horizontal padding, a 2px border. Selected: fill and border `--accent`, label `--on-accent`. Unselected: no fill, border `--border-control`, label `--text-primary`.
 - **Log-sheet tag chips** — a full pill, 4px × 12px padding, a 1.5px `--text-primary` border.
@@ -816,7 +816,7 @@ From `tools/liftboard/`, discard the uncommitted changes (`git restore .` for ed
 | Near-equal scores? | Within 0.01 counts as a tie; unchanged log rows keep their original kg; "ties the PR" is judged by the rounded figure on screen | Unit conversion and rounding must never fake a ↗ or 🔥 |
 | Charts? | Hand-drawn SVG | One chart type doesn't justify a library |
 | Icons? | Lucide, copied in as inline SVG | No runtime requests, easy to replace with hand-drawn art |
-| Fonts? | Self-hosted placeholders (Anton, Archivo, Space Mono) | No third-party requests; swapping is one file |
+| Fonts? | Self-hosted: Gaegu (display, final), Archivo and Space Mono (ui/mono, placeholders) | No third-party requests; swapping is one file |
 | Long-press menus? | None; edit through the log sheet and Settings | Long-press is unreliable in mobile browsers |
 | Reordering? | ▲/▼ buttons | Drag-and-drop on touch needs a library or a lot of code |
 | Accents? | Cobalt, Brick, Ink | Same set as the iOS app |
