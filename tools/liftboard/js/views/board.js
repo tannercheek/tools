@@ -94,13 +94,13 @@ export function renderBoard(root, store) {
         sync),
       h('div', { class: 'header-actions' },
         sortControl(store),
-        h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Add lift', onclick: add, html: icon('plus') }))),
+        h('button', { type: 'button', class: 'btn-icon btn-icon-primary', 'aria-label': 'Add lift', onclick: add, html: icon('plus') }))),
     h('p', { class: 't-subtitle' }, plural(all.length, 'lift') + (flames ? ` · ${flames} 🔥` : '')));
 
   const body = all.length === 0
     ? h('div', { class: 'empty' },
         h('p', { class: 't-row-label' }, 'No lifts yet'),
-        h('button', { type: 'button', class: 'btn-primary t-button', onclick: add }, 'Add your first lift'))
+        h('button', { type: 'button', class: 'btn-secondary t-button', onclick: add }, 'Add your first lift'))
     : lifts.length === 0
     ? h('div', { class: 'empty' }, h('p', { class: 't-row-label' }, 'No lifts match these tags'))
     : h('ul', { class: 'card-grid' }, lifts.map(lift =>

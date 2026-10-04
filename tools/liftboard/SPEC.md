@@ -336,7 +336,7 @@ The app is one HTML page with three tabs — **Board**, **Stats**, **Settings** 
 ### App shell
 
 - **Loading:** a plain centered *Loading…* until the store is ready, or the *couldn't connect* message if `persist.js` fails to import (see Persistence).
-- A fixed bottom **tab bar** with three tabs, each an icon above a label. The active tab is the accent color. It respects the bottom safe area.
+- A fixed bottom **tab bar** with three tabs, each an icon above a label. It floats above the page; the active tab is marked with an accent dot. It respects the bottom safe area.
 - The page scrolls; the tab bar doesn't.
 - **Sheets** are `<dialog>` elements opened with `showModal()`. On phones they slide up from the bottom, full width, rounded top corners, at most 92% of the viewport height (`dvh`), scrolling inside. On desktop they're centered, 520px wide. Escape and a backdrop tap close them, subject to the discard rule where it applies.
 - **Confirmations and text prompts** use one small reusable dialog module — `confirmDialog(message, actionLabel, {destructive})` and `promptDialog(title, initialValue)`, both returning Promises. Never use the browser's native `confirm()`, `alert()`, or `prompt()`.
@@ -344,7 +344,7 @@ The app is one HTML page with three tabs — **Board**, **Stats**, **Settings** 
 ### 1. Board
 
 1. **Header**, scrolling with the page:
-   - Left: a small rounded accent square (the logo mark), then the wordmark **LiftBoard**, then the sync dot (see Persistence → Sync status).
+   - Left: the logo mark (a placeholder for now), then the wordmark **LiftBoard**, then the sync dot (see Persistence → Sync status).
    - Right: two square bordered icon buttons. **Sort** is a native `<select>` made invisible and laid over the button, so phones show their own picker; its options are *Custom order*, *Recently logged*, *Name*, and *Best e1RM*. In every sort, never-logged lifts go last. *Best e1RM* ranks a bodyweight lift by its added-load record, and a bodyweight lift with only plain sessions goes after the lifts that have an e1RM. **Add** (`+`) opens the Add Lift sheet.
    - Below: a subtitle, `6 lifts`, plus ` · 2 🔥` when any lift has the flame.
 2. **Filter chips**: a horizontal scrolling row, with *All* first and selected by default. Tapping a tag toggles it; several selected tags mean *lifts having any of them*; tapping *All* clears the selection. The row is always shown.
@@ -373,7 +373,7 @@ Top to bottom:
 4. **Sets header** — `SETS · 3` on the left (a live count), and `Last: Sep 14` on the right: the date of the latest remaining session (nothing for a first session). After that session is deleted, the prefilled `lastSets` can come from a session that's gone; that's accepted.
 5. **Column labels** — `SET`, `WEIGHT (LB)` (or `KG`), `REPS`. On a bodyweight lift the middle label reads `ADDED (LB)`.
 6. **Set rows** — the set number, a weight field, a reps field, and a remove button.
-7. **Add set** — full width, soft accent fill. Appends a copy of the last row.
+7. **Add set** — full width, secondary button. Appends a copy of the last row.
 8. **Log Session** — full width, accent fill.
 
 **Prefill.** Rows start as a copy of `lastSets`, converted to the display unit and rounded to one decimal place, so 225 lb reappears as 225. A lift's first session starts with one empty row.
@@ -384,7 +384,7 @@ Top to bottom:
 
 - On a bodyweight lift an empty weight means 0. On every other lift, weight must be greater than 0. A negative or unparseable weight is always invalid, and a comma is accepted as a decimal point.
 - Reps must be a whole number from 1 to 100.
-- Log Session is disabled while any row is invalid. Invalid fields get a 2px `--text-primary` outline, not red text.
+- Log Session is disabled while any row is invalid. Invalid fields get a 1.5px `--danger` border, not red text.
 - The remove button is disabled when only one row is left.
 
 **Logging.** Log Session converts each row to kg, calls `store.logSession(liftId, sets)`, and `store.logSession` rounds each weight to 2 decimals. **A row left exactly as prefilled keeps its original `weightKg` from `lastSets`** instead of being converted back from the rounded display value, so repeating last session never drifts the stored weight. Then the sheet closes and plays a short, subtle pop on the card (respecting `prefers-reduced-motion`). The board re-renders from the store.
@@ -441,106 +441,100 @@ Settings → Lifts and Settings → Tags are one level deep, with a back button.
 
 ## Visual design
 
-The direction is **Varsity Concrete**: a warm cream page, cards drawn as thick accent-colored outlines with no fill, a condensed poster wordmark, and every number in a monospace face. The Board is bold; everything else stays quiet.
+LiftBoard follows the dashboard's design system, **"Quiet dark, loud numbers"**: `design/DESIGN.md` (rules and component recipes), `design/tokens.css` (every value), `design/reference/` (markup patterns and images). Read DESIGN.md before any visual change. It controls appearance only; this spec still controls structure, features, content and behavior. This section records only what's specific to LiftBoard.
 
 ### The one rule
 
-Every color, font, and size comes from CSS custom properties in `tokens.css`. **No other file contains a hex color, a font family name, or a raw font size.** That's what makes swapping a font or an accent a one-line change. Spacing, radii and border widths are layout, not tokens: they're written as plain values in `style.css`.
+Every color, radius, spacing step, font and font size is a token in `design/tokens.css`. **No other file contains a hex color, a font family name, a raw font size or a raw radius.** If something is missing, add a token first. The one exception is `<meta name="theme-color">` in `index.html`, which can't read a CSS variable; it matches `--ink`.
 
-### Tokens
+- `design/tokens.css` — the values, plus the base page styles. It imports `design/fonts.css`.
+- `type.css` — LiftBoard's text styles (`.t-*` classes) and accent themes, built only from tokens.
+- `style.css` — layout and components, built only from tokens. Plain px values there are component dimensions from DESIGN.md (icon boxes, border widths).
 
-```css
-:root {
-  --bg: #F5F1E6;             --surface-raised: #FFFFFF;   --surface-field: #F1F1F1;
-  --text-primary: #12110F;   --text-secondary: #4B4945;   --text-tertiary: #615F5A;
-  --border-control: #12110F; --divider: #DEDEDD;          --chart-grid: #D5D2C8;
-  --accent: #2255FF;         --on-accent: #FFFFFF;        --accent-soft: #E0E7FF;   /* Cobalt */
-}
-:root[data-accent="brick"] { --accent: #C23A0A; --accent-soft: #F6E3DD; }
-:root[data-accent="ink"]   { --accent: #12110F; --accent-soft: #E6E4DE; }
+**Dark only.** There is no light theme. `color-scheme: dark`.
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121212;             --surface-raised: #1D1D1B;   --surface-field: #2E2E2B;
-    --text-primary: #F5F1E6;   --text-secondary: #BCB9B1;   --text-tertiary: #A6A39C;
-    --border-control: #F5F1E6; --divider: #403F3B;          --chart-grid: #363634;
-    --accent: #6488FF;         --on-accent: #121212;        --accent-soft: #2A3044;
-  }
-  :root[data-accent="brick"] { --accent: #D47554; --accent-soft: #3E2D25; }
-  :root[data-accent="ink"]   { --accent: #F5F1E6; --accent-soft: #2E2E2B; }
-}
-```
+### Accent
 
-The accent is applied by setting `data-accent` on `<html>` — once at startup, after the saved settings load and before the app is revealed (only the uncolored *Loading…* shows before that), so there's no flash of the wrong color; and again whenever the setting changes. **Ink** is the neutral option: black in light mode, near-white in dark, so the whole board goes monochrome and only ❄️ and 🔥 keep any color. All text/background pairs above meet WCAG AA. Never fake secondary or tertiary text with opacity.
+Settings → Accent keeps its three choices, each one of DESIGN.md's tested accents. `data-accent` on `<html>` picks it, applied once at startup (after saved settings load, before the app is revealed) and again on every change:
 
-Add `<meta name="theme-color">` tags for light (`#F5F1E6`) and dark (`#121212`), so the browser chrome matches the page.
+| Setting | Token | Color |
+| --- | --- | --- |
+| Cobalt (default) | `--accent-blue` | blue |
+| Brick | `--accent-orange` | orange |
+| Ink | `--accent-light` | off-white |
+
+`--on-accent` (ink) works on all three. The accent marks only: the primary action on each screen (Board's Add button, Log Session, Save / Add Lift, Add Lift's *Create custom lift* tile), the selected filter or tag chip, the active tab's dot, selected tiles and switches, the trend arrow ↗, the chart's latest point and callout, and the focus ring.
 
 ### Fonts
 
-| Slot | CSS variable | Family | Weights |
+Self-hosted from `@fontsource` (OFL; licenses in `fonts/Geist-OFL.txt` and `fonts/GeistMono-OFL.txt`), declared in `design/fonts.css`. **Never link to `fonts.googleapis.com`**: LiftBoard makes no third-party requests.
+
+| Slot | Token | Family | Weights |
 | --- | --- | --- | --- |
-| display | `--font-display` | Gaegu (final) | 700 (its only self-hosted weight) |
-| ui | `--font-ui` | Archivo (placeholder) | 500, 700, 800 |
-| mono | `--font-mono` | Space Mono (placeholder) | 400, 700 |
+| UI | `--font-sans` | Geist (latin only; fontsource ships no latin-ext) | 400, 500, 600, 700 |
+| Numbers | `--font-mono` | Geist Mono (latin + latin-ext) | 400, 500, 600 |
+| Wordmark | `--font-brand` | not chosen yet; falls back to Geist | — |
 
-ui and mono are placeholders; final fonts for those will be chosen later. **Self-host them**: download the `.woff2` files once during setup with `npm pack @fontsource/<family>` into a scratch folder (nothing is installed, and no `package.json` is added), then copy the `latin` and `latin-ext` subsets of each weight into `fonts/`, with each family's license beside them as `Gaegu-OFL.txt`, `Archivo-OFL.txt` and `SpaceMono-OFL.txt`. Declare them with `@font-face`, `unicode-range` per subset, and `font-display: swap`. **Never link to `fonts.googleapis.com` at runtime**: that's a third-party request, and LiftBoard makes none. (Gaegu is an exception: its fontsource package ships only a `latin` subset, no `latin-ext` — only `latin` is self-hosted for it.)
-
-Give every slot a fallback stack: `'Gaegu', cursive`; `'Archivo', system-ui, sans-serif`; `'Space Mono', ui-monospace, Menlo, monospace`. Swapping a family later means replacing the files and one `@font-face` block.
+Swapping a family: replace its files in `fonts/`, edit its block in `design/fonts.css`, and change the matching `--font-*` token. `--mono-advance` (the mono face's character width in em) changes with the mono font.
 
 ### Type scale
 
-Sizes are multiples of `--base: 1.0625rem` (17px at default browser size). Using `rem` means they scale with the person's browser text-size setting. Define each style as a class in `tokens.css`:
+Sizes are DESIGN.md's tokens (Title 28, Heading 19, Body 16, Small 14, Caption 13, Label 12, stat 38). Every number is in `--font-mono`. Every input's font size is at least 16px.
 
-| Class | Font | Weight | Size × base | Color | Notes |
+| Class | Font | Weight | Size | Color | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `.t-wordmark` | display | 700 | 1.75 | accent | letter-spacing 0.02em, line-height 1 |
-| `.t-subtitle` | ui | 500 | 0.75 | tertiary | |
-| `.t-lift-name` | ui | 700 | 0.875 | primary | up to 2 lines |
-| `.t-hero` | mono | 700 | up to 1.375 | accent | letter-spacing −0.02em, one line, never wraps, never cut off; shrinks to fit (below) |
-| `.t-e1rm` | mono | 400 | 0.75 | secondary | |
-| `.t-date` | ui | 500 | 0.7 | tertiary | tabular numerals |
-| `.t-chip` | ui | 700 | 0.75 | per chip state | |
-| `.t-chip-small` | ui | 700 | 0.7 | primary | log-sheet tags |
-| `.t-sheet-title` | ui | 800 | 1.3 | primary | |
-| `.t-row-label` | ui | 500 | 1.0 | primary | |
-| `.t-row-value` | mono | 700 | 1.0 | primary | |
-| `.t-section` | ui | 800 | 0.75 | primary | uppercase, letter-spacing 0.06em |
-| `.t-column` | ui | 700 | 0.7 | secondary | uppercase, letter-spacing 0.06em |
-| `.t-field` | mono | 700 | 1.1 | primary | centered |
-| `.t-button` | ui | 800 | 1.1 | per button | |
-| `.t-chart-title` | ui | 700 | 1.0 | primary | |
-| `.t-chart-callout` | mono | 700 | 0.875 | accent | |
-| `.t-axis` | mono | 400 | 0.7 | tertiary | |
+| `.t-wordmark` | brand | 600 | heading | text | placeholder until the wordmark font is chosen |
+| `.t-subtitle` | sans | 400 | caption | muted | |
+| `.t-lift-name` | sans | 500 | small | text | up to 2 lines |
+| `.t-hero` | mono | 500 | up to stat-sm | text | one line, never cut off; shrinks to fit (below) |
+| `.t-e1rm` | mono | 400 | caption | text-2 | |
+| `.t-date` | sans | 400 | caption | muted | tabular numerals |
+| `.t-chip` | sans | 500 | small | per chip state | |
+| `.t-chip-small` | sans | 600 | label | per tag | log-sheet tags |
+| `.t-sheet-title` | sans | 600 | title | text | page and sheet titles |
+| `.t-row-label` | sans | 500 | body | text | |
+| `.t-row-value` | mono | 500 | body | text | |
+| `.t-section`, `.t-column` | sans | 500 | label | muted | uppercase eyebrow, `--ls-label` |
+| `.t-field` | mono | 500 | body | text | centered |
+| `.t-button` | sans | 600 | body | per button | secondary buttons 500 |
+| `.t-chart-title` | sans | 600 | heading | text | |
+| `.t-chart-callout` | mono | 500 | small | accent | |
+| `.t-axis` | mono | 400 | label | muted | |
+| `.t-badge` | sans | 400 | heading | — | the card's ❄️ / 🔥 |
 
-Numbers that update in place use `font-variant-numeric: tabular-nums`, so cards don't jitter.
-
-**The hero shrinks to fit.** A card is a size container (`container-type: inline-size`). The view sets `--hero-chars` on the hero to its character count, and `.t-hero` sizes itself as `min(1.375 × base, 100cqi ÷ (--hero-chars × the mono face's advance width))`. Short values like `225 × 5` get the full size; long ones like `BW+22.5 × 12` shrink until they fit on one line. There's deliberately no lower bound, because a floor is what would let a number get cut off. The advance width (0.62em for Space Mono, with a little slack) is a token beside `--font-mono`, so it changes with the font.
+**The hero shrinks to fit.** A card is a size container (`container-type: inline-size`). The view sets `--hero-chars` on the hero to its character count, and `.t-hero` sizes itself as `min(--fs-stat-sm, 100cqi ÷ (--hero-chars × --mono-advance))`. There's deliberately no lower bound, because a floor is what would let a number get cut off.
 
 ### Layout
 
-- **Mobile first.** 20px side padding. With `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`, pad the top and bottom with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)` so the page clears the notch and home indicator in landscape and full-screen views.
-- **Desktop:** at viewport widths of 700px and up, content sits in a centered column 640px wide. The grid stays two columns — it's the same app, just wider cards.
+- **Mobile first.** `--gutter` (20px) side padding, safe-area insets top and bottom.
+- **Desktop:** from 700px, content sits in a centered 640px column. The grid stays two columns.
 - **Very narrow screens** (under 340px): the grid becomes one column.
-- A 4px spacing grid: 16px card padding and grid gap, 8px chip gap, 24px chart padding. Every tappable element is at least 44 × 44px.
+- 4-pt spacing tokens: 16px card padding, 12px between cards, 8px between chips, 32px between sections. Every tappable element is at least 44 × 44px.
 
 ### Components
 
-- **Lift card** — 16px radius, a 3px `--accent` border, no fill, no shadow, 16px padding. Gaps: icon row → name 8px, name → hero 4px, hero → e1RM 4px, e1RM → date 2px. The icon is 24px, in `--accent`; the emoji is right-aligned. The trend arrow is an icon the size of the e1RM text, in `--accent`, 4px after the number, and the `· PR 281` run that follows is `--text-tertiary`.
-- **Header buttons** — 44 × 44px, a 3px `--border-control` border, 12px radius, 22px icons.
-- **Filter chips** — a full pill, 36px tall with a 44px hit area, 16px horizontal padding, a 2px border. Selected: fill and border `--accent`, label `--on-accent`. Unselected: no fill, border `--border-control`, label `--text-primary`.
-- **Log-sheet tag chips** — a full pill, 4px × 12px padding, a 1.5px `--text-primary` border.
-- **Sheets** — background `--surface-raised`, 20px side padding. The Tags and Date rows are 56px tall with a 1px `--divider` beneath each. The close button is a 36px circle filled `--surface-field`.
-- **Set rows** — columns of 32px, 1fr, 1fr, 44px, with 16px gaps. Fields are 56px tall, filled `--surface-field`, 12px radius, with no border. Rows are 12px apart.
-- **Add set** — 56px tall, 14px radius, `--accent-soft` fill, `--text-primary` label. **Log Session** — 60px tall, 14px radius, `--accent` fill, `--on-accent` label, 40% opacity when disabled.
-- **Tab bar** — `--surface-raised` background with a 1px `--divider` top border. The active tab is `--accent`; inactive tabs are `--text-tertiary`.
+Each follows its DESIGN.md recipe. LiftBoard's mapping:
+
+- **Lift card** — compact card: `--surface`, 1px `--line-soft`, `--r-md`, 16px padding. Pattern icon (24px, `--text-2`) on the left and the ❄️ / 🔥 emoji on the right, then the name, the hero, the e1RM line and the date. The trend arrow is an icon the size of the e1RM text, in `--accent`; the `· PR 281` run is `--text-muted`. Pressed: `--raised`.
+- **Board header** — placeholder logo mark (`--text-2`), the wordmark, the sync dot; on the right, Sort as a 44px round `--raised` icon button and Add as a 48px round accent icon button.
+- **Sync dot** — 8px. Synced: `--success`. Saving: a `--text-muted` ring. Offline: `--warning`, with the word *Offline*.
+- **Filter and tag chips** — 36px pill with a 44px hit area, 1px `--line` border, `--text-2`. Selected: `--accent` fill and border, `--on-accent` label.
+- **Buttons** — pills, 52px. Primary: accent. Secondary (Add set, Export, Import, Cancel, *Add your first lift*): `--raised`. Destructive: `--danger-bg` fill, `--danger` label. Quiet (Edit, Rename, ‹ Back): transparent, `--text-2`. Disabled: `--raised` fill, `--text-faint` label.
+- **Fields** — 52px, `--r-sm`, 1px `--line` border; `--surface` on the page, `--raised` in sheets and dialogs. Focus: 1.5px accent border. Invalid set fields: 1.5px `--danger` border.
+- **Lists** (Stats, Settings, Add Lift library, Lifts, Tags, Sessions) — rows grouped in one card with 1px dividers, a 40px `--raised` icon tile where there's an icon, and a `--text-faint` chevron.
+- **Sheets** — `--surface`, `--r-xl` top corners, `--scrim` backdrop, 44px round close button. Dialogs: `--surface`, `--r-xl`.
+- **Set rows** — columns of 32px, 1fr, 1fr, 44px with 12px gaps; set numbers `--text-muted`; fields 52px. Rows 8px apart.
+- **Segmented controls, switch, empty states, floating tab bar** — exactly as in DESIGN.md. The tab bar's inactive labels are `--text-muted` (not `--text-faint`) so they meet 4.5:1.
+- **Pattern tiles and accent swatches** — `--raised` / `--surface` tiles; selected has a 1.5px accent border.
+- **Current / Best / Change** — three small cards: eyebrow label, mono value at heading size, muted unit.
 
 ### Chart card
 
-The chart is **hand-drawn in inline SVG**, in `chart.js` — no charting library. The card matches a lift card (16px radius, a 3px accent border, no fill) with 24px padding. The title is the lift name; the subtitle is the metric and range, e.g. *Estimated 1RM · last 6 months*.
+The chart is **hand-drawn in inline SVG**, in `chart.js` — no charting library. The card is `--surface`, 1px `--line-soft`, `--r-lg`, 20px padding. The title is the lift name; the subtitle is the metric and range, e.g. *Estimated 1RM · last 6 months*.
 
-- **Line:** straight segments between points, a 3px `--accent` stroke, round caps and joins.
-- **Points:** 8px circles filled `--bg` with a 2.5px `--accent` stroke. The latest point is 12px, with its value called out above it, right-aligned, in `.t-chart-callout`.
-- **Gridlines:** four evenly spaced horizontal lines, 1px `--chart-grid`. No y-axis labels, axis lines, or vertical gridlines — the callout carries the number.
+- **Line:** straight segments, 2px `--text-2`, round caps and joins.
+- **Points:** 8px circles filled `--surface` with a 2px `--text-2` stroke. The latest point is 12px, filled `--accent`, with its value called out above it, right-aligned, in `.t-chart-callout`.
+- **Gridlines:** four evenly spaced horizontal lines, 1px `--line`. No y-axis labels, axis lines, or vertical gridlines — the callout carries the number.
 - **X labels:** month abbreviations at month boundaries within the range, in `.t-axis`.
 - **Y domain:** padded around the data's min and max; it doesn't start at zero. X is scaled by date, not by index.
 - 8px of inner horizontal padding, so the end points aren't clipped.
@@ -549,12 +543,12 @@ The chart is **hand-drawn in inline SVG**, in `chart.js` — no charting library
 
 ### Icons
 
-Use [Lucide](https://lucide.dev) icons (ISC license), **copied as inline SVG strings into `icons.js`** — not loaded from a CDN or installed as a package. Keep Lucide's license text in `icons.js`. Icons use `stroke="currentColor"`, so they take their color from CSS.
+All inline SVG strings in `icons.js` — nothing loaded from a CDN or installed as a package. Both licenses are kept in `icons.js`. Every icon draws in `currentColor`.
 
-- **UI icons:** plus, arrow-up-down (sort), x, circle-minus, chevron-right, chevron-left, chevron-up, chevron-down, arrow-up-right (the trend), trash-2, and the three tab icons (layout-grid, chart-line, settings).
-- **Pattern icons:** nine placeholders, one per movement pattern. Choose any nine distinct Lucide icons, using directional arrows for the push and pull patterns (for example, `arrow-right-to-line` for horizontal push, `arrow-up-to-line` for vertical push) and `dumbbell` for accessory.
-
-`icons.js` exports `patternIcon(pattern)`. When hand-drawn art exists, it replaces one SVG string there — single-color art using `currentColor`, on a square canvas.
+- **UI icons:** [Lucide](https://lucide.dev) (ISC), matching DESIGN.md's 2px rounded stroke: plus, arrow-up-down (sort), x, circle-minus, chevron-right, chevron-left, chevron-up, chevron-down, arrow-up-right (the trend), trash-2, search, and the three tab icons (layout-grid, chart-line, settings).
+- **Pattern icons:** [Atlas Icons](https://atlasicons.vectopus.com) (MIT), regular weight, copied from `@vectopus/atlas-icons`'s icon-font glyphs (filled outlines, flipped into place): squat `squat-pose`, hinge `standing-forward-bend-pose`, lunge `lunge-pose`, horizontal push `plank-pose`, vertical push `sitting-arm-raise-pose`, horizontal pull `leg-stretch-sitting-pose`, vertical pull `lifting-bars`, core `sit-ups-pose`, accessory `dumbbell`.
+- **Logo mark:** a placeholder rounded square until the mark is redrawn; `logoMark()` returns one SVG string.
+- **Emoji:** ❄️ and 🔥 stay as emoji for now, an approved exception to DESIGN.md's no-emoji rule.
 
 ## The built-in library
 
@@ -676,12 +670,12 @@ The folder convention is `index.html` with `style.css` and `app.js` beside it. L
   tools/liftboard/
     CLAUDE.md                ← working rules, read automatically
     SPEC.md                  ← this document
-    design/                  ← mockups: visual reference only; the spec wins
+    design/                  ← the design system: DESIGN.md, tokens.css, fonts.css, reference/
     index.html               ← with the four dashboard <meta> tags
-    tokens.css               ← every color, font and size; nothing else defines them
+    type.css                 ← text styles and accent themes, from tokens only
     style.css                ← reset, layout, components
     app.js                   ← entry: imports persist.js, hands it to createStore, starts the router
-    fonts/                   ← .woff2 files + <Family>-OFL.txt per family
+    fonts/                   ← .woff2 files + their OFL licenses
     js/
       store.js               ← the only file that talks to persist.js
       derive.js              ← pure math; no DOM, no storage
@@ -720,11 +714,11 @@ Eight phases. Each ends with a tool that loads, works, and does something checka
 
 First, read `../../shared/persist.js` and confirm how `syncedState`, `get` and `set` behave against the assumptions under Persistence. Report any difference before building.
 
-Then: `index.html` with the four dashboard `<meta>` tags; `tokens.css` with the fonts self-hosted; `style.css`; `app.js` importing `persist.js` with the *Loading…* and *couldn't connect* states; `store.js` with load, save, migrate and seeding; `derive.js` complete, with its tests; `format.js`; the Board header's wordmark and sync dot; the tab bar and hash routing; and empty states for all three tabs.
+Then: `index.html` with the four dashboard `<meta>` tags; `design/tokens.css` and `type.css` with the fonts self-hosted; `style.css`; `app.js` importing `persist.js` with the *Loading…* and *couldn't connect* states; `store.js` with load, save, migrate and seeding; `derive.js` complete, with its tests; `format.js`; the Board header's wordmark and sync dot; the tab bar and hash routing; and empty states for all three tabs.
 
 **Acceptance:**
 - `node --test "tests/*.test.js"` passes.
-- The page shows the cream background, the wordmark in the display font, and three tabs that switch views and survive a reload.
+- The page shows the dark background, the wordmark, and three tabs that switch views and survive a reload.
 - The seeded tags are still there after a reload, which proves the round trip through `persist.js`.
 - The Network tab shows no requests besides persist.js's Firebase/Google traffic.
 - The sync dot settles to *synced* after load.
@@ -774,7 +768,7 @@ The Stats list, the lift detail, metrics and ranges, the summary figures, the SV
 - Switching metric and range both redraw it.
 - A bodyweight lift offers Reps and Added load, each with its own line.
 - Deleting the latest session updates the chart and the Board card to match the session before it.
-- The chart looks right in light and dark mode.
+- The chart follows DESIGN.md (see Visual design → Chart card).
 
 ### Phase 6 — Settings and data
 
@@ -782,7 +776,7 @@ Units, accent, Keep history with pruning, the Lifts and Tags screens, export, im
 
 **Acceptance:**
 - Kilograms changes every number everywhere, and switching back restores the originals exactly.
-- Brick and Ink recolor everything instantly, in light and dark mode, with nothing vanishing.
+- Brick and Ink recolor everything instantly, with nothing vanishing.
 - Export downloads a readable file; importing it restores the same data; importing a broken file is refused with a message.
 - Keep history set to 6 months on sample data asks first and names a count, and every card still shows the same hero, PR and badge afterwards.
 
@@ -815,26 +809,26 @@ From `tools/liftboard/`, discard the uncommitted changes (`git restore .` for ed
 | Known limitation: offline saves can be lost | Accepted for now; to be fixed in `persist.js` by the dashboard, not in LiftBoard | On load, `persist.js` lets the cloud copy overwrite the device copy. Sessions logged while the cloud write failed are lost the next time LiftBoard opens online |
 | Near-equal scores? | Within 0.01 counts as a tie; unchanged log rows keep their original kg; "ties the PR" is judged by the rounded figure on screen | Unit conversion and rounding must never fake a ↗ or 🔥 |
 | Charts? | Hand-drawn SVG | One chart type doesn't justify a library |
-| Icons? | Lucide, copied in as inline SVG | No runtime requests, easy to replace with hand-drawn art |
-| Fonts? | Self-hosted: Gaegu (display, final), Archivo and Space Mono (ui/mono, placeholders) | No third-party requests; swapping is one file |
+| Icons? | Lucide for UI, Atlas for movement patterns, copied in as inline SVG | No runtime requests; both permissive licenses |
+| Fonts? | Self-hosted Geist and Geist Mono; wordmark font to be chosen | No third-party requests; swapping is one file and one token |
 | Long-press menus? | None; edit through the log sheet and Settings | Long-press is unreliable in mobile browsers |
 | Reordering? | ▲/▼ buttons | Drag-and-drop on touch needs a library or a lot of code |
-| Accents? | Cobalt, Brick, Ink | Same set as the iOS app |
+| Accents? | Cobalt, Brick, Ink, mapped to the design system's tested blue, orange and off-white | Same names as the iOS app |
 
-### The mockups
+### The design reference
 
-The PDF in `design/` is the visual reference: colors, type, spacing, and feel. It was drawn before several decisions above, so **where it disagrees with this spec, the spec wins.** In particular:
+`design/DESIGN.md` and the images in `design/reference/` control how LiftBoard looks. They're generic, though, and don't know LiftBoard's content: **for structure, features and content, this spec wins.** In particular (some of these date from the original mockups):
 
 - Cards show last session's heaviest set, not the all-time PR, with a relative date.
 - No unit on the hero or the e1RM line: `225 × 5`, `e1RM 263`, not `225 lb × 5`, `e1RM 251 lb`.
 - Bodyweight lifts read `BW+45 × 5`, with no e1RM line.
-- The accents are Cobalt, Brick and Ink, not the mockup's five.
+- The accents are Cobalt, Brick and Ink (see Visual design → Accent).
 - The header shows a sync dot, not a settings gear.
 - The header has sort and add buttons, and the subtitle is live.
 - There's a bottom tab bar.
 - The Last hint shows only the date.
 - The date row has no chevron.
-- The seeded tags differ from the mockups.
+- The seeded tags are LiftBoard's own.
 
 ### Explicitly deferred
 

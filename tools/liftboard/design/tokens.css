@@ -1,0 +1,96 @@
+/* design/tokens.css — single source of truth for the visual system.
+   Import once at the app root. Never hardcode colors, radii or font sizes elsewhere. */
+
+/* Fonts are self-hosted (LiftBoard makes no third-party requests). */
+@import url("./fonts.css");
+
+:root {
+  /* ---------- Color: surfaces (dark, slightly warm neutrals) ---------- */
+  --ink:        #0E0E0E; /* page background */
+  --surface:    #161616; /* cards, tab bar */
+  --raised:     #1F1F1F; /* inputs, rows inside cards, secondary buttons */
+  --pressed:    #262626; /* pressed / hover on raised */
+  --line:       #2A2A2A; /* borders, dividers, empty progress tracks */
+  --line-soft:  #242424; /* card borders */
+
+  /* ---------- Color: text ---------- */
+  --text:        #F2F2F0; /* headings, values, primary */
+  --text-2:      #A3A39E; /* body, secondary */
+  --text-muted:  #8A8A86; /* captions, eyebrow labels */
+  --text-faint:  #6F6F6B; /* ICONS and disabled only — fails contrast for body text */
+
+  /* ---------- Color: accent (swap this one value to re-theme) ---------- */
+  --accent:      #D4F75E;
+  --on-accent:   #0E0E0E; /* text/icons placed on accent fills */
+
+  /* ---------- Color: status ---------- */
+  --success: #5EE38D;  --success-bg: rgba(94, 227, 141, 0.14);
+  --warning: #FFB547;  --warning-bg: rgba(255, 181, 71, 0.14);
+  --danger:  #FF6363;  --danger-bg:  rgba(255, 99, 99, 0.12);
+
+  /* ---------- Color: overlays ---------- */
+  --tabbar-bg: rgba(28, 28, 28, 0.94); /* floating tab bar */
+  --scrim:     rgba(0, 0, 0, 0.6);     /* behind sheets and dialogs */
+
+  /* ---------- Accent themes (the tested alternatives below) ---------- */
+  --accent-blue:   #7CB4FF;
+  --accent-orange: #FF8A4C;
+  --accent-light:  #F2F2F0;
+
+  /* ---------- Type ---------- */
+  --font-sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Wordmark. Family not chosen yet: Geist until it is (see fonts.css). */
+  --font-brand: "LiftBoard Brand", var(--font-sans);
+  /* Width of one --font-mono character in em, with a little slack. Numbers
+     that shrink to fit their box use it. Change it with the mono font. */
+  --mono-advance: 0.62;
+
+  --fs-display: 44px;  --lh-display: 1.05;  --ls-display: -0.035em; /* 600 */
+  --fs-title:   28px;  --lh-title:   1.2;   --ls-title:   -0.02em;  /* 600 */
+  --fs-heading: 19px;  --lh-heading: 1.25;  --ls-heading: -0.01em;  /* 600 */
+  --fs-body:    16px;  --lh-body:    1.5;                           /* 400 */
+  --fs-small:   14px;
+  --fs-caption: 13px;
+  --fs-label:   12px;  --ls-label: 0.08em;  /* 500, UPPERCASE eyebrow */
+  --fs-stat:    52px;  --ls-stat: -0.04em;  /* mono 500, hero numbers */
+  --fs-stat-sm: 38px;
+
+  /* ---------- Radius (nest: inner = outer - padding) ---------- */
+  --r-xs:   8px;   /* tags, checkboxes */
+  --r-sm:   12px;  /* inputs, rows inside cards */
+  --r-md:   16px;  /* compact cards, toggle rows */
+  --r-lg:   20px;  /* cards */
+  --r-xl:   28px;  /* sheets, floating tab bar */
+  --r-pill: 999px; /* buttons, chips, switches */
+
+  /* ---------- Spacing (4-pt) ---------- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-12: 48px; --s-16: 64px;
+  --gutter: 20px;      /* phone screen side padding */
+  --card-pad: 16px;    /* inside cards (20px for hero cards) */
+  --tap: 44px;         /* minimum touch target */
+
+  /* ---------- Component sizes ---------- */
+  --h-button: 52px;
+  --h-input: 52px;
+  --h-chip: 36px;
+  --h-tabbar: 68px;
+}
+
+/* Base */
+html, body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+}
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow {
+  font-size: var(--fs-label); font-weight: 500; letter-spacing: var(--ls-label);
+  text-transform: uppercase; color: var(--text-muted);
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
