@@ -8,6 +8,7 @@ import {
 } from './schema.js';
 import { round2, summarizeSession, pruneSessions, RETENTION_MONTHS } from './derive.js';
 import { toExportFile, fromExportFile } from './transfer.js';
+import { allowsNoWeight } from './library.js';
 
 /** @param persist  what syncedState('liftboard') returned (or a test fake) */
 export function createStore(persist) {
@@ -84,7 +85,7 @@ export function createStore(persist) {
       return lift.id;
     },
 
-    /** Changes a lift's name, pattern, bodyweight flag or notes. */
+    /** Changes a lift's name, pattern, equipment or notes. */
     updateLift(id, changes) {
       const lift = this.lift(id);
       if (!lift) return;
@@ -104,7 +105,7 @@ export function createStore(persist) {
       if (!Array.isArray(sets) || sets.length === 0) throw new Error('A session needs at least one set');
       const clean = sets.map(s => ({ weightKg: round2(s.weightKg), reps: s.reps }));
       for (const s of clean) {
-        const minWeightOk = lift.isBodyweight ? s.weightKg >= 0 : s.weightKg > 0;
+        const minWeightOk = allowsNoWeight(lift) ? s.weightKg >= 0 : s.weightKg > 0;
         if (!Number.isFinite(s.weightKg) || !minWeightOk) throw new Error('Invalid weight');
         if (!Number.isInteger(s.reps) || s.reps < 1 || s.reps > 100) throw new Error('Invalid reps');
       }

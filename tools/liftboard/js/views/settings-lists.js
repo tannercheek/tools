@@ -3,7 +3,7 @@
 
 import { h, fill } from '../dom.js';
 import { confirmDialog, promptDialog, alertDialog } from '../dialogs.js';
-import { icon, patternIcon } from '../icons.js';
+import { icon, equipmentIcon } from '../icons.js';
 import { plural } from '../format.js';
 import { openLiftEditor } from './lift-editor.js';
 
@@ -42,7 +42,7 @@ export function renderLiftsList(root, store) {
       : h('ul', {}, lifts.map((lift, i) =>
           h('li', { class: 'row order-row' },
             h('button', { type: 'button', class: 'order-name', onclick: () => openLiftEditor(store, { liftId: lift.id }) },
-              h('span', { class: 'list-row-icon', html: patternIcon(lift.pattern) }),
+              h('span', { class: 'list-row-icon', html: equipmentIcon(lift.equipment) }),
               h('span', { class: 't-row-label' }, lift.name)),
             moveButtons(lift.name, i, lifts.length, dir => keepFocus(root, () => store.moveLift(lift.id, dir)))))));
 }

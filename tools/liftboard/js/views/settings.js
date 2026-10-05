@@ -135,6 +135,7 @@ export function renderSettings(root, store, [page] = []) {
         h('button', { type: 'button', class: 'btn-destructive btn-wide t-button', onclick: () => deleteAll(store) }, 'Delete all data'))),
     group('About',
       h('p', { class: 't-row-label' }, `LiftBoard ${VERSION}`),
-      h('p', { class: 't-subtitle' }, 'Estimated 1RM uses the Epley formula: weight × (1 + reps ÷ 30), or the weight itself for a single.')),
+      h('p', { class: 't-subtitle' }, 'Estimated 1RM uses the Epley formula: weight × (1 + reps ÷ 30), or the weight itself for a single.'),
+      h('p', { class: 't-subtitle' }, 'Icons: Lucide (ISC License) and Atlas Icons (MIT License).')),
   );
 }

@@ -2,6 +2,8 @@
 // Pure: no DOM, no storage, and no Date.now() except as default arguments,
 // so it can be unit-tested in Node.
 
+import { allowsNoWeight } from './library.js';
+
 export const STALE_AFTER_DAYS = 21;
 
 /** Scores within this of each other count as equal, so unit-conversion noise
@@ -138,8 +140,8 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 
 /** The Board's order. In every sort, never-logged lifts go last (in custom
  *  order among themselves). "e1rm" ranks by the loaded record — a bodyweight
- *  lift's added-load record — and lifts with only plain bodyweight sessions
- *  come after every lift that has an e1RM. Ties fall back to custom order. */
+ *  lift's added-load record — and lifts with only no-weight sessions (bodyweight
+ *  or band) come after every lift that has an e1RM. Ties fall back to custom order. */
 export function sortLifts(lifts, sort) {
   const logged = lifts.filter(l => l.sessions.length > 0);
   const never = lifts.filter(l => l.sessions.length === 0).sort(byCustom);
@@ -159,13 +161,14 @@ export function sortLifts(lifts, sort) {
 
 /* ── Stats: what the lift detail plots ── */
 
-/** The metrics a lift offers. A bodyweight lift's two kinds of session are
- *  never on one line: "reps" plots plain sessions, "added" loaded ones. */
-export const metricsFor = lift => (lift.isBodyweight ? ['reps', 'added'] : ['e1rm', 'top']);
+/** The metrics a lift offers. A bodyweight or band lift logs sessions with and
+ *  without weight, never on one line: "reps" plots the no-weight ones, "added"
+ *  the e1RM of the loaded ones. */
+export const metricsFor = lift => (allowsNoWeight(lift) ? ['reps', 'added'] : ['e1rm', 'top']);
 
 /** The detail opens on the kind of session the latest one was. */
 export function defaultMetric(lift) {
-  if (!lift.isBodyweight) return 'e1rm';
+  if (!allowsNoWeight(lift)) return 'e1rm';
   const l = latest(lift);
   return l && isLoaded(l) ? 'added' : 'reps';
 }

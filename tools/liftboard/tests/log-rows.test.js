@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { prefillRows, copyRow, readWeight, readRow, readRows, rowsDiffer, weightValid, repsValid } from '../js/log-rows.js';
 
-const bench = { isBodyweight: false, lastSets: [{ weightKg: 102.06, reps: 5 }, { weightKg: 102.06, reps: 4 }] };
-const pullUp = { isBodyweight: true, lastSets: [{ weightKg: 0, reps: 12 }, { weightKg: 6.8, reps: 8 }] };
+const bench = { equipment: 'barbell', lastSets: [{ weightKg: 102.06, reps: 5 }, { weightKg: 102.06, reps: 4 }] };
+const pullUp = { equipment: 'bodyweight', lastSets: [{ weightKg: 0, reps: 12 }, { weightKg: 6.8, reps: 8 }] };
 
 test('prefill: lastSets in the display unit, one decimal at most', () => {
   const rows = prefillRows(bench, 'lb');
@@ -12,12 +12,14 @@ test('prefill: lastSets in the display unit, one decimal at most', () => {
   assert.deepEqual(prefillRows(bench, 'kg').map(r => r.weight), ['102.1', '102.1']);
 });
 
-test('prefill: a first session is one empty row; plain bodyweight sets prefill empty', () => {
-  assert.deepEqual(prefillRows({ isBodyweight: false, lastSets: [] }, 'lb'), [{ weight: '', reps: '', prefill: null }]);
+test('prefill: a first session is one empty row; no-weight bodyweight and band sets prefill empty', () => {
+  assert.deepEqual(prefillRows({ equipment: 'barbell', lastSets: [] }, 'lb'), [{ weight: '', reps: '', prefill: null }]);
   assert.deepEqual(prefillRows(pullUp, 'lb').map(r => r.weight), ['', '15']);
+  const band = { equipment: 'band', lastSets: [{ weightKg: 0, reps: 20 }, { weightKg: 9.07, reps: 15 }] };
+  assert.deepEqual(prefillRows(band, 'lb').map(r => r.weight), ['', '20']);
 });
 
-test('weights: empty is bodyweight only; must be above 0 otherwise; comma accepted', () => {
+test('weights: empty means 0 only where no weight is allowed (bodyweight, band); above 0 otherwise; comma accepted', () => {
   assert.equal(readWeight('', true), 0);
   assert.ok(Number.isNaN(readWeight('', false)));
   assert.ok(Number.isNaN(readWeight('0', false)));
@@ -38,7 +40,7 @@ test('reps: whole numbers 1 to 100; empty is invalid', () => {
 });
 
 test('an unchanged prefilled row keeps its original kg; an edited one converts', () => {
-  const kgBench = { isBodyweight: false, lastSets: [{ weightKg: 100, reps: 5 }] };
+  const kgBench = { equipment: 'barbell', lastSets: [{ weightKg: 100, reps: 5 }] };
   const [row] = prefillRows(kgBench, 'lb');   // shows 220.5
   assert.equal(row.weight, '220.5');
   assert.deepEqual(readRow(row, 'lb', false), { weightKg: 100, reps: 5 });   // not 100.02

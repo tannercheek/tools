@@ -7,6 +7,7 @@ import { openSheet, confirmDialog } from '../dialogs.js';
 import { icon } from '../icons.js';
 import { latest } from '../derive.js';
 import { shortDate, todayLabel } from '../format.js';
+import { allowsNoWeight } from '../library.js';
 import { prefillRows, copyRow, readRows, rowsDiffer, weightValid, repsValid } from '../log-rows.js';
 import { openLiftEditor } from './lift-editor.js';
 import { openTagPicker } from './tag-chooser.js';
@@ -36,12 +37,13 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
   const logButton = h('button', { type: 'button', class: 'btn-log t-button', onclick: onLog }, 'Log Session');
 
   function renderRows() {
-    const bw = lift().isBodyweight;
+    // An empty weight field on a bodyweight or band lift means no weight
+    const empty = allowsNoWeight(lift()) ? (lift().equipment === 'band' ? 'Band' : 'BW') : null;
     fill(rowList, rows.map((row, i) => {
       const n = i + 1;
       const weight = h('input', {
         type: 'text', inputmode: 'decimal', enterkeyhint: 'next', autocomplete: 'off',
-        class: 'set-field t-field', id: `set-${n}-weight`, value: row.weight, placeholder: bw ? 'BW' : null,
+        class: 'set-field t-field', id: `set-${n}-weight`, value: row.weight, placeholder: empty,
       });
       const reps = h('input', {
         type: 'text', inputmode: 'numeric', enterkeyhint: 'next', autocomplete: 'off',
@@ -58,7 +60,7 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
       });
       return h('div', { class: 'set-row', role: 'group', 'aria-label': `Set ${n}` },
         h('span', { class: 't-row-value set-number', 'aria-hidden': 'true' }, String(n)),
-        h('label', { class: 'visually-hidden', for: weight.id }, `Set ${n} ${bw ? 'added weight' : 'weight'} in ${unit}`),
+        h('label', { class: 'visually-hidden', for: weight.id }, `Set ${n} ${lift().equipment === 'bodyweight' ? 'added weight' : 'weight'} in ${unit}`),
         weight,
         h('label', { class: 'visually-hidden', for: reps.id }, `Set ${n} reps`),
         reps,
@@ -80,17 +82,17 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
     count.textContent = `Sets · ${rows.length}`;
     const last = latest(l);
     lastLabel.textContent = last ? `Last: ${shortDate(last.date)}` : '';
-    weightColumn.textContent = `${l.isBodyweight ? 'Added' : 'Weight'} (${unit})`;
+    weightColumn.textContent = `${l.equipment === 'bodyweight' ? 'Added' : 'Weight'} (${unit})`;
     rowList.querySelectorAll('.set-row').forEach((el, i) => {
       const [weight, reps] = el.querySelectorAll('input');
-      const wOk = weightValid(rows[i].weight, l.isBodyweight);
+      const wOk = weightValid(rows[i].weight, allowsNoWeight(l));
       const rOk = repsValid(rows[i].reps);
       weight.setAttribute('aria-invalid', String(!wOk));
       reps.setAttribute('aria-invalid', String(!rOk));
       weight.classList.toggle('show-invalid', !wOk && touched.has(weight));
       reps.classList.toggle('show-invalid', !rOk && touched.has(reps));
     });
-    logButton.disabled = readRows(rows, unit, l.isBodyweight) === null;
+    logButton.disabled = readRows(rows, unit, allowsNoWeight(l)) === null;
   }
 
   function addSet() {
@@ -99,7 +101,7 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
   }
 
   function onLog() {
-    const sets = readRows(rows, unit, lift().isBodyweight);
+    const sets = readRows(rows, unit, allowsNoWeight(lift()));
     if (!sets) return;
     store.logSession(liftId, sets);
     sheet.close();
@@ -114,7 +116,7 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
   async function onEdit() {
     await openLiftEditor(store, { liftId });
     if (!lift()) sheet.close();   // deleted from the editor: nothing left to log
-    else renderRows();            // the name or bodyweight flag may have changed
+    else renderRows();            // the name or equipment may have changed
   }
 
   sheet.body.append(

@@ -92,7 +92,7 @@ The data is split across four fixed keys, named for their purpose, so changing a
 
 | Key | Value |
 | --- | --- |
-| `schemaVersion` | `1` |
+| `schemaVersion` | `2` |
 | `settings` | unit, accent, retention, sort, selected filter tags |
 | `tags` | the array of tags |
 | `lifts` | the array of lifts, each with its `lastSets` and `sessions` |
@@ -105,7 +105,7 @@ The four keys hold this, shown together:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "settings": {
     "unit": "lb",
     "accent": "cobalt",
@@ -121,7 +121,7 @@ The four keys hold this, shown together:
       "id": "l-9c2e…",
       "name": "Bench Press",
       "pattern": "horizontalPush",
-      "isBodyweight": false,
+      "equipment": "barbell",
       "notes": "",
       "sortOrder": 0,
       "createdAt": "2026-09-01T17:02:11.000Z",
@@ -148,7 +148,8 @@ The four keys hold this, shown together:
 - **Everything links by id, never by name.** Lift and tag ids are `crypto.randomUUID()` with a one-letter prefix (`l-`, `t-`). Session ids are slimmer: `s-` plus 8 random lowercase letters and digits from `crypto.getRandomValues`, unique within their lift (regenerated on the rare collision). Lifts reference tags through `tagIds`. Renaming a lift or tag can't break anything, and duplicate lift names are allowed.
 - **All weights are stored in kilograms, rounded to 2 decimals.** That applies to `lastSets` weights and to a session's `topWeightKg` and `bestE1RMKg`. The unit setting only changes display and input conversion. 1 lb = 0.45359237 kg.
 - **All dates are ISO-8601 strings from `toISOString()`**, which sort correctly as plain strings.
-- **`schemaVersion` exists for the future.** `store.js` reads the four keys into one in-memory document and runs `migrate(doc)`, which upgrades older data step by step on load. Version 1 needs no migrations, but any later change to the shape adds one — and any field added later gets a default in `migrate`, so older data always loads.
+- **`schemaVersion` says what shape the data is in.** `store.js` reads the four keys into one in-memory document and runs `migrate(doc)`, which upgrades older data step by step on load and saves the upgrade at once. Any later change to the shape adds a step — and any field added later gets a default in `migrate`, so older data always loads. Data with no `schemaVersion` counts as version 1.
+- **Version 2 replaced `isBodyweight` with `equipment`.** The 1 → 2 step gives each lift equipment from its name and old flag (`equipmentFromLegacy` in `library.js`): the library's equipment for that name, ignoring case and outer spaces, when it agrees with the flag on "bodyweight or not"; otherwise `bodyweight` if the flag was on, and `other` if not. The flag is then dropped. A LiftBoard still on version 1 refuses version 2 data (*newer than this LiftBoard understands*) rather than overwriting it.
 
 ### One store module
 
@@ -290,18 +291,22 @@ The top set and the best-e1RM set can be different sets. After 235 × 1 then 215
 - **Arrow versus flame:** ↗ means better than the previous session of its kind, shown only going up. 🔥 means better than every earlier session of its kind. A flame nearly always comes with an arrow.
 - **The badge:** ❄️ at 21+ days since the latest session, checked before 🔥, because a record set six weeks ago is still a stale lift. A lift's first session is trivially a record, so it never gets the flame.
 
-### Bodyweight movements
+### Equipment, bodyweight and band
 
-A lift has an `isBodyweight` flag: a toggle in the Lift Editor, prefilled by the library for pull-ups, dips, push-ups and the like. On those lifts the weight field means **added load**; empty or 0 means plain bodyweight.
+Every lift has an `equipment`, one of: `barbell`, `dumbbell`, `machine`, `cable`, `bodyweight`, `kettlebell`, `band`, `other`. It's picked in the Lift Editor, prefilled by the library, and drawn as the lift's icon. Two kinds change how weight works (`allowsNoWeight` in `library.js`); every other kind needs a weight above 0.
 
-The app doesn't know what anyone weighs, so it can't tell whether 20 pull-ups beats 8 with 15 lb added. It keeps them as two separate records and never compares them. A session with no added weight is judged on reps; one with added weight is judged on the e1RM of the added load. The arrow, the flame and the PR only ever compare a session against earlier sessions of the same kind — which is exactly what `score` and `sameKind` above do.
+**Bodyweight.** The weight field means **added load**; empty or 0 means plain bodyweight. The app doesn't know what anyone weighs, so it can't tell whether 20 pull-ups beats 8 with 15 lb added. It keeps them as two separate records and never compares them. A session with no added weight is judged on reps; one with added weight is judged on the e1RM of the added load. The arrow, the flame and the PR only ever compare a session against earlier sessions of the same kind — which is exactly what `score` and `sameKind` above do.
 
-| Latest session | Hero | Second line |
-| --- | --- | --- |
-| No added weight | `BW × 12` | `PR 20 reps` |
-| Added weight | `BW+15 × 8` | `PR BW+20 × 5` |
+**Band.** A weight of 0 (or empty) is allowed too, and scored the same way: no-weight sessions on reps, weighted ones on e1RM, never compared. Unlike bodyweight, a weighted band session reads like any other lift.
 
-The arrow sits on the second line as usual, and the `PR …` part follows the same omit rule. If neither applies, the line is hidden. **No e1RM figure is printed for a bodyweight lift**, since an estimate that ignores body weight would be misleading. A mixed session — a few bodyweight sets, then a few with a plate — counts as loaded.
+| Lift | Latest session | Hero | Second line |
+| --- | --- | --- | --- |
+| Bodyweight | No added weight | `BW × 12` | `PR 20 reps` |
+| Bodyweight | Added weight | `BW+15 × 8` | `PR BW+20 × 5` |
+| Band | No weight | `Band × 15` | `PR 20 reps` |
+| Band | Weight | `20 × 15` | `e1RM 30 · PR 35` |
+
+The arrow sits on the second line as usual, and the `PR …` part follows the same omit rule. If neither applies, the line is hidden. **No e1RM figure is printed for a bodyweight lift**, since an estimate that ignores body weight would be misleading, **or for any session with no weight** (`showsE1RM` in `format.js`). A mixed session — a few bodyweight sets, then a few with a plate — counts as loaded.
 
 ## History retention
 
@@ -310,7 +315,7 @@ Settings has **Keep history**: *6 months*, *1 year* (the default), or *2 years*,
 Sessions older than the window are deleted, except two per lift that are always kept, whatever their age:
 
 - **The latest session**, so the hero, the date line and ❄️ stay right for a lift not done in a while.
-- **The record session of each kind** — one on a normal lift, up to two on a bodyweight lift — so the PR and 🔥 stay honest instead of quietly resetting.
+- **The record session of each kind** — one on a normal lift, up to two on a bodyweight or band lift — so the PR and 🔥 stay honest instead of quietly resetting.
 
 `lastSets` is never touched by pruning.
 
@@ -345,7 +350,7 @@ The app is one HTML page with three tabs — **Board**, **Stats**, **Settings** 
 
 1. **Header**, scrolling with the page:
    - Left: the logo mark (a placeholder for now), then the wordmark **LiftBoard**, then the sync dot (see Persistence → Sync status).
-   - Right: two square bordered icon buttons. **Sort** is a native `<select>` made invisible and laid over the button, so phones show their own picker; its options are *Custom order*, *Recently logged*, *Name*, and *Best e1RM*. In every sort, never-logged lifts go last. *Best e1RM* ranks a bodyweight lift by its added-load record, and a bodyweight lift with only plain sessions goes after the lifts that have an e1RM. **Add** (`+`) opens the Add Lift sheet.
+   - Right: two square bordered icon buttons. **Sort** is a native `<select>` made invisible and laid over the button, so phones show their own picker; its options are *Custom order*, *Recently logged*, *Name*, and *Best e1RM*. In every sort, never-logged lifts go last. *Best e1RM* ranks a bodyweight lift by its added-load record and a band lift by its weighted record; a lift with only no-weight sessions goes after the lifts that have an e1RM. **Add** (`+`) opens the Add Lift sheet.
    - Below: a subtitle, `6 lifts`, plus ` · 2 🔥` when any lift has the flame.
 2. **Filter chips**: a horizontal scrolling row, with *All* first and selected by default. Tapping a tag toggles it; several selected tags mean *lifts having any of them*; tapping *All* clears the selection. The row is always shown.
 3. **Card grid**: two columns.
@@ -355,7 +360,7 @@ The sort choice and the selected filters persist in settings.
 
 **The lift card.** A `<button>` element, top to bottom:
 
-1. The movement-pattern icon on the left, the corner badge on the right.
+1. The equipment icon on the left, the corner badge on the right.
 2. The lift name.
 3. The hero.
 4. The e1RM line.
@@ -371,7 +376,7 @@ Top to bottom:
 2. **Tags row** — `Tags` on the left, the lift's tag chips and a chevron on the right. Tapping opens the tag picker. Tag changes save immediately, even if the session is then discarded.
 3. **Date row** — `Date` on the left, `Today, Sep 22` on the right. Read-only: a session is always logged as now.
 4. **Sets header** — `SETS · 3` on the left (a live count), and `Last: Sep 14` on the right: the date of the latest remaining session (nothing for a first session). After that session is deleted, the prefilled `lastSets` can come from a session that's gone; that's accepted.
-5. **Column labels** — `SET`, `WEIGHT (LB)` (or `KG`), `REPS`. On a bodyweight lift the middle label reads `ADDED (LB)`.
+5. **Column labels** — `SET`, `WEIGHT (LB)` (or `KG`), `REPS`. On a bodyweight lift the middle label reads `ADDED (LB)`. On a bodyweight or band lift an empty weight field shows the placeholder `BW` or `Band`.
 6. **Set rows** — the set number, a weight field, a reps field, and a remove button.
 7. **Add set** — full width, secondary button. Appends a copy of the last row.
 8. **Log Session** — full width, accent fill.
@@ -382,7 +387,7 @@ Top to bottom:
 
 **Validation.**
 
-- On a bodyweight lift an empty weight means 0. On every other lift, weight must be greater than 0. A negative or unparseable weight is always invalid, and a comma is accepted as a decimal point.
+- On a bodyweight or band lift an empty weight means 0. On every other lift, weight must be greater than 0. A negative or unparseable weight is always invalid, and a comma is accepted as a decimal point.
 - Reps must be a whole number from 1 to 100.
 - Log Session is disabled while any row is invalid. Invalid fields get a 1.5px `--danger` border, not red text.
 - The remove button is disabled when only one row is left.
@@ -396,8 +401,8 @@ Top to bottom:
 Used for creating a custom lift and for editing one:
 
 - **Name** — a text field. Save is disabled when it's empty or whitespace.
-- **Movement pattern** — a grid of the nine patterns, each shown with its icon and name.
-- **Bodyweight movement** — a toggle; when on, the weight field records added load.
+- **Equipment** — a grid of the eight equipment types, each shown with its icon and name. A custom lift starts as *Other*.
+- **Movement pattern** — a grid of the nine patterns, names only. It has no icon: it's kept for a future Stats chart.
 - **Tags** — a list of toggleable tag chips, plus a *New tag* field.
 - **Notes** — a multi-line text area.
 - **Delete Lift** — shown only when editing. Destructive, and its confirmation names what goes: *"Delete Bench Press and its 34 logged sessions?"*
@@ -407,7 +412,7 @@ Used for creating a custom lift and for editing one:
 A search field above a list:
 
 - First row: **Create custom lift**, which opens an empty Lift Editor.
-- Below: the built-in library, grouped under category headings, each row showing the pattern icon and name. Picking one opens the Lift Editor prefilled with that name, pattern, and bodyweight flag. The new lift starts untagged, and the library never creates tags.
+- Below: the built-in library, grouped under equipment headings (in the picker's order; equipment with no library lifts has no heading), each row showing the equipment icon and name. Picking one opens the Lift Editor prefilled with that name, pattern, and equipment. The new lift starts untagged, and the library never creates tags.
 
 ### 5. Stats
 
@@ -415,12 +420,12 @@ A search field above a list:
 
 **Lift detail** (`#stats/<id>`) has a back button to the list.
 
-- **Metric toggle** (a segmented control): *Est. 1RM* or *Top weight*. On a bodyweight lift these become *Reps* (plain sessions only) and *Added load* (loaded sessions only, plotting `bestE1RMKg`). It opens on whichever kind the latest session was.
+- **Metric toggle** (a segmented control): *Est. 1RM* or *Top weight*. On a bodyweight lift these become *Reps* (plain sessions only) and *Added load* (loaded sessions only, plotting `bestE1RMKg`). A band lift offers *Reps* (no-weight sessions) and *Est. 1RM* (weighted sessions), the same two lines. It opens on whichever kind the latest session was.
 - **Range toggle**: *3M*, *6M*, *1Y*, *All*.
 - **Summary figures**: **Current** (the latest session), **Best** (the max in range), and **Change** (latest minus oldest in range, with an up or down arrow).
 - **The chart card** — see Visual design.
 - A small note beneath it: *Estimates use the Epley formula and are least reliable above 10 reps.*
-- **Sessions** — every session, newest first, as `Sep 14 · 225 × 5 · e1RM 263` (on a bodyweight lift, `Sep 14 · BW × 12` or `Sep 14 · BW+15 × 8`). Each row has a delete button with a confirmation. Past sessions can be deleted but not edited, since their sets are gone.
+- **Sessions** — every session, newest first, as `Sep 14 · 225 × 5 · e1RM 263` (on a bodyweight lift, `Sep 14 · BW × 12` or `Sep 14 · BW+15 × 8`; on a band lift with no weight, `Sep 14 · Band × 15`). Each row has a delete button with a confirmation. Past sessions can be deleted but not edited, since their sets are gone.
 - With fewer than two sessions of the shown kind, show *Log at least two sessions to see a chart* in place of the chart. The Sessions list still shows.
 
 ### 6. Settings
@@ -433,7 +438,7 @@ A single page of grouped rows:
 - **Lifts →** (`#settings/lifts`) — every lift with ▲/▼ buttons to reorder (writing `sortOrder`), tapping a lift opens the Lift Editor.
 - **Tags →** (`#settings/tags`) — every tag with ▲/▼ to reorder, rename (via `promptDialog`), and delete. Deleting confirms, naming how many lifts use it, and never deletes a lift. An *Add tag* button sits at the bottom.
 - **Data** — *Export* (downloads the export file), *Import* (a file picker; replaces everything after a confirmation naming how many lifts will be removed), and *Delete all data* (destructive, confirmed), which resets LiftBoard to a fresh start: default settings, the five seeded tags, no lifts.
-- **About** — the version and one line explaining the Epley estimate.
+- **About** — the version, one line explaining the Epley estimate, and the icon credits: *Icons: Lucide (ISC License) and Atlas Icons (MIT License).*
 
 Settings → Lifts and Settings → Tags are one level deep, with a back button. Nothing goes deeper.
 
@@ -515,7 +520,7 @@ Sizes are DESIGN.md's tokens (Title 28, Heading 19, Body 16, Small 14, Caption 1
 
 Each follows its DESIGN.md recipe. LiftBoard's mapping:
 
-- **Lift card** — compact card: `--surface`, 1px `--line-soft`, `--r-md`, 16px padding. Pattern icon (24px, `--text-2`) on the left and the ❄️ / 🔥 emoji on the right, then the name, the hero, the e1RM line and the date. The trend arrow is an icon the size of the e1RM text, in `--accent`; the `· PR 281` run is `--text-muted`. Pressed: `--raised`.
+- **Lift card** — compact card: `--surface`, 1px `--line-soft`, `--r-md`, 16px padding. Equipment icon (24px, `--text-2`) on the left and the ❄️ / 🔥 emoji on the right, then the name, the hero, the e1RM line and the date. The trend arrow is an icon the size of the e1RM text, in `--accent`; the `· PR 281` run is `--text-muted`. Pressed: `--raised`.
 - **Board header** — placeholder logo mark (`--text-2`), the wordmark, the sync dot; on the right, Sort as a 44px round `--raised` icon button and Add as a 48px round accent icon button.
 - **Sync dot** — 8px. Synced: `--success`. Saving: a `--text-muted` ring. Offline: `--warning`, with the word *Offline*.
 - **Filter and tag chips** — 36px pill with a 44px hit area, 1px `--line` border, `--text-2`. Selected: `--accent` fill and border, `--on-accent` label.
@@ -525,7 +530,7 @@ Each follows its DESIGN.md recipe. LiftBoard's mapping:
 - **Sheets** — `--surface`, `--r-xl` top corners, `--scrim` backdrop, 44px round close button. Dialogs: `--surface`, `--r-xl`.
 - **Set rows** — columns of 32px, 1fr, 1fr, 44px with 12px gaps; set numbers `--text-muted`; fields 52px. Rows 8px apart.
 - **Segmented controls, switch, empty states, floating tab bar** — exactly as in DESIGN.md. The tab bar's inactive labels are `--text-muted` (not `--text-faint`) so they meet 4.5:1.
-- **Pattern tiles and accent swatches** — `--raised` / `--surface` tiles; selected has a 1.5px accent border.
+- **Equipment and pattern tiles, accent swatches** — `--raised` / `--surface` tiles; selected has a 1.5px accent border. Equipment tiles show a 28px icon above the name; pattern tiles show the name only, at least 52px tall.
 - **Current / Best / Change** — three small cards: eyebrow label, mono value at heading size, muted unit.
 
 ### Chart card
@@ -543,16 +548,29 @@ The chart is **hand-drawn in inline SVG**, in `chart.js` — no charting library
 
 ### Icons
 
-All inline SVG strings in `icons.js` — nothing loaded from a CDN or installed as a package. Both licenses are kept in `icons.js`. Every icon draws in `currentColor`.
+All inline SVG strings in `icons.js` — nothing loaded from a CDN, a webfont or a package at runtime. Every icon draws in `currentColor`, so tokens color it. The licenses sit in `icons.js` beside the icons they cover, and Settings → About credits both sets.
 
-- **UI icons:** [Lucide](https://lucide.dev) (ISC), matching DESIGN.md's 2px rounded stroke: plus, arrow-up-down (sort), x, circle-minus, chevron-right, chevron-left, chevron-up, chevron-down, arrow-up-right (the trend), trash-2, search, and the three tab icons (layout-grid, chart-line, settings).
-- **Pattern icons:** [Atlas Icons](https://atlasicons.vectopus.com) (MIT), regular weight, copied from `@vectopus/atlas-icons`'s icon-font glyphs (filled outlines, flipped into place): squat `squat-pose`, hinge `standing-forward-bend-pose`, lunge `lunge-pose`, horizontal push `plank-pose`, vertical push `sitting-arm-raise-pose`, horizontal pull `leg-stretch-sitting-pose`, vertical pull `lifting-bars`, core `sit-ups-pose`, accessory `dumbbell`.
+- **UI icons:** [Lucide](https://lucide.dev) (ISC), copied from `lucide-static` 1.48.0, matching DESIGN.md's 2px rounded stroke: plus, arrow-up-down (sort), x, circle-minus, chevron-right, chevron-left, chevron-up, chevron-down, arrow-up-right (the trend), trash-2, search, and the three tab icons (layout-grid, chart-line, settings). Feather's license covers the ones derived from it.
+- **Equipment icons:** [Atlas Icons](https://atlasicons.vectopus.com) (MIT), bold weight, redrawn from their published outlines onto Lucide's 24×24 grid so they sit with the Lucide icons: each fills Lucide's 20px drawing area (the wide barbell may use the full 24px width), and a thin outline stroke in the same color, sized per icon, brings each up to Lucide's ~2px line weight. They're filled shapes, not strokes.
+
+  | Equipment | Atlas icon |
+  | --- | --- |
+  | Barbell | `at-weights-gym` |
+  | Dumbbell | `at-dumbbell-gym` |
+  | Machine | `at-weight-lifting` |
+  | Cable | `at-weights-chair` |
+  | Bodyweight | `at-lifting-bars` |
+  | Kettlebell | `at-kg-weight` |
+  | Band | `at-tape-measure` |
+  | Other | `at-muscle-gain` |
+
+  `equipmentIcon(equipment)` draws them wherever a lift's icon shows: cards, the Add Lift library, the Stats list, Settings → Lifts, and the Lift Editor's equipment picker. Unknown equipment gets the *Other* icon. Each is one string in `EQUIPMENT_PATHS`, so other art can replace any one with a single string (filled, on a 24×24 grid). `tests/icons.test.js` checks every equipment type has its own icon. Movement patterns have no icons.
 - **Logo mark:** a placeholder rounded square until the mark is redrawn; `logoMark()` returns one SVG string.
 - **Emoji:** ❄️ and 🔥 stay as emoji for now, an approved exception to DESIGN.md's no-emoji rule.
 
 ## The built-in library
 
-A static array in `library.js`. Library entries aren't stored; they only prefill the Lift Editor.
+A static array in `library.js`. Library entries aren't stored; they only prefill the Lift Editor. `EQUIPMENT`'s order is the Lift Editor's picker order and Add Lift's grouping.
 
 ```js
 export const PATTERNS = {
@@ -562,32 +580,39 @@ export const PATTERNS = {
   core: 'Core', accessory: 'Accessory',
 };
 
-// [name, pattern, category, isBodyweight?]
+/** In display order: the Lift Editor's picker and Add Lift's groups. */
+export const EQUIPMENT = {
+  barbell: 'Barbell', dumbbell: 'Dumbbell', machine: 'Machine', cable: 'Cable',
+  bodyweight: 'Bodyweight', kettlebell: 'Kettlebell', band: 'Band', other: 'Other',
+};
+
+// [name, pattern, equipment]
 export const LIBRARY = [
-  ['Back Squat', 'squat', 'Barbell'],               ['Front Squat', 'squat', 'Barbell'],
-  ['Bench Press', 'horizontalPush', 'Barbell'],     ['Incline Bench Press', 'horizontalPush', 'Barbell'],
-  ['Overhead Press', 'verticalPush', 'Barbell'],    ['Deadlift', 'hinge', 'Barbell'],
-  ['Romanian Deadlift', 'hinge', 'Barbell'],        ['Barbell Row', 'horizontalPull', 'Barbell'],
-  ['Hip Thrust', 'hinge', 'Barbell'],               ['Power Clean', 'hinge', 'Barbell'],
-  ['Barbell Curl', 'accessory', 'Barbell'],
+  ['Back Squat', 'squat', 'barbell'],               ['Front Squat', 'squat', 'barbell'],
+  ['Bench Press', 'horizontalPush', 'barbell'],     ['Incline Bench Press', 'horizontalPush', 'barbell'],
+  ['Overhead Press', 'verticalPush', 'barbell'],    ['Deadlift', 'hinge', 'barbell'],
+  ['Romanian Deadlift', 'hinge', 'barbell'],        ['Barbell Row', 'horizontalPull', 'barbell'],
+  ['Hip Thrust', 'hinge', 'barbell'],               ['Power Clean', 'hinge', 'barbell'],
+  ['Barbell Curl', 'accessory', 'barbell'],
 
-  ['Dumbbell Bench Press', 'horizontalPush', 'Dumbbell'], ['Dumbbell Shoulder Press', 'verticalPush', 'Dumbbell'],
-  ['Dumbbell Row', 'horizontalPull', 'Dumbbell'],   ['Dumbbell Fly', 'horizontalPush', 'Dumbbell'],
-  ['Goblet Squat', 'squat', 'Dumbbell'],            ['Walking Lunge', 'lunge', 'Dumbbell'],
-  ['Dumbbell Curl', 'accessory', 'Dumbbell'],       ['Hammer Curl', 'accessory', 'Dumbbell'],
-  ['Lateral Raise', 'accessory', 'Dumbbell'],
+  ['Dumbbell Bench Press', 'horizontalPush', 'dumbbell'], ['Dumbbell Shoulder Press', 'verticalPush', 'dumbbell'],
+  ['Dumbbell Row', 'horizontalPull', 'dumbbell'],   ['Dumbbell Fly', 'horizontalPush', 'dumbbell'],
+  ['Goblet Squat', 'squat', 'dumbbell'],            ['Walking Lunge', 'lunge', 'dumbbell'],
+  ['Dumbbell Curl', 'accessory', 'dumbbell'],       ['Hammer Curl', 'accessory', 'dumbbell'],
+  ['Lateral Raise', 'accessory', 'dumbbell'],
 
-  ['Lat Pulldown', 'verticalPull', 'Machine & Cable'],     ['Seated Cable Row', 'horizontalPull', 'Machine & Cable'],
-  ['Leg Press', 'squat', 'Machine & Cable'],               ['Chest Press Machine', 'horizontalPush', 'Machine & Cable'],
-  ['Cable Fly', 'horizontalPush', 'Machine & Cable'],      ['Leg Extension', 'accessory', 'Machine & Cable'],
-  ['Leg Curl', 'accessory', 'Machine & Cable'],            ['Calf Raise', 'accessory', 'Machine & Cable'],
-  ['Tricep Pushdown', 'accessory', 'Machine & Cable'],
+  ['Leg Press', 'squat', 'machine'],                ['Chest Press Machine', 'horizontalPush', 'machine'],
+  ['Leg Extension', 'accessory', 'machine'],        ['Leg Curl', 'accessory', 'machine'],
+  ['Calf Raise', 'accessory', 'machine'],
 
-  ['Pull-Up', 'verticalPull', 'Bodyweight', true],         ['Chin-Up', 'verticalPull', 'Bodyweight', true],
-  ['Push-Up', 'horizontalPush', 'Bodyweight', true],       ['Dip', 'verticalPush', 'Bodyweight', true],
-  ['Inverted Row', 'horizontalPull', 'Bodyweight', true],  ['Bulgarian Split Squat', 'lunge', 'Bodyweight', true],
-  ['Nordic Curl', 'accessory', 'Bodyweight', true],        ['Plank', 'core', 'Bodyweight', true],
-  ['Hanging Leg Raise', 'core', 'Bodyweight', true],
+  ['Lat Pulldown', 'verticalPull', 'cable'],        ['Seated Cable Row', 'horizontalPull', 'cable'],
+  ['Cable Fly', 'horizontalPush', 'cable'],         ['Tricep Pushdown', 'accessory', 'cable'],
+
+  ['Pull-Up', 'verticalPull', 'bodyweight'],        ['Chin-Up', 'verticalPull', 'bodyweight'],
+  ['Push-Up', 'horizontalPush', 'bodyweight'],      ['Dip', 'verticalPush', 'bodyweight'],
+  ['Inverted Row', 'horizontalPull', 'bodyweight'], ['Bulgarian Split Squat', 'lunge', 'bodyweight'],
+  ['Nordic Curl', 'accessory', 'bodyweight'],       ['Plank', 'core', 'bodyweight'],
+  ['Hanging Leg Raise', 'core', 'bodyweight'],
 ];
 ```
 
@@ -631,7 +656,7 @@ Day counts run from local midnight to local midnight, as in `daysSince`, never f
     "exportedAt": "2026-09-22T18:04:00Z",
     "tags": [{ "name": "Push" }],
     "lifts": [{
-      "name": "Bench Press", "pattern": "horizontalPush", "isBodyweight": false, "notes": "",
+      "name": "Bench Press", "pattern": "horizontalPush", "equipment": "barbell", "isBodyweight": false, "notes": "",
       "tags": ["Push"],
       "lastSets": [{ "weightKg": 102.06, "reps": 5 }],
       "history": [{ "date": "2026-09-14T18:12:00.000Z", "bestE1RMKg": 119.07, "topWeightKg": 102.06, "topReps": 5 }]
@@ -639,7 +664,7 @@ Day counts run from local midnight to local midnight, as in `daysSince`, never f
   }
   ```
 
-  Tag ids become names on export and fresh ids on import, and `sessions` exports as `history`. Settings aren't included: import keeps the current settings but clears `filterTagIds`, since tag ids change. On import, `sortOrder` follows the file's order, each lift's `createdAt` is its first session's date (or the import time if it has none), and weights and e1RMs are rounded to 2 decimals.
+  The file's `schemaVersion` is the file format's own version (`FILE_VERSION` in `transfer.js`, still 1), not the saved data's. Each lift carries `equipment`, and also the iOS shape's `isBodyweight` (true only for bodyweight lifts). A file without `equipment` — from the iOS app, or from before equipment — gets it from the name and `isBodyweight`, by the same rule as the 1 → 2 migration. Tag ids become names on export and fresh ids on import, and `sessions` exports as `history`. Settings aren't included: import keeps the current settings but clears `filterTagIds`, since tag ids change. On import, `sortOrder` follows the file's order, each lift's `createdAt` is its first session's date (or the import time if it has none), and weights and e1RMs are rounded to 2 decimals.
 - Import **replaces everything** after a confirmation. If `schemaVersion` is missing or newer than the app understands, refuse with a plain message rather than attempting a partial read. Validate every field on import; one bad record rejects the whole file, with a message saying which lift it was.
 
 ### Deletion
@@ -727,7 +752,7 @@ Then: `index.html` with the four dashboard `<meta>` tags; `design/tokens.css` an
 
 ### Phase 1 — Creating lifts
 
-The Add Lift sheet with search and the library, the Lift Editor (name, pattern, bodyweight toggle, notes, delete), `icons.js`, and the dialog helpers.
+The Add Lift sheet with search and the library, the Lift Editor (name, equipment, pattern, notes, delete), `icons.js`, and the dialog helpers.
 
 **Acceptance:** You can add Bench Press from the library and a made-up lift. Both appear on the Board as a plain list. Reload — they're still there. Editing and deleting both work, and deleting confirms with the lift's name.
 
@@ -766,7 +791,7 @@ The Stats list, the lift detail, metrics and ranges, the summary figures, the SV
 **Acceptance:**
 - A sample lift with months of sessions draws a rising line, and the latest value is called out.
 - Switching metric and range both redraw it.
-- A bodyweight lift offers Reps and Added load, each with its own line.
+- A bodyweight lift offers Reps and Added load, each with its own line; a band lift offers Reps and Est. 1RM.
 - Deleting the latest session updates the chart and the Board card to match the session before it.
 - The chart follows DESIGN.md (see Visual design → Chart card).
 
@@ -801,7 +826,7 @@ From `tools/liftboard/`, discard the uncommitted changes (`git restore .` for ed
 | Where is data kept? | The dashboard's `persist.js`, docId `liftboard`, under four purpose-named keys | Every tool in the dashboard saves the same way |
 | How is data protected? | Stable ids for every record; malformed data is never overwritten; failed saves are shown | Reordering or a bug can't scramble or erase real data |
 | What's the hero? | Last session's heaviest set, with its reps | It answers "what did I lift last time?" |
-| What's the PR? | The best session of the same kind as the latest; the earliest wins ties | Plain and loaded bodyweight sessions are never compared |
+| What's the PR? | The best session of the same kind as the latest; the earliest wins ties | Plain and loaded bodyweight (or band) sessions are never compared |
 | How long is history kept? | 1 year by default; 6 months or 2 years if chosen; no Forever; latest and record sessions always kept | Minimal data, without PRs silently resetting |
 | How does data stay under Firestore's 1 MiB document limit? | The retention window. With at most 2 years of slim session summaries (8-character session ids, 2-decimal numbers), LiftBoard stays far inside it, so there's no storage meter | `persist.js` keeps all four keys in one document |
 | How are saves shown? | A sync dot in the Board header, driven by `persist.onStatus`; no "couldn't save" message | `persist.js`'s `set` never throws or rejects, so status is the only signal |
@@ -809,7 +834,9 @@ From `tools/liftboard/`, discard the uncommitted changes (`git restore .` for ed
 | Known limitation: offline saves can be lost | Accepted for now; to be fixed in `persist.js` by the dashboard, not in LiftBoard | On load, `persist.js` lets the cloud copy overwrite the device copy. Sessions logged while the cloud write failed are lost the next time LiftBoard opens online |
 | Near-equal scores? | Within 0.01 counts as a tie; unchanged log rows keep their original kg; "ties the PR" is judged by the rounded figure on screen | Unit conversion and rounding must never fake a ↗ or 🔥 |
 | Charts? | Hand-drawn SVG | One chart type doesn't justify a library |
-| Icons? | Lucide for UI, Atlas for movement patterns, copied in as inline SVG | No runtime requests; both permissive licenses |
+| Icons? | Lucide for the UI; Atlas Icons for equipment, redrawn to Lucide's grid and line weight; copied in as inline SVG | No runtime requests; permissive licenses |
+| What does a lift's icon show? | Its equipment, not its movement pattern | Equipment is what you see at the gym; a pattern can't be drawn for every exercise in it |
+| Bodyweight flag? | Replaced by `equipment: "bodyweight"` in version 2; band also allows no weight | One field says both what the icon is and how weight works |
 | Fonts? | Self-hosted Geist and Geist Mono; wordmark font to be chosen | No third-party requests; swapping is one file and one token |
 | Long-press menus? | None; edit through the log sheet and Settings | Long-press is unreliable in mobile browsers |
 | Reordering? | ▲/▼ buttons | Drag-and-drop on touch needs a library or a lot of code |

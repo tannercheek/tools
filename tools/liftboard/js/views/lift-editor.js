@@ -3,8 +3,8 @@
 
 import { h } from '../dom.js';
 import { openSheet, confirmDialog } from '../dialogs.js';
-import { patternIcon } from '../icons.js';
-import { PATTERNS } from '../library.js';
+import { equipmentIcon } from '../icons.js';
+import { PATTERNS, EQUIPMENT } from '../library.js';
 import { tagChooser } from './tag-chooser.js';
 
 let nextId = 0;
@@ -16,15 +16,27 @@ function deleteMessage(lift) {
   return `Delete ${lift.name} and its ${n} logged session${n === 1 ? '' : 's'}?`;
 }
 
+/** A fieldset of radio tiles, one per [value, label]; `art` adds an icon. */
+function choiceGroup(legend, name, entries, checked, art = null) {
+  return h('fieldset', { class: 'editor-group' },
+    h('legend', { class: 't-section' }, legend),
+    h('div', { class: 'choice-grid' },
+      entries.map(([value, label]) =>
+        h('label', { class: art ? 'choice-tile' : 'choice-tile choice-tile-text' },
+          h('input', { type: 'radio', name, value, checked: value === checked }),
+          art ? h('span', { class: 'choice-icon', html: art(value) }) : null,
+          h('span', { class: 't-chip-small' }, label)))));
+}
+
 /**
  * Opens the editor.
  *   liftId  — edit this lift, or
- *   prefill — { name, pattern, isBodyweight } for a new lift (from the library)
+ *   prefill — { name, pattern, equipment } for a new lift (from the library)
  * With neither, it's an empty "custom lift" editor.
  */
 export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
   const existing = liftId ? store.lift(liftId) : null;
-  const start = existing ?? { name: '', pattern: 'accessory', isBodyweight: false, notes: '', ...prefill };
+  const start = existing ?? { name: '', pattern: 'accessory', equipment: 'other', notes: '', ...prefill };
   const id = `editor-${++nextId}`;
   const sheet = openSheet({ title: existing ? 'Edit Lift' : 'New Lift' });
 
@@ -33,16 +45,8 @@ export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
     autocomplete: 'off', autocapitalize: 'words', maxlength: '60', enterkeyhint: 'done',
   });
 
-  const patterns = h('fieldset', { class: 'editor-group' },
-    h('legend', { class: 't-section' }, 'Movement pattern'),
-    h('div', { class: 'pattern-grid' },
-      Object.entries(PATTERNS).map(([key, label]) =>
-        h('label', { class: 'pattern-tile' },
-          h('input', { type: 'radio', name: `${id}-pattern`, value: key, checked: key === start.pattern }),
-          h('span', { class: 'pattern-icon', html: patternIcon(key) }),
-          h('span', { class: 't-chip-small' }, label)))));
-
-  const bodyweight = h('input', { id: `${id}-bw`, type: 'checkbox', role: 'switch', class: 'switch', checked: start.isBodyweight });
+  const equipment = choiceGroup('Equipment', `${id}-equipment`, Object.entries(EQUIPMENT), start.equipment, equipmentIcon);
+  const patterns = choiceGroup('Movement pattern', `${id}-pattern`, Object.entries(PATTERNS), start.pattern);
   let tagIds = existing ? [...existing.tagIds] : [];   // library lifts start untagged
   const tags = tagChooser(store, tagIds, ids => { tagIds = ids; });
   const notes = h('textarea', { id: `${id}-notes`, class: 'field field-multiline t-row-label', rows: '3' }, start.notes);
@@ -56,12 +60,8 @@ export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
     h('div', { class: 'editor-group' },
       h('label', { class: 't-section', for: name.id }, 'Name'),
       name),
+    equipment,
     patterns,
-    h('label', { class: 'switch-row', for: bodyweight.id },
-      h('span', { class: 'switch-text' },
-        h('span', { class: 't-row-label' }, 'Bodyweight movement'),
-        h('span', { class: 't-subtitle' }, 'The weight field records added load')),
-      bodyweight),
     h('div', { class: 'editor-group' },
       h('span', { class: 't-section' }, 'Tags'),
       tags),
@@ -79,7 +79,7 @@ export function openLiftEditor(store, { liftId = null, prefill = null } = {}) {
     const fields = {
       name: name.value,
       pattern: form.querySelector(`input[name="${id}-pattern"]:checked`)?.value ?? 'accessory',
-      isBodyweight: bodyweight.checked,
+      equipment: form.querySelector(`input[name="${id}-equipment"]:checked`)?.value ?? 'other',
       notes: notes.value,
     };
     const savedId = existing ? existing.id : store.addLift(fields);

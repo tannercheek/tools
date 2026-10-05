@@ -2,9 +2,9 @@
 // run is seeded, how older data is upgraded (migrate), and how saved data is
 // checked before it's trusted (validate). Pure; store.js does the saving.
 
-import { PATTERNS } from './library.js';
+import { PATTERNS, EQUIPMENT, equipmentFromLegacy } from './library.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** The four persist.js keys. There's no way to list keys, so these are fixed. */
 export const KEYS = ['schemaVersion', 'settings', 'tags', 'lifts'];
@@ -44,13 +44,13 @@ export function newSessionId(taken = new Set()) {
 
 /* ── Tidying and ordering (used by store.js) ── */
 
-/** The editable fields of a lift, tidied: a trimmed, non-empty name and a
- *  known pattern. Throws on an empty name — the editor never allows one. */
-export function liftFields({ name, pattern, isBodyweight, notes }) {
+/** The editable fields of a lift, tidied: a trimmed, non-empty name, a known
+ *  pattern and known equipment. Throws on an empty name — the editor never allows one. */
+export function liftFields({ name, pattern, equipment, notes }) {
   const clean = {
     name: String(name ?? '').trim(),
     pattern: pattern in PATTERNS ? pattern : 'accessory',
-    isBodyweight: Boolean(isBodyweight),
+    equipment: Object.hasOwn(EQUIPMENT, equipment ?? '') ? equipment : 'other',
     notes: String(notes ?? ''),
   };
   if (clean.name === '') throw new Error('A lift needs a name');
@@ -105,7 +105,8 @@ function checkLift(l) {
   if (!isStr(l.pattern)) return 'missing pattern';
   if (!isNum(l.sortOrder)) return 'missing sortOrder';
   if (!isStr(l.createdAt)) return 'missing createdAt';
-  if (!optional(l.isBodyweight, v => typeof v === 'boolean')) return 'bad isBodyweight';
+  if (!optional(l.equipment, v => typeof v === 'string' && Object.hasOwn(EQUIPMENT, v))) return 'unknown equipment';
+  if (!optional(l.isBodyweight, v => typeof v === 'boolean')) return 'bad isBodyweight';   // version 1 only
   if (!optional(l.notes, v => typeof v === 'string')) return 'bad notes';
   if (!optional(l.tagIds, v => Array.isArray(v) && v.every(isStr))) return 'bad tagIds';
   if (!optional(l.lastSets, v => Array.isArray(v) && v.every(checkSet))) return 'bad lastSets';
@@ -152,14 +153,17 @@ export function validate(raw) {
  *  default for every field that may be missing. Takes a copy and returns it. */
 export function migrate(raw) {
   const doc = {
-    schemaVersion: raw.schemaVersion ?? SCHEMA_VERSION,
+    schemaVersion: raw.schemaVersion ?? 1,   // saved data without a version predates version 2
     settings: { ...structuredClone(DEFAULT_SETTINGS), ...raw.settings },
     tags: raw.tags ?? [],
-    lifts: (raw.lifts ?? []).map(l => ({
-      isBodyweight: false, notes: '', tagIds: [], lastSets: [], sessions: [], ...l,
-    })),
+    lifts: (raw.lifts ?? []).map(l => ({ notes: '', tagIds: [], lastSets: [], sessions: [], ...l })),
   };
-  // Future versions add steps here, e.g.
-  // if (doc.schemaVersion === 1) { …change the shape…; doc.schemaVersion = 2; }
+  // 1 → 2: equipment replaces the bodyweight flag (see library.equipmentFromLegacy).
+  if (doc.schemaVersion === 1) {
+    doc.lifts = doc.lifts.map(({ isBodyweight, ...l }) => ({ ...l, equipment: equipmentFromLegacy({ ...l, isBodyweight }) }));
+    doc.schemaVersion = 2;
+  }
+  // Later versions add their steps here, after this one.
+  doc.lifts = doc.lifts.map(l => ({ equipment: 'other', ...l }));
   return doc;
 }

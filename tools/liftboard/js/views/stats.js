@@ -4,7 +4,7 @@
 import { h, fill } from '../dom.js';
 import { latest } from '../derive.js';
 import { heroText } from '../format.js';
-import { icon, patternIcon } from '../icons.js';
+import { icon, equipmentIcon } from '../icons.js';
 import { renderLiftStats } from './lift-stats.js';
 
 export function renderStats(root, store, [liftId] = []) {
@@ -24,7 +24,7 @@ export function renderStats(root, store, [liftId] = []) {
       : h('ul', {}, lifts.map(lift =>
           h('li', {},
             h('a', { class: 'list-row', href: `#stats/${encodeURIComponent(lift.id)}` },
-              h('span', { class: 'list-row-icon', html: patternIcon(lift.pattern) }),
+              h('span', { class: 'list-row-icon', html: equipmentIcon(lift.equipment) }),
               h('span', { class: 'list-row-text' },
                 h('span', { class: 't-lift-name' }, lift.name),
                 h('span', { class: 't-e1rm' }, heroText(latest(lift), lift, unit))),

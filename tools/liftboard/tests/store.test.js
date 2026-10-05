@@ -20,11 +20,11 @@ function fakePersist(initial = {}) {
 }
 
 const validDoc = () => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   settings: { unit: 'kg', accent: 'brick', retention: '2y', sort: 'name', filterTagIds: ['t-1'] },
   tags: [{ id: 't-1', name: 'Push', sortOrder: 0 }],
   lifts: [{
-    id: 'l-1', name: 'Bench Press', pattern: 'horizontalPush', isBodyweight: false, notes: '',
+    id: 'l-1', name: 'Bench Press', pattern: 'horizontalPush', equipment: 'barbell', notes: '',
     sortOrder: 0, createdAt: '2026-09-01T17:02:11.000Z', tagIds: ['t-1'],
     lastSets: [{ weightKg: 102.06, reps: 5 }],
     sessions: [{ id: 's-7d19mz3a', date: '2026-09-14T18:12:00.000Z', bestE1RMKg: 119.07, topWeightKg: 102.06, topReps: 5 }],
@@ -76,7 +76,7 @@ test('migrate fills defaults for missing fields without saving', () => {
   delete doc.settings.filterTagIds;
   delete doc.lifts[0].notes;
   delete doc.lifts[0].tagIds;
-  delete doc.lifts[0].isBodyweight;
+  delete doc.lifts[0].equipment;
   const p = fakePersist(doc);
   const store = createStore(p);
   assert.equal(store.loadError, null);
@@ -85,8 +85,47 @@ test('migrate fills defaults for missing fields without saving', () => {
   assert.equal(store.state.settings.unit, 'kg');
   assert.equal(store.state.lifts[0].notes, '');
   assert.deepEqual(store.state.lifts[0].tagIds, []);
-  assert.equal(store.state.lifts[0].isBodyweight, false);
+  assert.equal(store.state.lifts[0].equipment, 'other');
   assert.deepEqual(p.writes, []);
+});
+
+/** A lift as version 1 saved it, with the bodyweight flag and no equipment. */
+const v1Lift = (id, name, isBodyweight) => ({
+  id, name, pattern: 'accessory', isBodyweight, notes: '', sortOrder: 0,
+  createdAt: '2026-09-01T17:02:11.000Z', tagIds: [], lastSets: [], sessions: [],
+});
+
+test('migration 1 → 2: equipment from the library, else from the bodyweight flag, else other', () => {
+  const doc = { ...validDoc(), schemaVersion: 1, lifts: [
+    v1Lift('l-1', 'dumbbell row', false),      // library, ignoring case → dumbbell
+    v1Lift('l-2', ' Lat Pulldown ', false),    // library, ignoring spaces → cable
+    v1Lift('l-3', 'Pull-Up', true),            // library and flag agree → bodyweight
+    v1Lift('l-4', 'Ring Muscle-Up', true),     // not in the library, flag on → bodyweight
+    v1Lift('l-5', 'Zercher Squat', false),     // not in the library, flag off → other
+    v1Lift('l-6', 'Dip', false),               // library says bodyweight, flag off → other
+    v1Lift('l-7', 'Bench Press', true),        // library says barbell, flag on → bodyweight
+  ] };
+  doc.lifts.forEach((l, i) => { l.sortOrder = i; });
+  const p = fakePersist(doc);
+  const store = createStore(p);
+  assert.equal(store.loadError, null);
+  assert.deepEqual(store.state.lifts.map(l => l.equipment),
+    ['dumbbell', 'cable', 'bodyweight', 'bodyweight', 'other', 'other', 'bodyweight']);
+  for (const l of store.state.lifts) assert.ok(!('isBodyweight' in l), `${l.name} still has the flag`);
+  assert.equal(store.state.schemaVersion, 2);
+  // The upgrade is saved at once, so the next load starts from version 2.
+  assert.deepEqual(p.writes.sort(), ['lifts', 'schemaVersion', 'settings', 'tags']);
+  assert.equal(p.map.get('schemaVersion'), 2);
+  assert.ok(p.map.get('lifts').every(l => 'equipment' in l && !('isBodyweight' in l)));
+});
+
+test('migration 1 → 2 keeps everything else about a lift', () => {
+  const doc = validDoc();
+  doc.schemaVersion = 1;
+  const { equipment, ...rest } = doc.lifts[0];
+  doc.lifts[0] = { ...rest, isBodyweight: false };
+  const store = createStore(fakePersist(doc));
+  assert.deepEqual(store.state.lifts[0], { ...rest, equipment: 'barbell' });
 });
 
 test('partly saved data is not re-seeded', () => {
@@ -94,7 +133,7 @@ test('partly saved data is not re-seeded', () => {
   const store = createStore(p);
   assert.equal(store.loadError, null);
   assert.deepEqual(store.state.tags, []);
-  assert.equal(store.state.schemaVersion, 1);
+  assert.equal(store.state.schemaVersion, 2);
   assert.deepEqual(p.writes, []);
 });
 
@@ -107,7 +146,8 @@ test('malformed data is reported and never overwritten', () => {
     'unknown retention': d => { d.settings.retention = 'forever'; },
     'tags not a list': d => { d.tags = 'Push'; },
     'duplicate lift ids': d => { d.lifts.push(structuredClone(d.lifts[0])); },
-    'newer schema': d => { d.schemaVersion = 2; },
+    'unknown equipment': d => { d.lifts[0].equipment = 'sled'; },
+    'newer schema': d => { d.schemaVersion = 3; },
   };
   for (const [name, breakIt] of Object.entries(cases)) {
     const doc = validDoc();
@@ -147,12 +187,13 @@ test('addLift: adds an untagged, never-logged lift at the end, writing only "lif
   const store = createStore(p);
   let notified = 0;
   store.subscribe(() => notified++);
-  const id = store.addLift({ name: '  Pull-Up ', pattern: 'verticalPull', isBodyweight: true });
+  const id = store.addLift({ name: '  Pull-Up ', pattern: 'verticalPull', equipment: 'bodyweight' });
   assert.match(id, /^l-[0-9a-f-]{36}$/);
   const lift = store.lift(id);
   assert.equal(lift.name, 'Pull-Up');
   assert.equal(lift.pattern, 'verticalPull');
-  assert.equal(lift.isBodyweight, true);
+  assert.equal(lift.equipment, 'bodyweight');
+  assert.ok(!('isBodyweight' in lift));
   assert.equal(lift.notes, '');
   assert.equal(lift.sortOrder, 1);
   assert.deepEqual([lift.tagIds, lift.lastSets, lift.sessions], [[], [], []]);
@@ -227,15 +268,19 @@ test('logSession: two sessions the same day are both kept; the later sets become
   assert.equal(new Set(lift.sessions.map(s => s.id)).size, 3);
 });
 
-test('logSession: bodyweight lifts accept 0; other lifts need weight; bad input changes nothing', () => {
+test('logSession: bodyweight and band lifts accept 0; other lifts need weight; bad input changes nothing', () => {
   const p = fakePersist();
   const store = createStore(p);
-  const bw = store.addLift({ name: 'Pull-Up', pattern: 'verticalPull', isBodyweight: true });
-  const bench = store.addLift({ name: 'Bench Press', pattern: 'horizontalPush' });
+  const bw = store.addLift({ name: 'Pull-Up', pattern: 'verticalPull', equipment: 'bodyweight' });
+  const band = store.addLift({ name: 'Band Pull-Apart', pattern: 'horizontalPull', equipment: 'band' });
+  const bench = store.addLift({ name: 'Bench Press', pattern: 'horizontalPush', equipment: 'barbell' });
+  const bell = store.addLift({ name: 'Swing', pattern: 'hinge', equipment: 'kettlebell' });
   store.logSession(bw, [{ weightKg: 0, reps: 12 }]);
-  assert.equal(store.lift(bw).sessions[0].topReps, 12);
-  assert.equal(store.lift(bw).sessions[0].topWeightKg, 0);
+  store.logSession(band, [{ weightKg: 0, reps: 20 }]);
+  for (const id of [bw, band]) assert.deepEqual([store.lift(id).sessions[0].topWeightKg, store.lift(id).sessions.length], [0, 1]);
+  assert.equal(store.lift(band).sessions[0].topReps, 20);
   p.writes.length = 0;
+  assert.throws(() => store.logSession(bell, [{ weightKg: 0, reps: 15 }]));
   assert.throws(() => store.logSession(bench, [{ weightKg: 0, reps: 5 }]));
   assert.throws(() => store.logSession(bench, []));
   assert.throws(() => store.logSession(bench, [{ weightKg: 100, reps: 0 }]));
@@ -340,7 +385,7 @@ test('moveLift / moveTag: swap with the neighbour and renumber; ends do nothing'
   assert.equal(order(store.state.lifts), 'Bench Press,Back Squat,Overhead Press');
   store.moveLift(bench, -1);   // already first
   assert.deepEqual(p.writes, ['lifts']);
-  assert.deepEqual(store.state.lifts.map(l => l.sortOrder).sort(), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(store.state.lifts.map(l => l.sortOrder).sort(), [0, 1, 2, 3, 4, 5, 6, 7]);
   const pull = store.state.tags.find(t => t.name === 'Pull').id;
   store.moveTag(pull, -1);
   assert.equal(order(store.state.tags), 'Pull,Push,Legs');
@@ -367,7 +412,7 @@ test('deleteTag: removes it from tags, lifts and the filter; never deletes a lif
   assert.ok(!store.state.tags.some(t => t.id === push));
   assert.ok(store.state.lifts.every(l => !l.tagIds.includes(push)));
   assert.deepEqual(store.state.settings.filterTagIds, []);
-  assert.equal(store.state.lifts.length, 7);
+  assert.equal(store.state.lifts.length, 8);
   assert.deepEqual(p.writes.sort(), ['lifts', 'settings', 'tags']);
 });
 
@@ -398,7 +443,7 @@ test('exportDoc / importDoc round trip; a bad import changes nothing', () => {
   const bad = { ...file, schemaVersion: 99 };
   p.writes.length = 0;
   assert.throws(() => store.importDoc(bad), /newer version/);
-  assert.equal(store.state.lifts.length, 7);
+  assert.equal(store.state.lifts.length, 8);
   assert.deepEqual(p.writes, []);
 });
 

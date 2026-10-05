@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  toDisplay, toKg, formatWeight, formatE1RM, heroText, prFigure,
+  toDisplay, toKg, formatWeight, formatE1RM, heroText, prFigure, showsE1RM,
   relativeDay, shortDate, todayLabel, plural, parseDecimal, parseReps,
 } from '../js/format.js';
 
@@ -27,19 +27,37 @@ test('e1RM shows as a whole number', () => {
   assert.equal(formatE1RM(119.07, 'kg'), '119');
 });
 
+const barbell = { equipment: 'barbell' };
+const bwLift = { equipment: 'bodyweight' };
+const band = { equipment: 'band' };
+
 test('heroText: no unit; bodyweight forms', () => {
-  const lift = { isBodyweight: false };
-  const bwLift = { isBodyweight: true };
-  assert.equal(heroText(s(102.06, 5), lift, 'lb'), '225 × 5');
+  assert.equal(heroText(s(102.06, 5), barbell, 'lb'), '225 × 5');
   assert.equal(heroText(s(0, 12), bwLift, 'lb'), 'BW × 12');
   assert.equal(heroText(s(6.8, 8), bwLift, 'lb'), 'BW+15 × 8');
-  assert.equal(heroText(null, lift, 'lb'), 'Not logged yet');
+  assert.equal(heroText(null, barbell, 'lb'), 'Not logged yet');
+});
+
+test('heroText: a band lift reads "Band" with no weight, and the number with one', () => {
+  assert.equal(heroText(s(0, 15), band, 'lb'), 'Band × 15');
+  assert.equal(heroText(s(9.07, 15, 13.61), band, 'lb'), '20 × 15');
+  assert.equal(heroText(s(9.07, 15, 13.61), band, 'kg'), '9.1 × 15');
 });
 
 test('prFigure: what each kind of session shows', () => {
-  assert.equal(prFigure({ isBodyweight: false }, 'lb')(s(102.06, 5, 119.07)), 263);
-  assert.equal(prFigure({ isBodyweight: true }, 'lb')(s(0, 12)), 12);
-  assert.equal(prFigure({ isBodyweight: true }, 'lb')(s(9.07, 5, 10.58)), 'BW+20 × 5');
+  assert.equal(prFigure(barbell, 'lb')(s(102.06, 5, 119.07)), 263);
+  assert.equal(prFigure(bwLift, 'lb')(s(0, 12)), 12);
+  assert.equal(prFigure(bwLift, 'lb')(s(9.07, 5, 10.58)), 'BW+20 × 5');
+  assert.equal(prFigure(band, 'lb')(s(0, 20)), 20);
+  assert.equal(prFigure(band, 'lb')(s(9.07, 15, 13.61)), 30);
+});
+
+test('showsE1RM: never on bodyweight, never for a session with no weight', () => {
+  assert.equal(showsE1RM(barbell, s(102.06, 5)), true);
+  assert.equal(showsE1RM(band, s(9.07, 15)), true);
+  assert.equal(showsE1RM(band, s(0, 15)), false);
+  assert.equal(showsE1RM(bwLift, s(9.07, 5)), false);
+  assert.equal(showsE1RM(bwLift, s(0, 12)), false);
 });
 
 test('dates: relative days, short dates, the log sheet label', () => {

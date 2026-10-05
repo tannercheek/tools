@@ -15,7 +15,7 @@ let n = 0;
 const sess = (ago, bestE1RMKg, topWeightKg = bestE1RMKg, topReps = 5) =>
   ({ id: `s-${String(++n).padStart(8, '0')}`, date: daysAgo(ago), bestE1RMKg, topWeightKg, topReps });
 const bw = (ago, reps) => sess(ago, 0, 0, reps);
-const lift = (sessions, isBodyweight = false) => ({ isBodyweight, sessions });
+const lift = (sessions, equipment = 'barbell') => ({ equipment, sessions });
 
 test('e1rm: Epley above one rep, exact for a single', () => {
   assert.equal(e1rm(100, 1), 100);
@@ -125,29 +125,49 @@ test('showsPR: left off when the PR would read the same as the latest', () => {
 });
 
 test('bodyweight: plain and loaded sessions are never compared', () => {
-  const plainUp = lift([bw(14, 10), sess(10, 20, 15, 8), bw(0, 12)], true);
+  const plainUp = lift([bw(14, 10), sess(10, 20, 15, 8), bw(0, 12)], 'bodyweight');
   assert.equal(previousComparable(plainUp).topReps, 10);
   assert.equal(isTrendingUp(plainUp), true);    // 12 reps beats 10 reps
   assert.equal(latestIsPR(plainUp), true);
   assert.equal(comparablePR(plainUp).topReps, 12);
 
   // The first loaded session: nothing of its kind to beat, despite earlier plain ones
-  const firstLoaded = lift([bw(14, 20), bw(7, 18), sess(0, 24, 15, 8)], true);
+  const firstLoaded = lift([bw(14, 20), bw(7, 18), sess(0, 24, 15, 8)], 'bodyweight');
   assert.equal(isTrendingUp(firstLoaded), false);
   assert.equal(latestIsPR(firstLoaded), false);
   assert.equal(comparablePR(firstLoaded).topWeightKg, 15);
 
   // Loaded sessions judged on e1RM, with a plain session in between
-  const loadedUp = lift([sess(14, 20, 15, 8), bw(7, 30), sess(0, 22, 17, 8)], true);
+  const loadedUp = lift([sess(14, 20, 15, 8), bw(7, 30), sess(0, 22, 17, 8)], 'bodyweight');
   assert.equal(isTrendingUp(loadedUp), true);
   assert.equal(latestIsPR(loadedUp), true);
   assert.equal(recordSession(loadedUp, false).topReps, 30);
   assert.equal(recordSession(loadedUp, true).topWeightKg, 17);
 
   // Fewer reps than the plain record doesn't matter to a loaded session
-  const plainDown = lift([bw(14, 20), bw(0, 15)], true);
+  const plainDown = lift([bw(14, 20), bw(0, 15)], 'bodyweight');
   assert.equal(isTrendingUp(plainDown), false);
   assert.equal(showsPR(plainDown), true);
+});
+
+test('band: scored like bodyweight — no-weight sessions on reps, weighted ones on e1RM, never compared', () => {
+  const plainUp = lift([bw(14, 15), bw(7, 18), bw(0, 20)], 'band');
+  assert.equal(isTrendingUp(plainUp), true);    // 20 reps beats 18
+  assert.equal(latestIsPR(plainUp), true);
+  assert.equal(badge(plainUp, NOW), 'newPR');
+
+  // A weighted band session has nothing of its kind to beat yet, however many reps came before
+  const firstWeighted = lift([bw(14, 25), sess(0, 13.6, 9.07, 15)], 'band');
+  assert.equal(isTrendingUp(firstWeighted), false);
+  assert.equal(latestIsPR(firstWeighted), false);
+  assert.equal(recordSession(firstWeighted, false).topReps, 25);
+  assert.equal(recordSession(firstWeighted, true).topWeightKg, 9.07);
+
+  assert.deepEqual(metricsFor(firstWeighted), ['reps', 'added']);
+  assert.equal(defaultMetric(firstWeighted), 'added');
+  assert.deepEqual(series(firstWeighted, 'reps').map(p => p.value), [25]);
+  assert.deepEqual(series(firstWeighted, 'added').map(p => p.value), [13.6]);
+  assert.equal(defaultMetric(plainUp), 'reps');
 });
 
 test('daysSince counts local calendar days, not 24-hour spans', () => {
@@ -172,7 +192,7 @@ test('pruneSessions: removes old sessions but keeps the latest and each record',
   const oldOrdinary = sess(400, 100);  // old, not a record → removed
   const oldPlainLesser = bw(420, 10);  // old, not a record → removed
   const recent = sess(30, 120);
-  const l = lift([record, oldPlain, oldOrdinary, oldPlainLesser, recent], true);
+  const l = lift([record, oldPlain, oldOrdinary, oldPlainLesser, recent], 'bodyweight');
   const { kept, removed } = pruneSessions(l, 12, NOW);
   assert.equal(removed, 2);
   assert.deepEqual(new Set(kept.map(s => s.id)), new Set([record.id, oldPlain.id, recent.id]));
@@ -189,7 +209,7 @@ test('pruneSessions: an old latest session is kept; everything in the window sta
 });
 
 
-const L = (name, sortOrder, sessions, tagIds = [], isBodyweight = false) => ({ name, sortOrder, sessions, tagIds, isBodyweight });
+const L = (name, sortOrder, sessions, tagIds = [], equipment = 'barbell') => ({ name, sortOrder, sessions, tagIds, equipment });
 
 test('filterLifts: any of the selected tags; none selected means all', () => {
   const lifts = [L('A', 0, [], ['push']), L('B', 1, [], ['legs']), L('C', 2, [], ['push', 'upper']), L('D', 3, [])];
@@ -206,8 +226,8 @@ test('sortLifts: every order, with never-logged lifts last', () => {
     L('bench', 0, [sess(10, 120)]),
     L('Squat', 1, [sess(2, 150)]),
     L('Curl', 2, []),                               // never logged
-    L('Dip', 3, [bw(1, 12)], [], true),             // plain bodyweight only
-    L('pull-up', 4, [bw(20, 10), sess(5, 30, 20, 5)], [], true),
+    L('Dip', 3, [bw(1, 12)], [], 'bodyweight'),             // plain bodyweight only
+    L('pull-up', 4, [bw(20, 10), sess(5, 30, 20, 5)], [], 'bodyweight'),
     L('Apple', 5, []),                              // never logged
   ];
   const order = sort => sortLifts(lifts, sort).map(l => l.name).join(',');
@@ -225,13 +245,13 @@ test('stats: metrics, default metric, and series per kind', () => {
   assert.deepEqual(series(normal, 'e1rm').map(p => p.value), [110, 120]);
   assert.deepEqual(series(normal, 'top').map(p => p.value), [100, 105]);
 
-  const pullUp = lift([bw(30, 10), sess(20, 23, 9, 5), bw(10, 12), sess(5, 25, 10, 5)], true);
+  const pullUp = lift([bw(30, 10), sess(20, 23, 9, 5), bw(10, 12), sess(5, 25, 10, 5)], 'bodyweight');
   assert.deepEqual(metricsFor(pullUp), ['reps', 'added']);
   assert.equal(defaultMetric(pullUp), 'added');
   assert.deepEqual(series(pullUp, 'reps').map(p => p.value), [10, 12]);
   assert.deepEqual(series(pullUp, 'added').map(p => p.value), [23, 25]);
-  assert.equal(defaultMetric(lift([sess(9, 20, 9, 5), bw(1, 12)], true)), 'reps');
-  assert.equal(defaultMetric(lift([], true)), 'reps');
+  assert.equal(defaultMetric(lift([sess(9, 20, 9, 5), bw(1, 12)], 'bodyweight')), 'reps');
+  assert.equal(defaultMetric(lift([], 'bodyweight')), 'reps');
 });
 
 test('stats: range start, points in range, and the summary figures', () => {

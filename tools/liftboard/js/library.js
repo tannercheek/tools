@@ -1,5 +1,6 @@
-// library.js — the built-in lifts. Never stored: picking one only prefills the
-// Lift Editor with its name, pattern and bodyweight flag.
+// library.js — the movement patterns, the equipment types, and the built-in
+// lifts. Library lifts are never stored: picking one only prefills the Lift
+// Editor with its name, pattern and equipment.
 
 export const PATTERNS = {
   squat: 'Squat', hinge: 'Hinge', lunge: 'Lunge',
@@ -8,41 +9,68 @@ export const PATTERNS = {
   core: 'Core', accessory: 'Accessory',
 };
 
-// [name, pattern, category, isBodyweight?]
+/** In display order: the Lift Editor's picker and Add Lift's groups. */
+export const EQUIPMENT = {
+  barbell: 'Barbell', dumbbell: 'Dumbbell', machine: 'Machine', cable: 'Cable',
+  bodyweight: 'Bodyweight', kettlebell: 'Kettlebell', band: 'Band', other: 'Other',
+};
+
+/** Bodyweight and band lifts may log a weight of 0; every other lift needs one.
+ *  On a bodyweight lift the weight is added load. */
+export const allowsNoWeight = lift => lift.equipment === 'bodyweight' || lift.equipment === 'band';
+
+// [name, pattern, equipment]
 export const LIBRARY = [
-  ['Back Squat', 'squat', 'Barbell'],               ['Front Squat', 'squat', 'Barbell'],
-  ['Bench Press', 'horizontalPush', 'Barbell'],     ['Incline Bench Press', 'horizontalPush', 'Barbell'],
-  ['Overhead Press', 'verticalPush', 'Barbell'],    ['Deadlift', 'hinge', 'Barbell'],
-  ['Romanian Deadlift', 'hinge', 'Barbell'],        ['Barbell Row', 'horizontalPull', 'Barbell'],
-  ['Hip Thrust', 'hinge', 'Barbell'],               ['Power Clean', 'hinge', 'Barbell'],
-  ['Barbell Curl', 'accessory', 'Barbell'],
+  ['Back Squat', 'squat', 'barbell'],               ['Front Squat', 'squat', 'barbell'],
+  ['Bench Press', 'horizontalPush', 'barbell'],     ['Incline Bench Press', 'horizontalPush', 'barbell'],
+  ['Overhead Press', 'verticalPush', 'barbell'],    ['Deadlift', 'hinge', 'barbell'],
+  ['Romanian Deadlift', 'hinge', 'barbell'],        ['Barbell Row', 'horizontalPull', 'barbell'],
+  ['Hip Thrust', 'hinge', 'barbell'],               ['Power Clean', 'hinge', 'barbell'],
+  ['Barbell Curl', 'accessory', 'barbell'],
 
-  ['Dumbbell Bench Press', 'horizontalPush', 'Dumbbell'], ['Dumbbell Shoulder Press', 'verticalPush', 'Dumbbell'],
-  ['Dumbbell Row', 'horizontalPull', 'Dumbbell'],   ['Dumbbell Fly', 'horizontalPush', 'Dumbbell'],
-  ['Goblet Squat', 'squat', 'Dumbbell'],            ['Walking Lunge', 'lunge', 'Dumbbell'],
-  ['Dumbbell Curl', 'accessory', 'Dumbbell'],       ['Hammer Curl', 'accessory', 'Dumbbell'],
-  ['Lateral Raise', 'accessory', 'Dumbbell'],
+  ['Dumbbell Bench Press', 'horizontalPush', 'dumbbell'], ['Dumbbell Shoulder Press', 'verticalPush', 'dumbbell'],
+  ['Dumbbell Row', 'horizontalPull', 'dumbbell'],   ['Dumbbell Fly', 'horizontalPush', 'dumbbell'],
+  ['Goblet Squat', 'squat', 'dumbbell'],            ['Walking Lunge', 'lunge', 'dumbbell'],
+  ['Dumbbell Curl', 'accessory', 'dumbbell'],       ['Hammer Curl', 'accessory', 'dumbbell'],
+  ['Lateral Raise', 'accessory', 'dumbbell'],
 
-  ['Lat Pulldown', 'verticalPull', 'Machine & Cable'],     ['Seated Cable Row', 'horizontalPull', 'Machine & Cable'],
-  ['Leg Press', 'squat', 'Machine & Cable'],               ['Chest Press Machine', 'horizontalPush', 'Machine & Cable'],
-  ['Cable Fly', 'horizontalPush', 'Machine & Cable'],      ['Leg Extension', 'accessory', 'Machine & Cable'],
-  ['Leg Curl', 'accessory', 'Machine & Cable'],            ['Calf Raise', 'accessory', 'Machine & Cable'],
-  ['Tricep Pushdown', 'accessory', 'Machine & Cable'],
+  ['Leg Press', 'squat', 'machine'],                ['Chest Press Machine', 'horizontalPush', 'machine'],
+  ['Leg Extension', 'accessory', 'machine'],        ['Leg Curl', 'accessory', 'machine'],
+  ['Calf Raise', 'accessory', 'machine'],
 
-  ['Pull-Up', 'verticalPull', 'Bodyweight', true],         ['Chin-Up', 'verticalPull', 'Bodyweight', true],
-  ['Push-Up', 'horizontalPush', 'Bodyweight', true],       ['Dip', 'verticalPush', 'Bodyweight', true],
-  ['Inverted Row', 'horizontalPull', 'Bodyweight', true],  ['Bulgarian Split Squat', 'lunge', 'Bodyweight', true],
-  ['Nordic Curl', 'accessory', 'Bodyweight', true],        ['Plank', 'core', 'Bodyweight', true],
-  ['Hanging Leg Raise', 'core', 'Bodyweight', true],
+  ['Lat Pulldown', 'verticalPull', 'cable'],        ['Seated Cable Row', 'horizontalPull', 'cable'],
+  ['Cable Fly', 'horizontalPush', 'cable'],         ['Tricep Pushdown', 'accessory', 'cable'],
+
+  ['Pull-Up', 'verticalPull', 'bodyweight'],        ['Chin-Up', 'verticalPull', 'bodyweight'],
+  ['Push-Up', 'horizontalPush', 'bodyweight'],      ['Dip', 'verticalPush', 'bodyweight'],
+  ['Inverted Row', 'horizontalPull', 'bodyweight'], ['Bulgarian Split Squat', 'lunge', 'bodyweight'],
+  ['Nordic Curl', 'accessory', 'bodyweight'],       ['Plank', 'core', 'bodyweight'],
+  ['Hanging Leg Raise', 'core', 'bodyweight'],
 ];
 
-/** The library grouped by category, in the order above:
- *  [{ category, lifts: [{ name, pattern, isBodyweight }] }]. */
+/** The library grouped by equipment, in EQUIPMENT's order, skipping empty groups:
+ *  [{ equipment, label, lifts: [{ name, pattern, equipment }] }]. */
 export function libraryGroups() {
-  const groups = new Map();
-  for (const [name, pattern, category, isBodyweight = false] of LIBRARY) {
-    if (!groups.has(category)) groups.set(category, []);
-    groups.get(category).push({ name, pattern, isBodyweight });
-  }
-  return [...groups].map(([category, lifts]) => ({ category, lifts }));
+  return Object.entries(EQUIPMENT)
+    .map(([equipment, label]) => ({
+      equipment, label,
+      lifts: LIBRARY.filter(l => l[2] === equipment).map(([name, pattern]) => ({ name, pattern, equipment })),
+    }))
+    .filter(g => g.lifts.length > 0);
+}
+
+/** The library's equipment for a lift name (ignoring case and outer spaces), or null. */
+export function libraryEquipment(name) {
+  const key = String(name ?? '').trim().toLowerCase();
+  return LIBRARY.find(([n]) => n.toLowerCase() === key)?.[2] ?? null;
+}
+
+/** Equipment for a lift saved before equipment existed, from its name and old
+ *  bodyweight flag. The library's equipment is used when it agrees with the
+ *  flag on "bodyweight or not"; otherwise the flag decides: bodyweight, or other. */
+export function equipmentFromLegacy({ name, isBodyweight }) {
+  const flag = Boolean(isBodyweight);
+  const fromLibrary = libraryEquipment(name);
+  if (fromLibrary && (fromLibrary === 'bodyweight') === flag) return fromLibrary;
+  return flag ? 'bodyweight' : 'other';
 }

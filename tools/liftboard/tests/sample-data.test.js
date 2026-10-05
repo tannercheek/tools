@@ -19,7 +19,8 @@ const card = name => {
 };
 
 test('sample data passes the same checks as saved data', () => {
-  assert.equal(validate({ schemaVersion: 1, tags, lifts }), null);
+  assert.equal(validate({ schemaVersion: 2, tags, lifts }), null);
+  for (const l of lifts) assert.ok(l.equipment && !('isBodyweight' in l), l.name);
   assert.deepEqual(tags.map(t => t.name), ['Push', 'Pull', 'Legs', 'Upper', 'Lower']);
   for (const l of lifts) for (const id of l.tagIds) assert.ok(tags.some(t => t.id === id));
 });
@@ -50,4 +51,9 @@ test('bodyweight lifts: plain and loaded, never an e1RM', () => {
   assert.equal(heroText(pu.pr, byName('Pull-Up'), 'lb'), 'BW+20 × 5');
   const dip = card('Dip');
   assert.deepEqual([dip.hero, dip.badge, dip.up, dip.pr], ['BW × 12', 'newPR', true, null]);
+});
+
+test('a band lift with no weight: "Band × 20", a rep record, never an e1RM', () => {
+  const c = card('Band Pull-Apart');
+  assert.deepEqual([c.hero, c.badge, c.up, c.pr], ['Band × 20', 'newPR', true, null]);
 });

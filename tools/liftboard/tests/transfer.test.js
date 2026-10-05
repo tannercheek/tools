@@ -12,7 +12,13 @@ test('export: the iOS shape — tag names, history, no ids, no settings', () => 
   assert.deepEqual(Object.keys(file), ['schemaVersion', 'exportedAt', 'tags', 'lifts']);
   assert.deepEqual(file.tags[0], { name: 'Push' });
   const bench = file.lifts.find(l => l.name === 'Bench Press');
-  assert.deepEqual(Object.keys(bench), ['name', 'pattern', 'isBodyweight', 'notes', 'tags', 'lastSets', 'history']);
+  assert.deepEqual(Object.keys(bench), ['name', 'pattern', 'equipment', 'isBodyweight', 'notes', 'tags', 'lastSets', 'history']);
+  // isBodyweight stays for the iOS shape: true only for bodyweight lifts
+  const flags = Object.fromEntries(file.lifts.map(l => [l.name, [l.equipment, l.isBodyweight]]));
+  assert.deepEqual(flags['Bench Press'], ['barbell', false]);
+  assert.deepEqual(flags['Pull-Up'], ['bodyweight', true]);
+  assert.deepEqual(flags['Band Pull-Apart'], ['band', false]);
+  assert.equal(file.schemaVersion, 1);
   assert.deepEqual(bench.tags, ['Push', 'Upper']);
   assert.deepEqual(Object.keys(bench.history[0]), ['date', 'bestE1RMKg', 'topWeightKg', 'topReps']);
   assert.ok(!JSON.stringify(file).includes('"id"'));
@@ -23,7 +29,7 @@ test('round trip: export then import gives the same lifts, with fresh ids', () =
   const original = doc();
   const { tags, lifts } = fromExportFile(JSON.parse(JSON.stringify(toExportFile(original, NOW))), NOW);
   const strip = d => d.lifts.map(l => ({
-    name: l.name, pattern: l.pattern, isBodyweight: l.isBodyweight, notes: l.notes, sortOrder: l.sortOrder,
+    name: l.name, pattern: l.pattern, equipment: l.equipment, notes: l.notes, sortOrder: l.sortOrder,
     tags: l.tagIds.map(id => d.tags.find(t => t.id === id).name),
     lastSets: l.lastSets,
     sessions: [...l.sessions].sort((a, b) => a.date.localeCompare(b.date)).map(({ id, ...rest }) => rest),
@@ -42,9 +48,23 @@ test('import: fills optional fields, creates tags named by lifts, dedupes tag na
   assert.deepEqual(tags.map(t => t.name), ['Push', 'Weighted']);
   assert.deepEqual(lifts[0].tagIds, tags.map(t => t.id));
   assert.equal(lifts[0].name, 'Dip');
-  assert.equal(lifts[0].isBodyweight, false);
+  assert.equal(lifts[0].equipment, 'other');   // no equipment and no flag: the library's bodyweight doesn't agree
+  assert.ok(!('isBodyweight' in lifts[0]));
   assert.deepEqual([lifts[0].notes, lifts[0].lastSets, lifts[0].sessions], ['', [], []]);
   assert.equal(lifts[0].createdAt, NOW.toISOString());
+});
+
+test('import: a file without equipment (iOS, or before equipment) gets it as old saved data does', () => {
+  const { lifts } = fromExportFile({
+    schemaVersion: 1, tags: [],
+    lifts: [
+      { name: 'Dip', pattern: 'verticalPush', isBodyweight: true },
+      { name: 'goblet squat', pattern: 'squat', isBodyweight: false },
+      { name: 'Sled Push', pattern: 'accessory', isBodyweight: false },
+      { name: 'Sled Push', pattern: 'accessory', isBodyweight: true, equipment: 'other' },   // equipment wins
+    ],
+  }, NOW);
+  assert.deepEqual(lifts.map(l => l.equipment), ['bodyweight', 'dumbbell', 'other', 'other']);
 });
 
 test('import: refuses bad files with a plain message naming the lift', () => {
@@ -57,6 +77,7 @@ test('import: refuses bad files with a plain message naming the lift', () => {
   refuses(f => { f.schemaVersion = 2; }, /newer version/);
   refuses(f => { f.lifts = 'nope'; }, /missing its tags or lifts/);
   refuses(f => { f.lifts[1].pattern = 'crossfit'; }, /“Bench Press”.*movement pattern "crossfit"/);
+  refuses(f => { f.lifts[1].equipment = 'sled'; }, /“Bench Press”.*equipment "sled"/);
   refuses(f => { f.lifts[1].history[2].topReps = 0; }, /“Bench Press”.*session in its history has bad numbers/);
   refuses(f => { f.lifts[1].history[0].date = 'yesterday'; }, /“Bench Press”.*bad date/);
   refuses(f => { f.lifts[2].lastSets[0].weightKg = -1; }, /“Overhead Press”.*last sets/);

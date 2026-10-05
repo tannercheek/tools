@@ -6,13 +6,14 @@
 // the text in its two fields, plus what its weight field was prefilled with.
 
 import { formatWeight, parseDecimal, parseReps, toKg } from './format.js';
+import { allowsNoWeight } from './library.js';
 
 /** Rows copied from lastSets in the display unit, or one empty row for a first
- *  session. A bodyweight set with no added load prefills as an empty field. */
+ *  session. On a bodyweight or band lift, a set with no weight prefills empty. */
 export function prefillRows(lift, unit) {
   if (lift.lastSets.length === 0) return [{ weight: '', reps: '', prefill: null }];
   return lift.lastSets.map(s => {
-    const weight = lift.isBodyweight && s.weightKg === 0 ? '' : formatWeight(s.weightKg, unit);
+    const weight = allowsNoWeight(lift) && s.weightKg === 0 ? '' : formatWeight(s.weightKg, unit);
     return { weight, reps: String(s.reps), prefill: { weight, kg: s.weightKg } };
   });
 }
@@ -21,22 +22,23 @@ export function prefillRows(lift, unit) {
 export const copyRow = row => ({ ...row, prefill: row.prefill && { ...row.prefill } });
 
 /** The typed weight in the display unit, or NaN when it isn't allowed.
- *  Empty means 0 on a bodyweight lift; everywhere else weight must be above 0. */
-export function readWeight(text, isBodyweight) {
+ *  With noWeightOk (bodyweight and band lifts) empty means 0; otherwise weight
+ *  must be above 0. */
+export function readWeight(text, noWeightOk) {
   const n = parseDecimal(text);
-  if (n === null) return isBodyweight ? 0 : NaN;
-  if (Number.isNaN(n) || (!isBodyweight && n <= 0)) return NaN;
+  if (n === null) return noWeightOk ? 0 : NaN;
+  if (Number.isNaN(n) || (!noWeightOk && n <= 0)) return NaN;
   return n;
 }
 
-export const weightValid = (text, isBodyweight) => !Number.isNaN(readWeight(text, isBodyweight));
+export const weightValid = (text, noWeightOk) => !Number.isNaN(readWeight(text, noWeightOk));
 export const repsValid = text => Number.isInteger(parseReps(text));
 
 /** A row as a set in kg, or null when either field is invalid. A weight left
  *  exactly as prefilled keeps its original kg, so repeating last session never
  *  drifts through unit rounding. */
-export function readRow(row, unit, isBodyweight) {
-  const w = readWeight(row.weight, isBodyweight);
+export function readRow(row, unit, noWeightOk) {
+  const w = readWeight(row.weight, noWeightOk);
   const reps = parseReps(row.reps);
   if (Number.isNaN(w) || !Number.isInteger(reps)) return null;
   const unchanged = row.prefill && row.weight.trim() === row.prefill.weight;
@@ -44,8 +46,8 @@ export function readRow(row, unit, isBodyweight) {
 }
 
 /** All rows as sets, or null if any row is invalid. */
-export function readRows(rows, unit, isBodyweight) {
-  const sets = rows.map(r => readRow(r, unit, isBodyweight));
+export function readRows(rows, unit, noWeightOk) {
+  const sets = rows.map(r => readRow(r, unit, noWeightOk));
   return sets.every(Boolean) ? sets : null;
 }
 

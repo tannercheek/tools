@@ -4,6 +4,10 @@
 
 import { daysSince, isLoaded } from './derive.js';
 
+/** Whether a session's best e1RM means anything to show: not on a bodyweight
+ *  lift (it would ignore body weight), and not for a session with no weight. */
+export const showsE1RM = (lift, s) => lift.equipment !== 'bodyweight' && isLoaded(s);
+
 export const KG_PER_LB = 0.45359237;
 
 export const toDisplay = (kg, unit) => (unit === 'lb' ? kg / KG_PER_LB : kg);
@@ -17,20 +21,24 @@ export const formatWeight = (kg, unit) => String(round1(toDisplay(kg, unit)) + 0
 /** Estimated 1RMs are whole numbers. */
 export const formatE1RM = (kg, unit) => String(Math.round(toDisplay(kg, unit)));
 
-/** The card hero, with no unit: "225 × 5", "BW × 12", "BW+15 × 8". */
+/** The card hero, with no unit: "225 × 5"; on a bodyweight lift "BW × 12" or
+ *  "BW+15 × 8"; on a band lift with no weight "Band × 15". */
 export function heroText(session, lift, unit) {
   if (!session) return 'Not logged yet';
   const reps = session.topReps;
-  if (!lift.isBodyweight) return `${formatWeight(session.topWeightKg, unit)} × ${reps}`;
-  return isLoaded(session) ? `BW+${formatWeight(session.topWeightKg, unit)} × ${reps}` : `BW × ${reps}`;
+  if (lift.equipment === 'bodyweight') {
+    return isLoaded(session) ? `BW+${formatWeight(session.topWeightKg, unit)} × ${reps}` : `BW × ${reps}`;
+  }
+  if (lift.equipment === 'band' && !isLoaded(session)) return `Band × ${reps}`;
+  return `${formatWeight(session.topWeightKg, unit)} × ${reps}`;
 }
 
 /** What the card shows for a session when deciding whether "· PR …" would
  *  repeat the latest (see derive.showsPR). */
 export function prFigure(lift, unit) {
   return s => {
-    if (!lift.isBodyweight) return Math.round(toDisplay(s.bestE1RMKg, unit));
-    return isLoaded(s) ? heroText(s, lift, unit) : s.topReps;
+    if (!isLoaded(s)) return s.topReps;
+    return lift.equipment === 'bodyweight' ? heroText(s, lift, unit) : Math.round(toDisplay(s.bestE1RMKg, unit));
   };
 }
 

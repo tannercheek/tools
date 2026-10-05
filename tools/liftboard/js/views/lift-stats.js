@@ -10,10 +10,13 @@ import { segmented } from './controls.js';
 import {
   metricsFor, defaultMetric, isWeightMetric, series, rangeStart, inRange, summaryFigures, history,
 } from '../derive.js';
-import { formatWeight, formatE1RM, heroText, shortDate } from '../format.js';
+import { formatWeight, formatE1RM, heroText, shortDate, showsE1RM } from '../format.js';
 
 const METRIC_LABELS = { e1rm: 'Est. 1RM', top: 'Top weight', reps: 'Reps', added: 'Added load' };
 const METRIC_TITLES = { e1rm: 'Estimated 1RM', top: 'Top weight', reps: 'Reps', added: 'Added load (est. 1RM)' };
+/** A band's weighted sessions aren't "added" to anything: there, "added" reads as e1RM. */
+const metricLabel = (m, lift) => (m === 'added' && lift.equipment === 'band' ? METRIC_LABELS.e1rm : METRIC_LABELS[m]);
+const metricTitle = (m, lift) => (m === 'added' && lift.equipment === 'band' ? METRIC_TITLES.e1rm : METRIC_TITLES[m]);
 const RANGES = [['3m', '3M'], ['6m', '6M'], ['1y', '1Y'], ['all', 'All']];
 const RANGE_TEXT = { '3m': 'last 3 months', '6m': 'last 6 months', '1y': 'last year', all: 'all time' };
 const RANGE_SPOKEN = { '3m': '3 months', '6m': '6 months', '1y': '1 year', all: 'all time' };
@@ -22,10 +25,11 @@ const UNIT_WORDS = { lb: 'pounds', kg: 'kilograms' };
 /** The chosen metric and range per lift, kept while the page is open. */
 const choices = new Map();
 
-/** "Sep 14 · 225 × 5 · e1RM 263", or "Sep 14 · BW+15 × 8" on a bodyweight lift. */
+/** "Sep 14 · 225 × 5 · e1RM 263"; "Sep 14 · BW+15 × 8" or "Sep 14 · Band × 15"
+ *  where there's no e1RM to show. */
 function sessionText(s, lift, unit) {
-  const main = heroText(s, lift, unit);
-  return lift.isBodyweight ? `${shortDate(s.date)} · ${main}` : `${shortDate(s.date)} · ${main} · e1RM ${formatE1RM(s.bestE1RMKg, unit)}`;
+  const main = `${shortDate(s.date)} · ${heroText(s, lift, unit)}`;
+  return showsE1RM(lift, s) ? `${main} · e1RM ${formatE1RM(s.bestE1RMKg, unit)}` : main;
 }
 
 /** Renders the detail; returns a cleanup function for when the view is left. */
@@ -37,7 +41,7 @@ export function renderLiftStats(root, store, liftId) {
     const lift = store.lift(liftId);
     const { unit } = store.state.settings;
     const state = choices.get(liftId) ?? { metric: defaultMetric(lift), range: '6m' };
-    if (!metricsFor(lift).includes(state.metric)) state.metric = defaultMetric(lift);   // bodyweight flag changed
+    if (!metricsFor(lift).includes(state.metric)) state.metric = defaultMetric(lift);   // equipment changed
     choices.set(liftId, state);
     const pick = changes => { Object.assign(state, changes); draw(); };
 
@@ -71,13 +75,13 @@ export function renderLiftStats(root, store, liftId) {
     const chartBox = h('div', { class: 'chart-box' });
     const card = h('section', { class: 'chart-card', 'aria-label': 'Chart' },
       h('h2', { class: 't-chart-title' }, lift.name),
-      h('p', { class: 't-subtitle' }, `${METRIC_TITLES[metric]} · ${RANGE_TEXT[range]}`),
+      h('p', { class: 't-subtitle' }, `${metricTitle(metric, lift)} · ${RANGE_TEXT[range]}`),
       ranged.length >= 2 ? chartBox : h('p', { class: 't-row-label chart-empty' }, 'Log at least two sessions to see a chart'));
 
     const sessions = [...history(lift)].reverse();
     fill(root,
       header,
-      segmented('Metric', metricsFor(lift).map(m => [m, METRIC_LABELS[m]]), metric, m => pick({ metric: m })),
+      segmented('Metric', metricsFor(lift).map(m => [m, metricLabel(m, lift)]), metric, m => pick({ metric: m })),
       segmented('Range', RANGES, range, r => pick({ range: r })),
       h('div', { class: 'figures' },
         figure('Current', num(figs.current)),
@@ -107,7 +111,7 @@ export function renderLiftStats(root, store, liftId) {
       const opts = {
         points: ranged, start, end: now,
         callout: `${num(last)} ${unitText}`,
-        ariaLabel: `${METRIC_TITLES[metric]}, ${RANGE_SPOKEN[range]}, from ${num(first)} to ${num(last)} ${weight ? UNIT_WORDS[unit] : 'reps'}.`,
+        ariaLabel: `${metricTitle(metric, lift)}, ${RANGE_SPOKEN[range]}, from ${num(first)} to ${num(last)} ${weight ? UNIT_WORDS[unit] : 'reps'}.`,
       };
       drawChart(chartBox, opts);
       let lastWidth = chartBox.clientWidth;

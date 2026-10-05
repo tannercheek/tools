@@ -2,25 +2,32 @@
 // The file uses the same shape as the LiftBoard iOS app's export: tags by
 // name, lifts with `tags` (names) and `history` (session summaries), no ids,
 // no settings. Import validates every field; one bad record rejects the file.
+// Lifts carry `equipment`, plus the iOS shape's `isBodyweight` (true only for
+// bodyweight lifts); a file without `equipment` gets it as old saved data does.
 
-import { SCHEMA_VERSION, newLiftId, newTagId, newSessionId, validate } from './schema.js';
-import { PATTERNS } from './library.js';
+import { newLiftId, newTagId, newSessionId, validate } from './schema.js';
+import { PATTERNS, EQUIPMENT, equipmentFromLegacy } from './library.js';
 import { history, round2 } from './derive.js';
 
 const bySortOrder = (a, b) => a.sortOrder - b.sortOrder;
+
+/** The export file's own version. It stays 1, the iOS app's, while the saved
+ *  data's schemaVersion moves on: the file's shape only ever gains fields. */
+export const FILE_VERSION = 1;
 
 /** The export file as an object (JSON.stringify it to save). */
 export function toExportFile(doc, now = new Date()) {
   const tags = [...doc.tags].sort(bySortOrder);
   const nameOf = new Map(tags.map(t => [t.id, t.name]));
   return {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: FILE_VERSION,
     exportedAt: now.toISOString(),
     tags: tags.map(t => ({ name: t.name })),
     lifts: [...doc.lifts].sort(bySortOrder).map(l => ({
       name: l.name,
       pattern: l.pattern,
-      isBodyweight: l.isBodyweight,
+      equipment: l.equipment,
+      isBodyweight: l.equipment === 'bodyweight',
       notes: l.notes,
       tags: l.tagIds.map(id => nameOf.get(id)).filter(Boolean),
       lastSets: l.lastSets.map(({ weightKg, reps }) => ({ weightKg, reps })),
@@ -47,6 +54,7 @@ function checkLift(l) {
   if (!isObj(l)) return 'it isn’t a lift record';
   if (!isName(l.name)) return 'it has no name';
   if (!(l.pattern in PATTERNS)) return `its movement pattern "${l.pattern}" isn’t one LiftBoard knows`;
+  if (l.equipment !== undefined && !(typeof l.equipment === 'string' && Object.hasOwn(EQUIPMENT, l.equipment))) return `its equipment "${l.equipment}" isn’t one LiftBoard knows`;
   if (l.isBodyweight !== undefined && typeof l.isBodyweight !== 'boolean') return 'its bodyweight flag isn’t true or false';
   if (l.notes !== undefined && typeof l.notes !== 'string') return 'its notes aren’t text';
   if (l.tags !== undefined && !(Array.isArray(l.tags) && l.tags.every(isName))) return 'its tags aren’t a list of names';
@@ -76,7 +84,7 @@ export function fromExportFile(data, now = new Date()) {
   if (!Number.isInteger(data.schemaVersion) || data.schemaVersion < 1) {
     throw new ImportError('This file’s version number isn’t valid, so nothing was imported.');
   }
-  if (data.schemaVersion > SCHEMA_VERSION) {
+  if (data.schemaVersion > FILE_VERSION) {
     throw new ImportError('This file is from a newer version of LiftBoard, so it can’t be imported here.');
   }
   if (!Array.isArray(data.tags) || !Array.isArray(data.lifts)) {
@@ -121,7 +129,7 @@ export function fromExportFile(data, now = new Date()) {
       id: newLiftId(),
       name: l.name.trim(),
       pattern: l.pattern,
-      isBodyweight: l.isBodyweight ?? false,
+      equipment: l.equipment ?? equipmentFromLegacy(l),
       notes: l.notes ?? '',
       sortOrder: i,
       createdAt: sessions[0]?.date ?? now.toISOString(),
