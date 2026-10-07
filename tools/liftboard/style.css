@@ -58,8 +58,12 @@ button:disabled { cursor: default; color: var(--text-faint); }
 .board-header { display: grid; gap: var(--s-2); margin-bottom: var(--s-6); }
 .board-header-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .brand { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
-.logo-mark { display: flex; color: var(--text-2); flex: none; }
-.logo-mark .icon { width: 24px; height: 24px; }
+/* The mark is sized in em of the wordmark's size, so the two scale together */
+.logo-mark { display: flex; color: var(--accent); flex: none; font-size: var(--fs-wordmark); }
+.logo-mark .icon { width: 1em; height: 1em; }
+/* The two-tone mark (icons.js → HEADER_LOGO): squares in the text color, the arrow in the accent */
+.logo-squares { fill: var(--text); }
+.logo-arrow { fill: var(--accent); }
 .header-actions { display: flex; align-items: center; gap: var(--s-2); flex: none; }
 
 /* Sort: an invisible native <select> over the icon button */
@@ -114,7 +118,8 @@ button:disabled { cursor: default; color: var(--text-faint); }
 .btn-secondary:not(:disabled):active, .btn-add-set:active { background: var(--pressed); }
 .btn-wide { width: 100%; }
 
-/* Round icon buttons. The Board's Add is the screen's primary action. */
+/* Round icon buttons. The Board's Sort and Add are one size; Add's accent fill
+   marks it as the screen's primary action. */
 .btn-icon, .btn-close {
   width: var(--tap);
   height: var(--tap);
@@ -127,7 +132,8 @@ button:disabled { cursor: default; color: var(--text-faint); }
   background: var(--raised);
   color: var(--text);
 }
-.btn-icon-primary { width: var(--s-12); height: var(--s-12); background: var(--accent); color: var(--on-accent); }
+.btn-icon { width: var(--s-12); height: var(--s-12); }
+.btn-icon-primary { background: var(--accent); color: var(--on-accent); }
 .btn-close { margin-right: calc(-1 * var(--s-1)); }
 
 /* Quiet text buttons and links: Edit, Rename, ‹ Back */
@@ -160,7 +166,7 @@ button:disabled { cursor: default; color: var(--text-faint); }
 .field::placeholder, .set-field::placeholder { color: var(--text-muted); }
 
 /* Focus: a 1.5px accent border (the 1px border plus a 0.5px ring inside it) */
-:is(.field, .set-field):focus { border-color: var(--accent); outline: 0.5px solid var(--accent); outline-offset: -1.5px; }
+.field:focus, .set-stepper:has(.set-field:focus) { border-color: var(--accent); outline: 0.5px solid var(--accent); outline-offset: -1.5px; }
 
 .search-wrap { position: relative; margin-bottom: var(--s-4); }
 .search-wrap .field { padding-left: var(--s-12); }
@@ -354,25 +360,54 @@ dialog::backdrop { background: var(--scrim); }
 /* Data rows: # | weight | reps | remove */
 .set-columns, .set-row {
   display: grid;
-  grid-template-columns: 32px 1fr 1fr var(--tap);
-  gap: var(--s-3);
+  grid-template-columns: var(--s-5) minmax(0, 5fr) minmax(0, 4fr) var(--tap);
+  column-gap: var(--s-1);
   align-items: center;
+  /* The remove button's hit area reaches into the gutter; its icon stays inside it */
+  margin-right: calc(-1 * var(--s-3));
 }
 .set-columns { margin-bottom: var(--s-2); }
 .set-columns .t-column:nth-child(2), .set-columns .t-column:nth-child(3) { text-align: center; }
 .set-rows { display: grid; gap: var(--s-2); margin-bottom: var(--s-4); }
 .set-number { color: var(--text-muted); text-align: center; }
 
-.set-field {
-  width: 100%;
+/* A set field: − on the left, the number, + on the right, in one bordered box.
+   The number takes whatever width the buttons leave. */
+.set-stepper {
   min-width: 0;
   height: var(--h-input);
-  padding: 0 var(--s-2);
+  display: flex;
+  align-items: center;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--raised);
 }
-.set-field.show-invalid { border-color: var(--danger); outline: 0.5px solid var(--danger); outline-offset: -1.5px; }
+.set-stepper:has(.set-field.show-invalid) { border-color: var(--danger); outline: 0.5px solid var(--danger); outline-offset: -1.5px; }
+.set-field {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.set-field:focus-visible { outline: 0; }   /* the box shows focus instead */
+
+.btn-step {
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
+  touch-action: manipulation;   /* tapping + quickly mustn't double-tap zoom on iOS */
+}
+.btn-step:active { background: var(--pressed); }
 
 .btn-remove, .btn-move {
   width: var(--tap);

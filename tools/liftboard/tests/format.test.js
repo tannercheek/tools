@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   toDisplay, toKg, formatWeight, formatE1RM, heroText, prFigure, showsE1RM,
-  relativeDay, shortDate, todayLabel, plural, parseDecimal, parseReps,
+  relativeDay, shortDate, todayLabel, boardDate, plural, parseDecimal, parseReps, parseWhole,
 } from '../js/format.js';
 
 const s = (topWeightKg, topReps, bestE1RMKg = topWeightKg) =>
@@ -91,4 +91,22 @@ test('parseReps: whole numbers 1 to 100', () => {
   assert.equal(parseReps('100'), 100);
   assert.equal(parseReps(''), null);
   for (const bad of ['0', '101', '5.5', '-3', 'x']) assert.ok(Number.isNaN(parseReps(bad)), bad);
+});
+
+test("the Board's date: long weekday, short month, day, in the device's locale", () => {
+  const oct4 = new Date(2023, 9, 4, 9, 30);   // a Wednesday, local time
+  assert.equal(boardDate(oct4, 'en-US'), 'Wednesday, Oct 4');
+  assert.match(boardDate(oct4, 'en-GB'), /^Wednesday,? 4 Oct$/);
+  assert.match(boardDate(oct4, 'de-DE'), /^Mittwoch, 4\. Okt/);
+  assert.equal(boardDate(oct4), new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(oct4));
+  // Just before and after local midnight are different days
+  assert.equal(boardDate(new Date(2023, 9, 4, 23, 59), 'en-US'), 'Wednesday, Oct 4');
+  assert.equal(boardDate(new Date(2023, 9, 5, 0, 1), 'en-US'), 'Thursday, Oct 5');
+});
+
+test('whole numbers: any size; null when empty, NaN when unreadable', () => {
+  assert.equal(parseWhole(' 150 '), 150);
+  assert.equal(parseWhole(''), null);
+  assert.ok(Number.isNaN(parseWhole('5.5')));
+  assert.ok(Number.isNaN(parseWhole('-3')));
 });

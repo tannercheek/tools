@@ -8,9 +8,21 @@ import { icon } from '../icons.js';
 import { latest } from '../derive.js';
 import { shortDate, todayLabel } from '../format.js';
 import { allowsNoWeight } from '../library.js';
-import { prefillRows, copyRow, readRows, rowsDiffer, weightValid, repsValid } from '../log-rows.js';
+import {
+  prefillRows, copyRow, readRows, rowsDiffer, weightValid, repsValid, stepWeight, stepReps,
+} from '../log-rows.js';
 import { openLiftEditor } from './lift-editor.js';
 import { openTagPicker } from './tag-chooser.js';
+
+/** A field with − on its left and + on its right. `step(direction)` returns the
+ *  field's new text, or null when the button does nothing; `set(text)` applies it. */
+function stepper(input, what, n, step, set) {
+  const button = (direction, verb, name) => h('button', {
+    type: 'button', class: 'btn-step', 'aria-label': `${verb} ${what}, set ${n}`, html: icon(name),
+    onclick: () => { const text = step(direction); if (text !== null) set(text); },
+  });
+  return h('div', { class: 'set-stepper' }, button(-1, 'Decrease', 'minus'), input, button(1, 'Increase', 'plus'));
+}
 
 /** Opens the sheet for one lift. `onLogged(liftId)` runs after a session is saved. */
 export function openLogSheet(store, liftId, { onLogged } = {}) {
@@ -49,8 +61,11 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
         type: 'text', inputmode: 'numeric', enterkeyhint: 'next', autocomplete: 'off',
         class: 'set-field t-field', id: `set-${n}-reps`, value: row.reps,
       });
-      weight.addEventListener('input', () => { row.weight = weight.value; touched.add(weight); refresh(); });
-      reps.addEventListener('input', () => { row.reps = reps.value; touched.add(reps); refresh(); });
+      // Typing and the − / + buttons both edit the row the same way
+      const setWeight = text => { weight.value = row.weight = text; touched.add(weight); refresh(); };
+      const setReps = text => { reps.value = row.reps = text; touched.add(reps); refresh(); };
+      weight.addEventListener('input', () => setWeight(weight.value));
+      reps.addEventListener('input', () => setReps(reps.value));
       weight.addEventListener('blur', () => { touched.add(weight); refresh(); });
       reps.addEventListener('blur', () => { touched.add(reps); refresh(); });
       const remove = h('button', {
@@ -58,12 +73,13 @@ export function openLogSheet(store, liftId, { onLogged } = {}) {
         disabled: rows.length === 1,
         onclick: () => { rows.splice(i, 1); renderRows(); },
       });
+      const weightWord = lift().equipment === 'bodyweight' ? 'added weight' : 'weight';
       return h('div', { class: 'set-row', role: 'group', 'aria-label': `Set ${n}` },
         h('span', { class: 't-row-value set-number', 'aria-hidden': 'true' }, String(n)),
-        h('label', { class: 'visually-hidden', for: weight.id }, `Set ${n} ${lift().equipment === 'bodyweight' ? 'added weight' : 'weight'} in ${unit}`),
-        weight,
+        h('label', { class: 'visually-hidden', for: weight.id }, `Set ${n} ${weightWord} in ${unit}`),
+        stepper(weight, weightWord, n, d => stepWeight(row.weight, d, unit, allowsNoWeight(lift())), setWeight),
         h('label', { class: 'visually-hidden', for: reps.id }, `Set ${n} reps`),
-        reps,
+        stepper(reps, 'reps', n, d => stepReps(row.reps, d), setReps),
         remove);
     }));
     refresh();

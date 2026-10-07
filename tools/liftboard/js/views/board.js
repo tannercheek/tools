@@ -1,12 +1,12 @@
 // views/board.js — the Board tab: the header (logo mark, wordmark, sync dot,
-// Sort and Add buttons, live subtitle), the tag filter chips, the empty
+// Sort and Add buttons, today's date, live subtitle), the tag filter chips, the empty
 // states, and the grid of lift cards. Tapping a card opens the Log Session
 // sheet. Sort and the selected filters are saved in settings.
 
 import { h, fill } from '../dom.js';
-import { plural } from '../format.js';
+import { boardDate, plural } from '../format.js';
 import { badge, filterLifts, sortLifts } from '../derive.js';
-import { icon, logoMark } from '../icons.js';
+import { icon, headerLogo } from '../icons.js';
 import { openAddLift } from './add-lift.js';
 import { openLogSheet } from './log-sheet.js';
 import { liftCard } from './card.js';
@@ -89,12 +89,13 @@ export function renderBoard(root, store) {
   const header = h('header', { class: 'board-header' },
     h('div', { class: 'board-header-row' },
       h('div', { class: 'brand' },
-        h('span', { class: 'logo-mark', html: logoMark() }),
+        h('span', { class: 'logo-mark', html: headerLogo() }),
         h('h1', { class: 't-wordmark' }, 'LiftBoard'),
         sync),
       h('div', { class: 'header-actions' },
         sortControl(store),
         h('button', { type: 'button', class: 'btn-icon btn-icon-primary', 'aria-label': 'Add lift', onclick: add, html: icon('plus') }))),
+    h('p', { class: 't-section' }, boardDate(now)),
     h('p', { class: 't-subtitle' }, plural(all.length, 'lift') + (flames ? ` · ${flames} 🔥` : '')));
 
   const body = all.length === 0

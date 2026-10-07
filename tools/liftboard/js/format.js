@@ -54,6 +54,11 @@ export function relativeDay(iso, now = new Date()) {
 export const shortDate = iso =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
+/** "Wednesday, Oct 4" — the Board's date line. Unlike LiftBoard's other dates,
+ *  it follows the device's language and region. */
+export const boardDate = (now = new Date(), locale = undefined) =>
+  new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'short', day: 'numeric' }).format(now);
+
 /** "Today, Sep 22" — the log sheet's date row. */
 export const todayLabel = (now = new Date()) => `Today, ${shortDate(now.toISOString())}`;
 
@@ -68,10 +73,20 @@ export function parseDecimal(text) {
   return /^(\d+\.?\d*|\.\d+)$/.test(t) ? Number(t) : NaN;
 }
 
-/** Reads typed reps: a whole number from 1 to 100, else NaN (null when empty). */
-export function parseReps(text) {
+/** Reps must be a whole number in this range. */
+export const REPS_MIN = 1;
+export const REPS_MAX = 100;
+
+/** Reads a typed whole number of any size: null when empty, NaN when unreadable. */
+export function parseWhole(text) {
   const t = String(text).trim();
   if (t === '') return null;
-  const n = /^\d+$/.test(t) ? Number(t) : NaN;
-  return n >= 1 && n <= 100 ? n : NaN;
+  return /^\d+$/.test(t) ? Number(t) : NaN;
+}
+
+/** Reads typed reps: a whole number from 1 to 100, else NaN (null when empty). */
+export function parseReps(text) {
+  const n = parseWhole(text);
+  if (n === null) return null;
+  return n >= REPS_MIN && n <= REPS_MAX ? n : NaN;
 }

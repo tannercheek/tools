@@ -10,7 +10,7 @@
 
 /* ── Type scale ── */
 
-.t-wordmark      { font: 600 var(--fs-heading)/1 var(--font-brand); letter-spacing: var(--ls-heading); color: var(--text); }
+.t-wordmark      { font: 600 var(--fs-wordmark)/1 var(--font-brand); letter-spacing: var(--ls-heading); color: var(--text); }
 .t-subtitle      { font: 400 var(--fs-caption)/1.4 var(--font-sans); color: var(--text-muted); }
 .t-lift-name     { font: 500 var(--fs-small)/1.3 var(--font-sans); color: var(--text);
                    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

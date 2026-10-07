@@ -17,6 +17,7 @@ This folder is `tools/liftboard/` inside the dashboard repo. It must follow the 
 ## How to work
 
 - Build one phase at a time, in the order in SPEC.md → Build phases. Finish a phase, then stop.
+- Work directly on main. Never create branches. Don't commit or push; I check the work and commit myself.
 - A phase is finished only when `node --test "tests/*.test.js"` passes, the page loads with no console errors, and you've listed its acceptance checks for me to try. Never report a phase done because the code looks right.
 - Change only what the current phase needs. Don't refactor earlier phases, and don't touch anything outside this folder.
 - If the spec is ambiguous, contradictory, or seems wrong — or `persist.js` doesn't behave as SPEC.md assumes — stop and ask. Don't guess.

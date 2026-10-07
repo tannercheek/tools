@@ -69,6 +69,8 @@ function startRouter(store) {
 
   window.addEventListener('hashchange', render);
   store.subscribe(render);
+  // Back in view (say, the next morning): redraw, so dates, "5 days ago" and ❄️ are current
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') render(); });
   render();
 }
 

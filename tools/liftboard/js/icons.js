@@ -1,7 +1,8 @@
 // icons.js — UI icons from Lucide (https://lucide.dev), copied in as inline SVG
 // strings from lucide-static 1.48.0; equipment icons from Atlas Icons (below,
-// with their license); and a placeholder logo mark. Nothing is fetched at
-// runtime. All of them draw with currentColor, so CSS sets their color.
+// with their license); and the logo mark from brand/. Nothing is fetched at
+// runtime. All of them draw with currentColor, so CSS sets their color; the
+// two-tone logo's two parts are colored by class in style.css instead.
 //
 // ISC License (Lucide)
 //
@@ -22,7 +23,7 @@
 // ---
 //
 // Of the Lucide icons below, these are derived from the Feather project: plus,
-// x, chevron-right, chevron-left, chevron-up, chevron-down, arrow-up-right,
+// minus, x, chevron-right, chevron-left, chevron-up, chevron-down, arrow-up-right,
 // trash-2, search.
 //
 // The MIT License (MIT) (for the icons listed above)
@@ -50,6 +51,7 @@
 export const PATHS = {
   // UI
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  minus: '<path d="M5 12h14"/>',
   'arrow-up-down': '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   'circle-minus': '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
@@ -118,8 +120,24 @@ export const equipmentIcon = equipment =>
   'stroke-linejoin="round" aria-hidden="true" focusable="false">' +
   `${EQUIPMENT_PATHS[equipment] ?? EQUIPMENT_PATHS.other}</svg>`;
 
-/** The logo mark, for the Board header. A placeholder until the mark is drawn:
- *  replace this one SVG string. Decorative, like the icons. */
+/** The logo mark, for the Board header: brand/logo-mark.svg (filled, on a 96×96
+ *  grid), with its black fill swapped for currentColor so CSS colors it. Its
+ *  export clipped it to its own box, which changed nothing, so the clip is left
+ *  out. Decorative, like the icons. */
 export const logoMark = () =>
-  '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">' +
-  '<rect x="3" y="3" width="18" height="18" rx="6"/></svg>';
+  '<svg class="icon" viewBox="0 0 96 96" fill="currentColor" aria-hidden="true" focusable="false">' +
+  '<path d="M0 8C0 2.6667 2.6667 0 8 0H32C37.3333 0 40 2.6667 40 8V32C40 37.3333 37.3333 40 32 40H8C2.6667 40 0 37.3333 0 32V8ZM0 64C0 58.6667 2.6667 56 8 56H32C37.3333 56 40 58.6667 40 64V88C40 93.3333 37.3333 96 32 96H8C2.6667 96 0 93.3333 0 88V64ZM56 64C56 58.6667 58.6667 56 64 56H88C93.3333 56 96 58.6667 96 64V88C96 93.3333 93.3333 96 88 96H64C58.6667 96 56 93.3333 56 88V64ZM57 34C56.1473 33.0312 56.1473 31.8527 57 31L74 14C74.9688 13.0312 74.7247 12.4419 73 12H62C60.3914 12.4419 59.5581 11.6086 60 10V3C59.5581 1.2753 60.3914 0.4419 62 0H88C92.8914 0.4419 95.5581 3.1086 96 8V34C95.5581 35.6086 94.7247 36.4419 93 36H86C84.3914 36.4419 83.5581 35.6086 84 34V23C83.5581 21.2753 82.9688 21.0312 82 22L65 39C64.1473 39.8527 62.9688 39.8527 62 39L57 34Z"/></svg>';
+
+/** An experimental two-tone version of the mark: brand/logo-mark-two-tone.svg,
+ *  the same drawing split in two. It has no fills of its own: style.css colors
+ *  .logo-squares with the text color and .logo-arrow with the accent. Decorative. */
+export const logoMarkTwoTone = () =>
+  '<svg class="icon" viewBox="0 0 96 96" aria-hidden="true" focusable="false">' +
+  '<path class="logo-squares" d="M0 8C0 2.6667 2.6667 0 8 0H32C37.3333 0 40 2.6667 40 8V32C40 37.3333 37.3333 40 32 40H8C2.6667 40 0 37.3333 0 32V8ZM0 64C0 58.6667 2.6667 56 8 56H32C37.3333 56 40 58.6667 40 64V88C40 93.3333 37.3333 96 32 96H8C2.6667 96 0 93.3333 0 88V64ZM56 64C56 58.6667 58.6667 56 64 56H88C93.3333 56 96 58.6667 96 64V88C96 93.3333 93.3333 96 88 96H64C58.6667 96 56 93.3333 56 88V64Z"/>' +
+  '<path class="logo-arrow" d="M57 34C56.1473 33.0312 56.1473 31.8527 57 31L74 14C74.9688 13.0312 74.7247 12.4419 73 12H62C60.3914 12.4419 59.5581 11.6086 60 10V3C59.5581 1.2753 60.3914 0.4419 62 0H88C92.8914 0.4419 95.5581 3.1086 96 8V34C95.5581 35.6086 94.7247 36.4419 93 36H86C84.3914 36.4419 83.5581 35.6086 84 34V23C83.5581 21.2753 82.9688 21.0312 82 22L65 39C64.1473 39.8527 62.9688 39.8527 62 39L57 34Z"/></svg>';
+
+/** Which mark the Board header shows: 'original' (all accent) or 'two-tone'. */
+export const HEADER_LOGO = 'two-tone';
+
+/** The mark HEADER_LOGO picks, for the Board header. */
+export const headerLogo = () => (HEADER_LOGO === 'two-tone' ? logoMarkTwoTone() : logoMark());
