@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interview Prep</title>
+  <meta name="description" content="SWE interview practice plan">
+  <meta name="icon" content="checklist">
+  <meta name="tags" content="checklist, interview, study, career">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <h1>Interview prep</h1>
+      <p class="sync" id="sync" role="status">Loading saved progress</p>
+    </header>
+
+    <dl class="stats" id="stats"></dl>
+
+    <section class="ticket" aria-labelledby="next-h">
+      <h2 class="tape" id="next-h">Next up</h2>
+      <ul class="orders" id="orders"></ul>
+      <div class="timer">
+        <span class="timer-read" id="timer-read" aria-live="off">25:00</span>
+        <button type="button" data-act="timer-toggle" id="timer-toggle">Start timer</button>
+        <button type="button" class="quiet" data-act="timer-reset">Reset</button>
+        <span class="timer-msg" id="timer-msg" role="status"></span>
+      </div>
+    </section>
+
+    <section aria-labelledby="road-h">
+      <h2 id="road-h">Problems</h2>
+      <p class="lede">Work top to bottom. Phase 1 covers what most entry-level screens ask.</p>
+      <div id="roadmap"></div>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
