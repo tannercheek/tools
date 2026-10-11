@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Job Search</title>
+  <meta name="description" content="Prep checklist, daily and weekly search rounds, and interview problem practice for SWE and cybersecurity roles">
+  <meta name="icon" content="checklist">
+  <meta name="tags" content="checklist, career, weekly, interview, study">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <h1>Job search</h1>
+      <p class="sync" id="sync" role="status">Loading saved progress</p>
+    </header>
+    <p class="lede">Prepare once, work the search every day and week, and practice interview problems in short sessions. For entry-level software engineering and cybersecurity roles.</p>
+
+    <div class="bar">
+      <div class="tabs" role="tablist" aria-label="Plan">
+        <button class="tab" type="button" role="tab" id="tab-prepare" data-tab="prepare" aria-controls="panel-prepare" aria-selected="true">Prepare</button>
+        <button class="tab" type="button" role="tab" id="tab-search" data-tab="search" aria-controls="panel-search" aria-selected="false" tabindex="-1">Search</button>
+        <button class="tab" type="button" role="tab" id="tab-interview" data-tab="interview" aria-controls="panel-interview" aria-selected="false" tabindex="-1">Interview prep</button>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label" id="bar-label">Ready to apply</span>
+        <span class="bar-count" id="bar-count">0 of 0</span>
+      </div>
+      <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="bar-label" id="meter">
+        <div class="fill" id="fill"></div>
+      </div>
+    </div>
+
+    <div class="controls" id="controls">
+      <div class="segmented" id="track-picker" role="group" aria-label="Track">
+        <button type="button" data-track="all">Both tracks</button>
+        <button type="button" data-track="swe">Software eng.</button>
+        <button type="button" data-track="sec">Cybersecurity</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="hide-done"> Hide completed</label>
+    </div>
+
+    <section class="panel" id="panel-prepare" role="tabpanel" aria-labelledby="tab-prepare"></section>
+
+    <section class="panel" id="panel-search" role="tabpanel" aria-labelledby="tab-search" hidden>
+      <section class="ticket" aria-labelledby="week-h">
+        <h2 class="tape" id="week-h">This week</h2>
+        <p class="meta" id="week-meta"></p>
+        <div class="counter">
+          <div>
+            <p class="counter-name">Applications sent</p>
+            <p class="counter-goal">
+              Goal: 10–15, aimed at roles that fit. Tailor the resume version and log each one in the tracker.
+              <span class="last" id="last-apps"></span>
+            </p>
+          </div>
+          <div class="stepper">
+            <button class="step" type="button" data-counter="apps" data-delta="-1" aria-label="Remove one application" disabled>−</button>
+            <span class="count" id="count-apps" aria-live="polite">0</span>
+            <button class="step" type="button" data-counter="apps" data-delta="1" aria-label="Add one application" disabled>+</button>
+          </div>
+        </div>
+        <div class="counter">
+          <div>
+            <p class="counter-name">Outreach messages sent</p>
+            <p class="counter-goal">
+              Goal: 3–5, to alumni, past contacts and people at target companies. Be specific, and don't ask for a job in the first message.
+              <span class="last" id="last-outreach"></span>
+            </p>
+          </div>
+          <div class="stepper">
+            <button class="step" type="button" data-counter="outreach" data-delta="-1" aria-label="Remove one outreach message" disabled>−</button>
+            <span class="count" id="count-outreach" aria-live="polite">0</span>
+            <button class="step" type="button" data-counter="outreach" data-delta="1" aria-label="Add one outreach message" disabled>+</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="rounds"></div>
+
+      <section class="phase" aria-labelledby="where-h">
+        <div class="phase-head"><h2 id="where-h">Where to look</h2></div>
+        <p class="phase-intro">In order of payoff. First-pass tasks here stay checked; the recurring checks live in your daily and weekly rounds above.</p>
+        <div id="channels"></div>
+      </section>
+
+      <footer>
+        One referral usually does more than 30 cold applications, so keep warm contacts moving even on weeks when the boards are busy.
+      </footer>
+    </section>
+
+    <section class="panel" id="panel-interview" role="tabpanel" aria-labelledby="tab-interview" hidden>
+      <section class="ticket" aria-labelledby="next-h">
+        <h2 class="tape" id="next-h">Next up</h2>
+        <ul class="orders" id="orders"></ul>
+        <div class="timer">
+          <span class="timer-read" id="timer-read" aria-live="off">25:00</span>
+          <button type="button" data-act="timer-toggle" id="timer-toggle">Start timer</button>
+          <button type="button" class="quiet" data-act="timer-reset">Reset</button>
+          <span class="timer-msg" id="timer-msg" role="status"></span>
+        </div>
+      </section>
+
+      <section class="phase" aria-labelledby="road-h">
+        <div class="phase-head"><h2 id="road-h">Problems</h2></div>
+        <p class="phase-intro">Work top to bottom. Phase 1 covers what most entry-level screens ask.</p>
+        <div id="roadmap"></div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

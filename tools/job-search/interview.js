@@ -1,8 +1,6 @@
-// Interview Prep: a spaced-review practice plan.
-// State syncs through shared/persist.js, with a localStorage fallback so the
-// tool still works when opened on its own.
+// Interview prep tab: a spaced-review problem list, the one problem to work
+// on next, and a 25-minute timer. Saved in its own synced document.
 
-const TOOL_ID = 'interview-prep';
 const DAY = 86400000;
 const REVIEW_DAYS = [3, 7, 21]; // gaps after each clean solve
 const TIMER_MS = 25 * 60 * 1000;
@@ -160,216 +158,187 @@ const ALL = PHASES.flatMap(ph => ph.topics.flatMap(t =>
   t.problems.map(pr => ({ ...pr, topic: t.name, phase: ph.id }))));
 const BY_SLUG = Object.fromEntries(ALL.map(pr => [pr.slug, pr]));
 
-/* ---------- persistence ---------- */
-
-async function openStore() {
-  try {
-    const { syncedState } = await import('../../shared/persist.js');
-    const s = await syncedState(TOOL_ID);
-    return { mode: 'synced', get: k => s.get(k), set: (k, v) => s.set(k, v) };
-  } catch (err) {
-    const key = k => `${TOOL_ID}:${k}`;
-    return {
-      mode: 'local',
-      get: k => { try { return JSON.parse(localStorage.getItem(key(k))); } catch { return null; } },
-      set: (k, v) => { localStorage.setItem(key(k), JSON.stringify(v)); },
-    };
-  }
-}
-
-const state = {
-  problems: {},  // slug -> { s: 'solved' | 'help', n: clean solves so far, t: last attempt }
-  current: null, // slug of the problem that was opened but not finished
-};
-
-const syncEl = document.getElementById('sync');
-const store = await openStore();
-for (const k of Object.keys(state)) {
-  try {
-    const v = await store.get(k);
-    if (v !== null && v !== undefined) state[k] = v;
-  } catch { /* keep the default */ }
-}
-const MODE_TEXT = store.mode === 'synced' ? 'Synced across devices' : 'Saved on this device only';
-syncEl.textContent = MODE_TEXT;
-
-async function save(k) {
-  try {
-    await store.set(k, state[k]);
-    syncEl.textContent = MODE_TEXT;
-    syncEl.classList.remove('is-error');
-  } catch {
-    syncEl.textContent = 'Last change was not saved. Check your connection and change it again.';
-    syncEl.classList.add('is-error');
-  }
-}
-
-/* ---------- scheduling ---------- */
-
-function dueAt(slug) {
-  const r = state.problems[slug];
-  if (!r) return null;
-  if (r.s === 'help') return r.t + DAY;
-  if (r.n > REVIEW_DAYS.length) return null; // learned
-  return r.t + REVIEW_DAYS[r.n - 1] * DAY;
-}
-const dueNow = () => ALL
-  .filter(pr => { const d = dueAt(pr.slug); return d !== null && d <= Date.now(); })
-  .sort((a, b) => dueAt(a.slug) - dueAt(b.slug));
-const unseen = () => ALL.filter(pr => !state.problems[pr.slug]);
-
-function record(slug, result) {
-  const prev = state.problems[slug];
-  const n = result === 'solved' ? (prev && prev.s === 'solved' ? prev.n + 1 : 1) : 0;
-  state.problems[slug] = { s: result, n, t: Date.now() };
-  if (state.current === slug) { state.current = null; save('current'); }
-  save('problems');
-}
-
-/* ---------- rendering ---------- */
+/* ---------- tab ---------- */
 
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const link = pr => `<a href="https://leetcode.com/problems/${pr.slug}/" target="_blank" rel="noopener" data-act="open" data-slug="${pr.slug}">${esc(pr.title)}</a>`;
 const days = ms => Math.max(1, Math.ceil(ms / DAY));
 
-function problemOrder(pr, kind) {
-  const label = { review: 'Review, from a blank editor', resume: 'Pick up where you stopped', fresh: 'New problem' }[kind];
-  return `<li class="order">
-    <p class="order-kind${kind === 'review' ? ' is-due' : ''}">${label}</p>
-    <p class="order-title">${link(pr)}</p>
-    <p class="order-meta">${pr.level}, ${esc(pr.topic)}</p>
-    <div class="order-actions">
-      <button type="button" data-act="solved" data-slug="${pr.slug}" data-key="solved-${pr.slug}">Solved it</button>
-      <button type="button" data-act="help" data-slug="${pr.slug}" data-key="help-${pr.slug}">Needed the solution</button>
-    </div>
-  </li>`;
-}
+// Renders the tab into root and keeps it live. store is a syncedState()
+// instance; onChange runs after every status change so the page can update.
+export function mountInterview(root, store, onChange) {
+  const state = {
+    problems: store.get('problems') || {}, // slug -> { s: 'solved' | 'help', n: clean solves so far, t: last attempt }
+    current: store.get('current') ?? null,  // slug of the problem that was opened but not finished
+  };
+  const save = k => store.set(k, state[k]);
 
-function renderNext() {
-  // An opened-but-unfinished problem comes first, then due reviews, then new problems.
-  const current = state.current && !state.problems[state.current] ? BY_SLUG[state.current] : null;
-  const due = dueNow()[0];
-  const fresh = unseen()[0];
-  const next = current ? problemOrder(current, 'resume')
-    : due ? problemOrder(due, 'review')
-    : fresh ? problemOrder(fresh, 'fresh') : null;
+  /* ---------- scheduling ---------- */
 
-  document.getElementById('orders').innerHTML = next ||
-    `<li class="order"><p class="order-title">Nothing is due.</p>
-     <p class="order-meta">Every problem is solved and no review is due yet.</p></li>`;
-}
-
-function renderStats() {
-  const solved = ALL.filter(pr => state.problems[pr.slug]).length;
-  document.getElementById('stats').innerHTML = `
-    <div><dt>of ${ALL.length} problems attempted</dt><dd>${solved}</dd></div>
-    <div><dt>due for review</dt><dd>${dueNow().length}</dd></div>`;
-}
-
-const openPhases = new Set();
-function problemRow(pr) {
-  const r = state.problems[pr.slug];
-  const st = r ? r.s : 'new';
-  const word = { new: 'not started', solved: 'solved', help: 'needed the solution' }[st];
-  const glyph = { new: '', solved: '✓', help: '?' }[st];
-  let when = '';
-  if (r) {
-    const d = dueAt(pr.slug);
-    when = d === null ? 'Learned' : d <= Date.now() ? '<span class="due">Review due</span>'
-      : `Review in ${days(d - Date.now())} ${days(d - Date.now()) === 1 ? 'day' : 'days'}`;
+  function dueAt(slug) {
+    const r = state.problems[slug];
+    if (!r) return null;
+    if (r.s === 'help') return r.t + DAY;
+    if (r.n > REVIEW_DAYS.length) return null; // learned
+    return r.t + REVIEW_DAYS[r.n - 1] * DAY;
   }
-  return `<li class="prob is-${st}">
-    <button type="button" class="mark" data-act="cycle" data-slug="${pr.slug}" data-key="cycle-${pr.slug}"
-      aria-label="${esc(pr.title)}: ${word}. Change status">${glyph}</button>
-    <span>${link(pr)}</span>
-    <span class="prob-side">${when || pr.level}</span>
-  </li>`;
-}
-function renderRoadmap() {
-  document.getElementById('roadmap').innerHTML = PHASES.map(ph => {
-    const all = ph.topics.flatMap(t => t.problems);
-    const done = all.filter(pr => state.problems[pr.slug]).length;
-    return `<details class="phase" data-phase="${ph.id}"${openPhases.has(ph.id) ? ' open' : ''}>
-      <summary><span>${esc(ph.name)}</span><span class="count">${done} of ${all.length}</span></summary>
-      <p class="phase-note">${esc(ph.note)}</p>
-      ${ph.topics.map(t => `<div class="topic">
-        <div class="topic-head"><h3>${esc(t.name)}</h3>
-          <span class="count">${t.problems.filter(pr => state.problems[pr.slug]).length} of ${t.problems.length}</span></div>
-        <ul class="probs">${t.problems.map(problemRow).join('')}</ul>
-      </div>`).join('')}
-    </details>`;
-  }).join('');
-}
+  const dueNow = () => ALL
+    .filter(pr => { const d = dueAt(pr.slug); return d !== null && d <= Date.now(); })
+    .sort((a, b) => dueAt(a.slug) - dueAt(b.slug));
+  const unseen = () => ALL.filter(pr => !state.problems[pr.slug]);
 
-function render() {
-  const key = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
-  renderStats(); renderNext(); renderRoadmap();
-  if (key) { const el = document.querySelector(`[data-key="${key}"]`); if (el) el.focus(); }
-}
-
-/* ---------- timer ---------- */
-
-const timer = { left: TIMER_MS, endsAt: null, tick: null };
-const readEl = document.getElementById('timer-read');
-const toggleEl = document.getElementById('timer-toggle');
-const msgEl = document.getElementById('timer-msg');
-function paintTimer() {
-  const left = timer.endsAt ? Math.max(0, timer.endsAt - Date.now()) : timer.left;
-  const s = Math.ceil(left / 1000);
-  readEl.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-  toggleEl.textContent = timer.endsAt ? 'Pause timer' : left < TIMER_MS && left > 0 ? 'Resume timer' : 'Start timer';
-  if (timer.endsAt && left === 0) {
-    stopTimer(0);
-    msgEl.textContent = 'Time. Finish in the next few minutes, or read the solution and rewrite it from memory.';
+  function record(slug, result) {
+    const prev = state.problems[slug];
+    const n = result === 'solved' ? (prev && prev.s === 'solved' ? prev.n + 1 : 1) : 0;
+    state.problems[slug] = { s: result, n, t: Date.now() };
+    if (state.current === slug) { state.current = null; save('current'); }
+    save('problems');
   }
-}
-function stopTimer(left) {
-  clearInterval(timer.tick);
-  timer.left = left; timer.endsAt = null; timer.tick = null;
-  paintTimer();
-}
-function toggleTimer() {
-  if (timer.endsAt) return stopTimer(Math.max(0, timer.endsAt - Date.now()));
-  if (timer.left <= 0) timer.left = TIMER_MS;
-  msgEl.textContent = '';
-  timer.endsAt = Date.now() + timer.left;
-  timer.tick = setInterval(paintTimer, 500);
-  paintTimer();
-}
 
-/* ---------- events ---------- */
+  /* ---------- rendering ---------- */
 
-document.addEventListener('click', e => {
-  const el = e.target.closest('[data-act]');
-  if (!el) return;
-  const { act, slug } = el.dataset;
-  switch (act) {
-    case 'open':
-      if (!state.problems[slug] && state.current !== slug) { state.current = slug; save('current'); }
-      break; // let the link open
-    case 'solved': case 'help': record(slug, act); break;
-    case 'cycle': {
-      const r = state.problems[slug];
-      if (!r) record(slug, 'solved');
-      else if (r.s === 'solved') record(slug, 'help');
-      else { delete state.problems[slug]; save('problems'); }
-      break;
+  function problemOrder(pr, kind) {
+    const label = { review: 'Review, from a blank editor', resume: 'Pick up where you stopped', fresh: 'New problem' }[kind];
+    return `<li class="order">
+      <p class="order-kind${kind === 'review' ? ' is-due' : ''}">${label}</p>
+      <p class="order-title">${link(pr)}</p>
+      <p class="order-meta">${pr.level}, ${esc(pr.topic)}</p>
+      <div class="order-actions">
+        <button type="button" data-act="solved" data-slug="${pr.slug}" data-key="solved-${pr.slug}">Solved it</button>
+        <button type="button" data-act="help" data-slug="${pr.slug}" data-key="help-${pr.slug}">Needed the solution</button>
+      </div>
+    </li>`;
+  }
+
+  function renderNext() {
+    // An opened-but-unfinished problem comes first, then due reviews, then new problems.
+    const current = state.current && !state.problems[state.current] ? BY_SLUG[state.current] : null;
+    const due = dueNow()[0];
+    const fresh = unseen()[0];
+    const next = current ? problemOrder(current, 'resume')
+      : due ? problemOrder(due, 'review')
+      : fresh ? problemOrder(fresh, 'fresh') : null;
+
+    root.querySelector('#orders').innerHTML = next ||
+      `<li class="order"><p class="order-title">Nothing is due.</p>
+       <p class="order-meta">Every problem is solved and no review is due yet.</p></li>`;
+  }
+
+  const openStages = new Set();
+  function problemRow(pr) {
+    const r = state.problems[pr.slug];
+    const st = r ? r.s : 'new';
+    const word = { new: 'not started', solved: 'solved', help: 'needed the solution' }[st];
+    const glyph = { new: '', solved: '✓', help: '?' }[st];
+    let when = '';
+    if (r) {
+      const d = dueAt(pr.slug);
+      when = d === null ? 'Learned' : d <= Date.now() ? '<span class="due">Review due</span>'
+        : `Review in ${days(d - Date.now())} ${days(d - Date.now()) === 1 ? 'day' : 'days'}`;
     }
-    case 'timer-toggle': toggleTimer(); return;
-    case 'timer-reset': stopTimer(TIMER_MS); msgEl.textContent = ''; return;
-    default: return;
+    return `<li class="prob is-${st}">
+      <button type="button" class="mark" data-act="cycle" data-slug="${pr.slug}" data-key="cycle-${pr.slug}"
+        aria-label="${esc(pr.title)}: ${word}. Change status">${glyph}</button>
+      <span>${link(pr)}</span>
+      <span class="prob-side">${when || pr.level}</span>
+    </li>`;
   }
+  function renderRoadmap() {
+    const attempted = list => list.filter(pr => state.problems[pr.slug]).length;
+    root.querySelector('#roadmap').innerHTML = PHASES.map(ph => {
+      const all = ph.topics.flatMap(t => t.problems);
+      return `<details class="stage" data-stage="${ph.id}"${openStages.has(ph.id) ? ' open' : ''}>
+        <summary>
+          <span class="sum-left"><span class="chev" aria-hidden="true"></span><span class="sum-title"><h3>${esc(ph.name)}</h3></span></span>
+          <span class="sec-count">${attempted(all)} of ${all.length}</span>
+        </summary>
+        <div class="body">
+          <p class="stage-note">${esc(ph.note)}</p>
+          ${ph.topics.map(t => `<div class="topic">
+            <div class="topic-head"><h4>${esc(t.name)}</h4>
+              <span class="sec-count">${attempted(t.problems)} of ${t.problems.length}</span></div>
+            <ul class="probs">${t.problems.map(problemRow).join('')}</ul>
+          </div>`).join('')}
+        </div>
+      </details>`;
+    }).join('');
+  }
+
+  function render() {
+    const key = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
+    renderNext(); renderRoadmap();
+    if (key) { const el = root.querySelector(`[data-key="${key}"]`); if (el) el.focus(); }
+    onChange();
+  }
+
+  /* ---------- timer ---------- */
+
+  const timer = { left: TIMER_MS, endsAt: null, tick: null };
+  const readEl = root.querySelector('#timer-read');
+  const toggleEl = root.querySelector('#timer-toggle');
+  const msgEl = root.querySelector('#timer-msg');
+  function paintTimer() {
+    const left = timer.endsAt ? Math.max(0, timer.endsAt - Date.now()) : timer.left;
+    const s = Math.ceil(left / 1000);
+    readEl.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    toggleEl.textContent = timer.endsAt ? 'Pause timer' : left < TIMER_MS && left > 0 ? 'Resume timer' : 'Start timer';
+    if (timer.endsAt && left === 0) {
+      stopTimer(0);
+      msgEl.textContent = 'Time. Finish in the next few minutes, or read the solution and rewrite it from memory.';
+    }
+  }
+  function stopTimer(left) {
+    clearInterval(timer.tick);
+    timer.left = left; timer.endsAt = null; timer.tick = null;
+    paintTimer();
+  }
+  function toggleTimer() {
+    if (timer.endsAt) return stopTimer(Math.max(0, timer.endsAt - Date.now()));
+    if (timer.left <= 0) timer.left = TIMER_MS;
+    msgEl.textContent = '';
+    timer.endsAt = Date.now() + timer.left;
+    timer.tick = setInterval(paintTimer, 500);
+    paintTimer();
+  }
+
+  /* ---------- events ---------- */
+
+  root.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const { act, slug } = el.dataset;
+    switch (act) {
+      case 'open':
+        if (!state.problems[slug] && state.current !== slug) { state.current = slug; save('current'); }
+        break; // let the link open
+      case 'solved': case 'help': record(slug, act); break;
+      case 'cycle': {
+        const r = state.problems[slug];
+        if (!r) record(slug, 'solved');
+        else if (r.s === 'solved') record(slug, 'help');
+        else { delete state.problems[slug]; save('problems'); }
+        break;
+      }
+      case 'timer-toggle': toggleTimer(); return;
+      case 'timer-reset': stopTimer(TIMER_MS); msgEl.textContent = ''; return;
+      default: return;
+    }
+    render();
+  });
+
+  // <details> toggle does not bubble, so listen in the capture phase.
+  root.addEventListener('toggle', e => {
+    const id = e.target.dataset && e.target.dataset.stage;
+    if (!id) return;
+    if (e.target.open) openStages.add(id); else openStages.delete(id);
+  }, true);
+
+  const first = unseen()[0];
+  openStages.add(first ? first.phase : PHASES[0].id);
   render();
-});
+  paintTimer();
 
-// <details> toggle does not bubble, so listen in the capture phase.
-document.addEventListener('toggle', e => {
-  const ph = e.target.dataset && e.target.dataset.phase;
-  if (!ph) return;
-  if (e.target.open) openPhases.add(ph); else openPhases.delete(ph);
-}, true);
-
-const first = unseen()[0];
-openPhases.add(first ? first.phase : PHASES[0].id);
-render();
-paintTimer();
+  return {
+    progress: () => ({ done: ALL.length - unseen().length, total: ALL.length, due: dueNow().length }),
+  };
+}
