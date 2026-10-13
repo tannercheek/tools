@@ -1,0 +1,331 @@
+# Macro Planner — Design System
+
+Rules for building Macro Planner's UI. Every value comes from `tokens.css`. **Never hard-code a colour, size, space, radius, shadow, duration or easing.** If a value you need is missing, add a token first, then use it.
+
+Stack: vanilla HTML/CSS/JS, no frameworks. Rings and charts are hand-written inline SVG. Theme follows `prefers-color-scheme`; motion follows `prefers-reduced-motion`. Both are handled at token level.
+
+---
+
+## 1. Principles
+
+1. **Numbers are the content.** Every screen exists to show a few numbers clearly. Numbers get the heaviest weight and largest size on the screen. Chrome stays quiet.
+2. **Monochrome UI, coloured data.** All interface elements are ink, paper and greys. Colour appears only in macro data: rings, macro dots and chart series.
+3. **Flat sticker shapes.** Use 2px outlines, a 12px radius and flat fills. No gradients, glows, blur or soft shadows. The only "shadow" is the hard bottom edge on pressable controls.
+4. **One idea per card.** Each card answers one question. When in doubt, split the card or cut content.
+5. **Fun to tap, calm at rest.** Motion happens only in response to a tap. Nothing loops, pulses or animates on load.
+6. **Never colour alone.** Every coloured mark has a text label or letter next to it.
+7. **Native-ready.** Use patterns with a direct iOS equivalent: tab bar, bottom sheets, segmented controls and list rows. Avoid hover-only behaviour, custom scrollbars and web-only idioms.
+
+---
+
+## 2. Colour
+
+### UI roles
+| Token | Use for | Never use for |
+|---|---|---|
+| `--color-bg` | Page background | Cards |
+| `--color-surface` | Cards, list rows, tab bar, sheets, secondary buttons | Page background |
+| `--color-surface-sunken` | Emoji tiles, active tab, pressed icon button, input wells inside cards | Large areas |
+| `--color-border` | Card and row outlines, dividers, chart gridlines | Interactive outlines |
+| `--color-border-strong` | Outlines on things you can tap or type into: inputs, secondary buttons, toggles, tiles, dashed placeholders | Static cards |
+| `--color-text` | Primary text and **all numbers** | — |
+| `--color-text-2` | Units, eyebrows, helper text, "left" lines, inactive tabs | Primary numbers |
+| `--color-text-3` | Placeholders, disabled labels, chart target lines | Anything a user must read |
+| `--color-ink` | The accent: focus ring, focused input border, selected segment | Body text (use `--color-text`) |
+| `--color-btn-face` / `--color-btn-edge` / `--color-on-ink` | Primary button, eaten toggle (on) | Anything not pressable |
+| `--color-error` | Validation borders and messages, always with an icon and text | Destructive buttons, data |
+| `--color-scrim` | Behind bottom sheets and dialogs | — |
+
+### Macro roles
+| Macro | Stroke / fill | Track / tint | Label |
+|---|---|---|---|
+| Calories | `--macro-kcal` | `--macro-kcal-soft` | "Calories", unit "kcal" |
+| Protein | `--macro-protein` | `--macro-protein-soft` | "Protein", letter **P** |
+| Fat | `--macro-fat` | `--macro-fat-soft` | "Fat", letter **F** |
+| Carbs | `--macro-carbs` | `--macro-carbs-soft` | "Carbs", letter **C** |
+
+- **Order is fixed everywhere:** Calories, Protein, Fat, Carbs. This applies to rings, lists, forms, legends and stacked bars.
+- **Macro colours are for marks only:** ring arcs, dots, chart lines, bars and segments. **Never set text in a macro colour.** Text is always `--color-text` or `--color-text-2`.
+- **`-soft` tints are for ring tracks and chart backgrounds only.** Never put text on a tint.
+- **Calories share the ink colour on purpose.** It's the headline number, and that is how it matches the accent.
+- **Why fat is a cool avocado:** the palette is tuned so all four colours stay distinct under protanopia, deuteranopia and tritanopia. They differ in lightness as well as hue. Don't swap in a warmer olive for fat: under red-green colour blindness it looks the same as protein.
+
+---
+
+## 3. Typography
+
+Two families:
+- `--font-display` (Nunito, rounded) for **numbers, headings, button labels, tab labels and macro names**.
+- `--font-body` (Nunito Sans) for **sentences, eyebrows, helper text and text inputs**.
+
+Every element showing a number gets `font-variant-numeric: var(--numeric)`. Nunito's digits are already equal-width; the property keeps fallback fonts aligned.
+
+### Type scale: roles
+
+| Role | Family | Size / line | Weight | Tracking | Example |
+|---|---|---|---|---|---|
+| Hero number (max **one** per screen) | display | `5xl` | black | tight | "1,260" kcal left |
+| Stat number | display | `4xl` | black | tight | "5" days on target |
+| Ring centre, hero | display | `3xl` | black | snug | "1,340" |
+| Screen / section title | display | `2xl` | black | snug | "Meals", "Today" |
+| Ring centre, macro | display | `2xl` | black | snug | "89" |
+| Numeric input | display | `xl` | heavy | normal | "82.6" |
+| Card title, meal name | display | `lg` | heavy | normal | "Rice & beef bowl" |
+| Body | body | `base` | regular | normal | Empty-state sentence, text inputs |
+| Button label, macro name | display | `md` | heavy (primary: black) | normal | "Save", "Protein" |
+| Secondary info | body | `sm` | semibold | normal | "101 g left", "P 34" |
+| Eyebrow | body | `xs`, UPPERCASE | bold | eyebrow | "BREAKFAST · EATEN" |
+| Tab label | display | `xs` | bold (active: heavy) | normal | "Plan" |
+| Ring sub-label | body | `xs` | semibold | normal | "of 2,600" |
+| Ring unit | body | `2xs` | bold | normal | "/190g" |
+
+Use the matching `--line-*` with every `--font-size-*`.
+
+### Number formatting
+- Thousands separator: 2,600. Show kcal and grams as integers. Show bodyweight to one decimal.
+- **The unit follows the number at a smaller size in `--color-text-2`:** "1,260" then "kcal left".
+- **Remaining values never go negative.** Write "120 g over" instead of "−120 g left".
+- Format as eaten / target in rings ("89 /190g") and as "N of M" in prose ("2 of 3 eaten").
+
+---
+
+## 4. Spacing and layout
+
+Everything sits on a 4px grid (`--space-*`).
+
+| Gap | Token |
+|---|---|
+| Page side padding | `--gutter` |
+| Between cards in a stack | `--stack-gap` |
+| Between sections (title + its cards) | `--section-gap` |
+| Between list rows | `--row-gap` |
+| Inside a row: tile ↔ text ↔ control | `--inline-gap` |
+| Card padding | `--card-pad` (hero card: `--card-pad-lg`) |
+| Row padding | `--row-pad` |
+
+- **Single column.** On screens wider than `--content-max`, centre the column. The header and tab bar match the column width. Don't add multi-column layouts at desktop size. The phone layout is the layout.
+- **No horizontal scroll at 360px.** Long names truncate with an ellipsis on one line. Number rows use `flex-wrap: wrap`.
+- **Layout siblings with flex or grid plus `gap`,** never with margins on children.
+- Stacking order: header `--z-header`, tab bar `--z-tabbar`, sheets `--z-sheet`, toasts `--z-toast`. No other z-index values.
+- The tab bar's bottom padding is `--space-6` plus `--safe-bottom`. Scrollable content gets enough bottom padding to clear it.
+
+---
+
+## 5. Shape
+
+- **Radius:** `--radius-md` is the default for cards, buttons, inputs, rows, tiles and tab items. `--radius-sm` for chips and chart bars. `--radius-lg` for bottom sheet top corners only. `--radius-pill` for circular toggles and segmented controls.
+- **Outlines:** always `--border-width` solid.
+  - Static grouping uses `--color-border`.
+  - Interactive elements use `--color-border-strong`.
+  - Placeholders (flex slot, empty slot, add tile) use **dashed** `--color-border-strong`.
+- **Edges:** only pressable controls have them: `--edge-primary`, `--edge-secondary`, `--edge-toggle-on`. Cards never do.
+- **Focus:** `outline: var(--focus-width) solid var(--color-ink); outline-offset: var(--focus-offset)`, on `:focus-visible` only.
+
+---
+
+## 6. Rings
+
+All rings are inline SVG with `viewBox="0 0 100 100"`, rotated −90° so progress starts at 12 o'clock.
+
+```
+r = 50 − stroke / 2            circumference C = 2πr
+track: circle, stroke = --macro-X-soft
+arc:   circle, stroke = --macro-X, stroke-linecap: round,
+       stroke-dasharray: C, stroke-dashoffset: C × (1 − min(eaten / target, 1))
+```
+
+| Ring | Size | Stroke | Where |
+|---|---|---|---|
+| Hero | `--ring-hero-size` | `--ring-hero-stroke` | Calories on Today; average calories on Stats |
+| Macro | `--ring-macro-size` | `--ring-macro-stroke` | Protein, Fat and Carbs in a 3-column grid |
+| Mini | `--ring-mini-size` | `--ring-mini-stroke` | Inline in lists (Stats days, Plan); no centre text |
+
+- **The SVG is `aria-hidden="true"`.** The label and numbers beside it are real text. The container's accessible name reads like "Protein, 89 of 190 grams, 101 left".
+- **Centre text:** eaten value (display, black) over target (`--color-text-2`). Below the ring: macro name, then "N g left" or "N g over".
+- **Over target:** the arc stays full and the text switches to "over". Don't use a second lap, a colour change or a warning colour.
+- **Zero:** show the track only. Don't draw a rounded-cap dot at 0%.
+- **Animate only `stroke-dashoffset`:** `transition: stroke-dashoffset var(--dur-ring) var(--ease-spring)`.
+
+---
+
+## 7. Charts (Stats)
+
+- **No chart library.** Build charts as inline SVG sized to `--chart-height`, full card width, with `preserveAspectRatio="none"` only on the plot group (never on text).
+- **Gridlines:** at most 3 horizontal lines, `--chart-grid-width` in `--chart-grid`. No vertical gridlines and no chart border.
+- **Axis text:** `--font-size-xs` `--chart-axis-text` with tabular figures. Label the first, middle and last x-ticks only.
+- **Target line:** dashed (`--chart-target-dash`) in `--chart-target`, labelled at the right end ("Target 2,600").
+- **Bodyweight trend:** a single `--chart-line` path at `--chart-line-width` with round joins and caps, and no area fill. Show a point (`--chart-point-size`) only on the latest value, labelled with its number. Show gaps for missing days; never interpolate across them.
+- **Daily bars:** `--radius-sm` top corners only (`--chart-bar-radius`), single series in `--macro-kcal`.
+- **Stacked macro bars:** segments in the fixed order Protein → Fat → Carbs from bottom to top. Separate segments with a `--chart-bar-gap` gap in `--chart-bar-gap-fill`, so boundaries show without colour. Always pair with a direct text legend.
+- **7 / 30 toggle:** a segmented control (see §9).
+- **"Days on target":** a stat number ("5"), with "of 7 days on target" in body `--color-text-2`, plus a row of mini day markers. A filled ink circle with a check means hit; an outlined circle means miss. Shape carries the meaning, not just fill.
+
+---
+
+## 8. List rows
+
+All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--radius-md`, `--row-pad`, `--row-gap` between rows. A row's full height is ≥ `--tap-min`.
+
+**Anatomy, left to right:** emoji tile → text stack (flex 1, `min-width: 0`) → one trailing control.
+
+**Text stack:**
+1. Eyebrow (optional): slot name or category, plus state ("BREAKFAST · EATEN").
+2. Title: meal or food name, card-title style, one line with ellipsis.
+3. Numbers line: kcal in `--color-text` heavy, then `P n  F n  C n`. Each macro letter has a `--dot-size` dot in its macro colour before it. Use `--color-text-2` semibold and tabular figures, separated by `--space-2`.
+
+**Variants:**
+- **Meal slot (Today):** the trailing control is the eaten toggle.
+- **Flex slot:** no fill, **dashed** `--color-border-strong` outline, and a dashed tile with an outline icon instead of emoji. Title: "N kcal to fill". The numbers line shows what's left for the day. Trailing control: a secondary "Log" button.
+- **Empty slot (Plan):** same dashed treatment. Title: "Add a meal". The whole row is the button.
+- **Food search result:** title plus serving ("100 g") in the eyebrow. Trailing: a 44px add icon button.
+- **Saved meal:** trailing chevron. The row navigates to the editor.
+- **Ingredient row (meal editor):** a quantity input replaces the trailing control. Live totals sit in a sticky card above the list.
+
+**Eaten toggle:** a `--control-h-sm` circle with `--radius-pill`, a `--color-border-strong` outline and `--edge-secondary`.
+- On: `--color-btn-face` fill, `--edge-toggle-on`, and a check icon in `--color-on-ink`.
+- Set `aria-pressed` and an `aria-label` like "Mark Breakfast as eaten".
+
+---
+
+## 9. Buttons and controls
+
+| Type | Fill | Outline | Edge | Text | Height |
+|---|---|---|---|---|---|
+| **Primary** | `--color-btn-face` | same as fill | `--edge-primary` | `--color-on-ink`, display black `md` | `--control-h` |
+| **Secondary** | `--color-surface` | `--color-border-strong` | `--edge-secondary` | `--color-text`, display heavy `md` | `--control-h-sm` |
+| **Icon button** | transparent | none | none | `--color-text` icon | `--tap-min` square |
+| **Text link** | none | none | none | `--color-text`, underlined | ≥ `--tap-min` hit area |
+
+- **Press:** on `:active`, `transform: translateY(var(--press-depth))` (secondary and toggle: `--press-depth-sm`) and `box-shadow: var(--edge-none)`. Transition `transform` and `box-shadow` over `--dur-press` with `--ease-out`. The button visibly sinks into its edge.
+- **Icon button press:** `--color-surface-sunken` background and `scale(0.92)`.
+- **One primary per screen or sheet.** Everything else is secondary.
+- **Destructive actions** (delete meal, clear history, import over existing data) use a **secondary** button with an explicit verb ("Delete meal") and a confirm sheet. There's no red button.
+- **Disabled:** `--color-text-3` text, `--color-border` outline, no edge, no press.
+- **Segmented control** (7/30 days, units, sex): a `--color-surface-sunken` track with `--radius-pill` and a `--border-width` `--color-border-strong` outline. The selected segment is a `--color-surface` pill with an ink outline. Items are ≥ `--tap-min` high. The pill slides over `--dur-base` with `--ease-spring`.
+- **Switch** (settings toggles): use the platform-like pill. Track `--color-border-strong` when off, `--color-btn-face` when on; knob `--color-surface`. Pair it with a visible text label.
+
+---
+
+## 10. Inputs
+
+- **Box:** height `--control-h`, `--radius-md`, `--border-width` `--color-border-strong`, `--color-bg` fill inside cards (so it reads as a well), padding `0 var(--space-4)`.
+- **Label:** a visible `<label>` above the input, display heavy `lg` or body semibold `sm` in dense forms. Never use the placeholder as the label.
+- **Numeric fields** (kcal, P, F, C, weight, quantity): `inputmode="decimal"`, display heavy `xl` with tabular figures, and the unit as a suffix inside the box in body bold `md` `--color-text-2`.
+- **Focus:** the border becomes `--color-ink` (no glow).
+- **Error:** the border becomes `--color-error`. Add an error icon and message below in `--font-size-sm`, linked with `aria-describedby`.
+- **Search field:** a 24px outline search icon as a prefix and a clear (×) icon button as a suffix when it has a value.
+- **Custom food form:** the order is Name → Serving (amount and unit) → kcal → Protein → Fat → Carbs. Put the macro fields in a 2-column grid at ≥ 360px, with a `--dot-size` macro dot before each label.
+- **Emoji picker:** a bottom sheet with a grid of `--tile-size-sm` tiles, emoji at `--emoji-size-sm`. The selected tile gets an ink outline.
+
+---
+
+## 11. Header and tab bar
+
+**Header** (`--header-h`, `--color-bg`, no outline):
+- Today: previous-day icon button, date stack (title "Today" or the weekday, plus an `sm` `--color-text-2` date), next-day icon button. Settings icon button on the right.
+- Other tabs: the screen title (`2xl` black) on the left, Settings on the right.
+- Tapping the date title jumps back to today.
+- **Sync status** (personal build only): one `--icon-size` outline icon in `--color-text-2`, just left of Settings on every screen. A cloud with a check (Lucide `cloud-check`) means synced. A cloud with an up arrow (`cloud-upload`) means saving, shown only if a save is still in flight after a second, so normal saves don't flicker. A crossed-out cloud (`cloud-off`) means offline, with changes kept on this device. It isn't a button. It sits in a `role="status"` element with visually hidden text ("Synced", "Saving", "Offline, saved on this device"). The icon swaps with no animation. Shape carries the meaning, not colour.
+
+**Tab bar:**
+- Fixed to the bottom, `--color-surface` fill, `--border-width` `--color-border` top outline, `--z-tabbar`.
+- 5 equal columns: Today, Plan, Foods, Meals, Stats. Each item is `--tabbar-h` high with `--radius-md`: a 24px icon over an `xs` label.
+- **Active item:** `aria-current="page"`, `--color-surface-sunken` fill, `--color-border-strong` outline, label weight heavy, `--color-text`.
+- **Inactive items:** `--color-text-2`, no fill.
+- Labels are always visible. Never show icon-only tabs.
+- Settings opens as a pushed screen with a back button, not a tab.
+
+---
+
+## 12. Icons and emoji
+
+- **UI icons:** rendered at `--icon-size` from a 24×24 viewBox, `fill="none"`, `stroke="currentColor"`, `stroke-width` = `--icon-stroke`, round caps and joins. Inline SVG, `aria-hidden="true"`. Icon-only buttons carry an `aria-label`.
+- **Tab icons:** Today (ring), Plan (calendar), Foods (apple), Meals (bowl), Stats (bars), Settings (sliders).
+- **Emoji only identify foods and meals.** Never use them as UI icons, decoration, status or empty-state art.
+- **Emoji tile:** `--tile-size` square, `--radius-md`, `--color-surface-sunken` fill, `--border-width` `--color-border-strong` outline, emoji at `--emoji-size`, centred.
+- Generic foods have a fixed emoji in the database. Custom foods and meals default to 🍽️ until the user picks one.
+- **Icon source:** Lucide, inlined from `js/icons.js`. Lucide's 24×24 outline style already matches the rules above. Set size and stroke from tokens in CSS, not in SVG attributes.
+- **Emoji source:** Microsoft Fluent Emoji Flat SVGs, never native OS glyphs. Data stores the character; `js/emoji.js` renders the bundled SVG at `--emoji-size` (picker: `--emoji-size-sm`) and falls back to the native character if the SVG is missing. In a list row the image has `alt=""`, because the title beside it names the item.
+
+---
+
+## 13. Empty states
+
+An empty state is a single card:
+- dashed `--color-border-strong` outline
+- a `--tile-size` dashed tile holding a UI outline icon
+- a card-title-style heading
+- one sentence of body text in `--color-text-2`
+- **one** primary button
+
+Centre it within the content area. No illustrations, no emoji, no jokes.
+
+| Screen | Heading | Button |
+|---|---|---|
+| Today, nothing planned | "No meals planned" | "Plan today" |
+| Meals, none saved | "No saved meals yet" | "Build a meal" |
+| Foods, search with no results | "No match for '…'" | "Add custom food" |
+| Stats, under 2 days of data | "Log a couple of days to see trends" | none (no action makes sense) |
+
+Rings with no targets set show tracks only and a single line: "Set your targets in Settings" (text link).
+
+---
+
+## 14. Motion
+
+Only animate in response to a user action. Every duration is a token, and reduced motion collapses them all to near zero in `tokens.css`, so no extra media queries are needed for transitions. Gate any JS-driven animation on `matchMedia('(prefers-reduced-motion: reduce)')`.
+
+| Moment | What moves | Timing |
+|---|---|---|
+| Press any button | translateY by edge depth, edge collapses | `--dur-press`, `--ease-out` |
+| Mark eaten | toggle "pop": scale 1 → `--pop-scale-down` → `--pop-scale-up` → 1 | `--dur-pop`, `--ease-spring` |
+| Mark eaten | emoji tile "hop": translateY `--hop-lift` and rotate `--hop-tilt`, then back | `--dur-hop`, `--ease-spring` |
+| Ring value changes | `stroke-dashoffset` | `--dur-ring`, `--ease-spring` |
+| Chart switches 7/30 | bars/line morph to new values | `--dur-ring`, `--ease-out` |
+| Colour / border change | fill, outline | `--dur-fast`, `--ease-out` |
+| Bottom sheet | translateY in from bottom; scrim fades. Dismiss uses `--ease-in-out` | `--dur-base`, `--ease-out` |
+| Segmented control | selected pill slides | `--dur-base`, `--ease-spring` |
+
+- **Pop and hop** run only when switching to eaten, not when unmarking.
+- **Never** loop, pulse, shimmer, auto-play, parallax or animate on page load. Skeleton loaders are flat `--color-surface-sunken` blocks, not shimmering.
+- **Only animate `transform`, `opacity` and `stroke-dashoffset`.** Never animate layout properties.
+
+---
+
+## 15. Accessibility checklist
+
+- [ ] Every hit target is ≥ `--tap-min` in both axes.
+- [ ] Works at 360px with no horizontal scroll, and at 200% text zoom.
+- [ ] Text contrast is ≥ 4.5:1. `--color-text-3` is never used for essential text.
+- [ ] Every macro mark has a text label or letter next to it.
+- [ ] Rings and charts are `aria-hidden`, with the same numbers available as text.
+- [ ] Toggles use `aria-pressed`, tabs use `aria-current`, icon buttons have an `aria-label`, and inputs have a `<label>`.
+- [ ] Focus is visible on every control (§5).
+- [ ] Real `<button>`, `<a>`, `<input>` and `<label>` elements are used. Never a clickable `<div>`.
+
+---
+
+## 16. Mapping to iOS
+
+| Web | iOS |
+|---|---|
+| `--font-display` | SF Pro Rounded |
+| `--font-body` | SF Pro Text |
+| Tab bar | `TabView` |
+| Settings push | `NavigationStack` push |
+| Bottom sheets | `.sheet` with detents |
+| Segmented control | `Picker(.segmented)` |
+| Light/dark tokens | Asset-catalog colour sets with Any/Dark appearances, same names minus `--` |
+| `--ease-spring` | `.spring(response: 0.4, dampingFraction: 0.6)` |
+| Press edge | a `ButtonStyle` that offsets y by the edge depth when `isPressed` |
+| Haptics (iOS only) | light impact on press, success notification on mark eaten |
+
+---
+
+## Don'ts
+
+- Don't use gradients, blur, glows, soft shadows or transparency effects (except `--color-scrim`).
+- Don't use colour in the UI chrome. Macro colours are never used for buttons, text, links or tabs.
+- Don't use emoji outside food and meal tiles.
+- Don't put more than one hero number on a screen, or more than one primary button per view.
+- Don't hard-code values. Don't add new colours outside `tokens.css`.

@@ -1,0 +1,223 @@
+/* ==========================================================================
+   Macro Planner — design tokens
+   Every design value lives here. Components reference these by name only.
+   Light theme is the default; dark overrides follow prefers-color-scheme.
+   Load fonts with:
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap">
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---------- Colour: surfaces (monochrome UI) ---------- */
+  --color-bg:             #F7F4EE; /* page background, warm paper */
+  --color-surface:        #FFFDF9; /* cards, rows, tab bar, sheets */
+  --color-surface-sunken: #F0ECE4; /* emoji tiles, active tab, pressed icon buttons */
+  --color-scrim:          rgba(36, 33, 29, 0.40); /* behind bottom sheets; flat, no blur */
+
+  /* ---------- Colour: lines ---------- */
+  --color-border:         #E4DED3; /* card + row outlines, dividers, chart gridlines */
+  --color-border-strong:  #CFC7B9; /* interactive outlines: inputs, secondary buttons, toggles, tiles, placeholders */
+
+  /* ---------- Colour: text ---------- */
+  --color-text:           #24211D; /* primary text and all numbers (14.6:1 on bg) */
+  --color-text-2:         #6B645A; /* secondary text, units, eyebrows (5.3:1 on bg) */
+  --color-text-3:         #9A9285; /* placeholders, disabled, target lines only; never essential text */
+
+  /* ---------- Colour: ink accent ---------- */
+  --color-ink:            #24211D; /* the accent: focus rings, selected states, focused input border */
+  --color-on-ink:         #FBF9F5; /* text/icons on ink fills */
+  --color-btn-face:       #2E2B27; /* primary button + eaten toggle fill */
+  --color-btn-edge:       #0E0D0C; /* primary button bottom edge */
+
+  /* ---------- Colour: feedback ---------- */
+  --color-error:          #9E2B4F; /* form validation only; always paired with icon + message */
+
+  /* ---------- Colour: macros (data only) ---------- */
+  --macro-kcal:           #24211D; /* calories = ink */
+  --macro-kcal-soft:      #EAE5DC; /* ring track */
+  --macro-protein:        #B14A31; /* brick / terracotta */
+  --macro-protein-soft:   #F5DDD5;
+  --macro-fat:            #569C85; /* cool avocado */
+  --macro-fat-soft:       #D9EBE4;
+  --macro-carbs:          #D9A238; /* wheat gold */
+  --macro-carbs-soft:     #F5E6C6;
+
+  /* ---------- Colour: charts ---------- */
+  --chart-line:           var(--color-ink);       /* non-macro series, e.g. bodyweight */
+  --chart-grid:           var(--color-border);
+  --chart-axis-text:      var(--color-text-2);
+  --chart-target:         var(--color-text-3);    /* dashed target line */
+  --chart-bar-gap-fill:   var(--color-surface);   /* separator between stacked segments */
+
+  /* ---------- Typography: families ---------- */
+  --font-display: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --font-body:    "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* ---------- Typography: weights ---------- */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-heavy:    800;
+  --weight-black:    900;
+
+  /* ---------- Typography: size / line-height pairs ---------- */
+  --font-size-2xs: 11px;  --line-2xs: 14px;  /* ring unit ("/190g") */
+  --font-size-xs:  12px;  --line-xs:  16px;  /* eyebrows, tab labels, ring "of 2,600" */
+  --font-size-sm:  13px;  --line-sm:  18px;  /* secondary info, macro lines, helper text */
+  --font-size-md:  15px;  --line-md:  20px;  /* button labels, macro names, unit suffixes */
+  --font-size-base:16px;  --line-base:24px;  /* body copy, text inputs */
+  --font-size-lg:  17px;  --line-lg:  22px;  /* card titles, meal names */
+  --font-size-xl:  20px;  --line-xl:  24px;  /* numeric inputs */
+  --font-size-2xl: 22px;  --line-2xl: 28px;  /* screen/section titles, macro ring number */
+  --font-size-3xl: 26px;  --line-3xl: 28px;  /* hero ring centre number */
+  --font-size-4xl: 32px;  --line-4xl: 36px;  /* stat headline numbers */
+  --font-size-5xl: 44px;  --line-5xl: 48px;  /* one hero number per screen */
+
+  /* ---------- Typography: tracking + numerals ---------- */
+  --tracking-tight:   -0.02em; /* 32px and up */
+  --tracking-snug:    -0.01em; /* 20–26px */
+  --tracking-normal:  0;
+  --tracking-eyebrow: 0.04em;  /* uppercase eyebrows */
+  --numeric: tabular-nums lining-nums; /* use with font-variant-numeric */
+
+  /* ---------- Spacing (4px base) ---------- */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- Layout ---------- */
+  --gutter:        var(--space-4); /* page side padding */
+  --content-max:   560px;          /* app column width on wide screens */
+  --card-pad:      var(--space-4);
+  --card-pad-lg:   var(--space-5); /* hero card */
+  --row-pad:       var(--space-3);
+  --stack-gap:     var(--space-3); /* between cards */
+  --row-gap:       var(--space-2); /* between list rows */
+  --section-gap:   var(--space-6); /* between sections */
+  --inline-gap:    var(--space-3); /* tile ↔ text ↔ control inside a row */
+
+  /* ---------- Sizes ---------- */
+  --tap-min:        44px; /* minimum hit target, both axes */
+  --control-h:      48px; /* inputs, primary buttons */
+  --control-h-sm:   44px; /* secondary buttons, icon buttons, toggles */
+  --icon-size:      24px;
+  --icon-stroke:    2;    /* SVG stroke-width, matches --border-width */
+  --tile-size:      48px; /* emoji sticker tile */
+  --tile-size-sm:   40px; /* emoji tile in dense pickers */
+  --emoji-size:     26px;
+  --emoji-size-sm:  22px;
+  --dot-size:       8px;  /* macro dot beside P / F / C */
+  --header-h:       64px;
+  --tabbar-h:       56px; /* item height, excluding safe area */
+  --safe-bottom:    env(safe-area-inset-bottom, 0px);
+
+  /* ---------- Rings (stroke values are SVG user units in a 0 0 100 100 viewBox) ---------- */
+  --ring-hero-size:    124px;
+  --ring-hero-stroke:  11;
+  --ring-macro-size:   84px;
+  --ring-macro-stroke: 13;
+  --ring-mini-size:    40px;
+  --ring-mini-stroke:  16;
+
+  /* ---------- Charts ---------- */
+  --chart-height:        160px;
+  --chart-line-width:    2px;
+  --chart-grid-width:    1px;
+  --chart-target-dash:   4 4;
+  --chart-point-size:    8px;
+  --chart-bar-radius:    4px;
+  --chart-bar-gap:       2px;
+
+  /* ---------- Borders + radii ---------- */
+  --border-width:       2px;
+  --focus-width:        3px;
+  --focus-offset:       2px;
+  --radius-sm:          8px;   /* chips, bars, small badges */
+  --radius-md:          12px;  /* default: cards, buttons, inputs, rows, tiles, tabs */
+  --radius-lg:          20px;  /* bottom sheet top corners */
+  --radius-pill:        999px; /* toggles, segmented control pills */
+
+  /* ---------- Edges (the only "shadows": hard, zero-blur, offset-y) ---------- */
+  --press-depth:        4px;
+  --press-depth-sm:     3px;
+  --edge-primary:       0 var(--press-depth) 0 0 var(--color-btn-edge);
+  --edge-secondary:     0 var(--press-depth-sm) 0 0 var(--color-border-strong);
+  --edge-toggle-on:     0 var(--press-depth-sm) 0 0 var(--color-btn-edge);
+  --edge-none:          0 0 0 0 transparent;
+
+  /* ---------- Motion ---------- */
+  --ease-out:      cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:   cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* overshoots ~10%, then settles */
+  --dur-press:     90ms;   /* press-down / release */
+  --dur-fast:      160ms;  /* colour + border changes */
+  --dur-base:      240ms;  /* sheets, segmented control slide */
+  --dur-pop:       380ms;  /* eaten toggle pop */
+  --dur-hop:       460ms;  /* emoji tile hop */
+  --dur-ring:      700ms;  /* ring / chart value change */
+  --pop-scale-down: 0.82;
+  --pop-scale-up:   1.12;
+  --hop-lift:       -6px;
+  --hop-tilt:       -6deg;
+
+  /* ---------- Layering ---------- */
+  --z-header: 10;
+  --z-tabbar: 10;
+  --z-sheet:  20;
+  --z-toast:  30;
+}
+
+/* ---------- Dark theme ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg:             #1B1A18;
+    --color-surface:        #242320;
+    --color-surface-sunken: #2C2A27;
+    --color-scrim:          rgba(0, 0, 0, 0.60);
+
+    --color-border:         #36332F;
+    --color-border-strong:  #4A4640;
+
+    --color-text:           #F2EEE6;
+    --color-text-2:         #A69F93;
+    --color-text-3:         #7A7469;
+
+    --color-ink:            #F2EEE6;
+    --color-on-ink:         #1B1A18;
+    --color-btn-face:       #F2EEE6;
+    --color-btn-edge:       #A9A296;
+
+    --color-error:          #F08AA8;
+
+    --macro-kcal:           #F2EEE6;
+    --macro-kcal-soft:      #34312C;
+    --macro-protein:        #D96D52;
+    --macro-protein-soft:   #45261F;
+    --macro-fat:            #72C3AE;
+    --macro-fat-soft:       #1E3630;
+    --macro-carbs:          #F6D57A;
+    --macro-carbs-soft:     #3A3018;
+  }
+}
+
+/* ---------- Reduced motion: collapse every duration ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 0.01ms;
+    --dur-fast:  0.01ms;
+    --dur-base:  0.01ms;
+    --dur-pop:   0.01ms;
+    --dur-hop:   0.01ms;
+    --dur-ring:  0.01ms;
+  }
+}
