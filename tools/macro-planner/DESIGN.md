@@ -265,7 +265,7 @@ Centre it within the content area. No illustrations, no emoji, no jokes.
 | Today, nothing planned | "No meals planned" | "Plan today" |
 | Meals, none saved | "No saved meals yet" | "Build a meal" |
 | Foods, search with no results | "No match for '…'" | "Add custom food" |
-| Stats, under 2 days of data | "Log a couple of days to see trends" | none (no action makes sense) |
+| Stats, under 2 days logged this week | "Log a couple of days to see this week's averages" | none (no action makes sense) |
 
 Rings with no targets set show tracks only and a single line: "Set your targets in Settings" (text link).
 

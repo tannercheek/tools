@@ -47,21 +47,21 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 1 — Core math (`js/calc.js`, no DOM)
 
-- [ ] **1.1 Units, BMR, TDEE**
+- [x] **1.1 Units, BMR, TDEE**
       kg/lb and cm/ft-in conversions, Mifflin-St Jeor BMR, activity multipliers, TDEE.
       _Done when:_ tests cover both sexes, every activity level, and conversion round-trips.
 
-- [ ] **1.2 Targets**
+- [x] **1.2 Targets**
       Goal adjustment from rate, macro defaults (protein g/kg, fat %, carbs remainder), manual overrides, warnings for below-BMR calories and clamped negative carbs.
       _Done when:_ tests cover lose/maintain/gain, each override on its own, and both warnings.
 
-- [ ] **1.3 Totals**
+- [x] **1.3 Totals**
       Food × quantity → kcal/P/F/C, meal totals, day totals from log entries, remaining vs targets, portion multiplier.
       _Done when:_ tests cover rounding (display rounding only — keep raw values internally), empty meals and empty days.
 
-- [ ] **1.4 Stats math**
-      N-day averages excluding empty days, days-on-target (thresholds as named constants), average weekly weight change.
-      _Done when:_ tests cover gaps in data, fewer than 2 weeks of weight, and all-empty ranges.
+- [x] **1.4 Stats math**
+      Average daily totals over the days logged, excluding empty days. This week's dates, Monday to today.
+      _Done when:_ tests cover gaps in data, all-empty weeks, and weeks across month and year boundaries.
 
 ## Phase 2 — Storage (no DOM)
 
@@ -147,21 +147,21 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       _Done when:_ a swap affects only that date unless made default.
 
 - [ ] **5.6 Flex slot**
-      Shows remaining after other slots; optional fixed budget; resolve by logging a meal, a food or quick numbers.
-      _Done when:_ remaining updates live as other slots are marked eaten.
+      Shows remaining after other slots; optional fixed budget; resolve by logging a meal, a food or quick numbers. With more than one open flex slot, each shows the full remaining; nothing is split (SPEC §3.4).
+      _Done when:_ with nothing logged, it shows the targets minus the planned meals; remaining updates live as other slots are marked eaten; with two flex slots, logging into one updates what the other shows; an open flex slot on a past day just shows as open.
 
 - [ ] **5.7 Quick-add and copy yesterday**
       Quick-add a food (search, qty, slot) and quick numbers (kcal + macros + optional label). Copy yesterday with the confirm sheet.
       _Done when:_ all three show up in rings and survive reload.
 
-- [ ] **5.8 Weight check-in**
-      One optional number per day on Today, in the display unit.
-      _Done when:_ it saves to the day and converts correctly between units.
+- [ ] **5.8 Plan totals**
+      On Plan, a totals card above the slots: what the template adds up to (its meals plus any pinned flex budgets) against targets, and one "left for flex" figure that isn't split between flex slots (SPEC §3.4).
+      _Done when:_ changing a slot's meal updates the card straight away, and a plan over target shows "over", never a negative number.
 
 ## Phase 6 — Settings and Stats
 
 - [ ] **6.1 Profile and targets**
-      Profile form with live calculated targets, per-target overrides, reset to calculated, units toggle. First launch opens here.
+      Profile form with live calculated targets, per-target overrides, reset to calculated, units toggle. Weight is updated here whenever you weigh in; there's no weight log. First launch opens here.
       _Done when:_ changing weight or goal updates targets immediately everywhere.
 
 - [ ] **6.2 Retention**
@@ -173,12 +173,8 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       _Done when:_ export → reset → import restores everything exactly.
 
 - [ ] **6.4 Stats**
-      7 / 30 day segmented control, average rings, days on target with day markers (DESIGN §7). Empty state for under 2 days of data (DESIGN §13). No daily or stacked bar charts; they aren't in SPEC.
-      _Done when:_ numbers match a hand calculation on a week of test data.
-
-- [ ] **6.5 Weight trend**
-      SVG line of check-ins (DESIGN §7), average weekly change, "recalculate targets?" offer in a confirm sheet after 2+ weeks.
-      _Done when:_ recalculating uses the latest weight and updates targets.
+      This week only (Monday to today): average rings over the days logged, and "N days logged". Empty state for fewer than 2 logged days (DESIGN §13). No range toggle, days on target, weight trend or bar charts; they aren't in SPEC.
+      _Done when:_ numbers match a hand calculation on a week of test data, and on a Monday only Monday counts.
 
 ## Phase 7 — Polish and publish
 

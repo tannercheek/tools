@@ -9,10 +9,11 @@ A deliberately small calorie and macro tracker that doubles as a meal planner. B
 ## 1. Principles
 
 1. **Routine over flexibility.** The common case is eating the same few meals. One tap should cover it.
-2. **Four numbers per food.** Calories, protein, fat, carbs. No micronutrients, no fibre, no sugar.
-3. **No accounts, no backend.** Personal build syncs through `shared/persist.js`. Public build is local-only.
-4. **Short memory.** History is kept for months, not years, and purged automatically.
-5. **When in doubt, cut it.** Anything not in this document is out of scope for v1.
+2. **Planning works without logging.** Marking meals eaten is optional. The plan alone answers "what should I aim for at dinner?", and nothing nags, warns or marks a day incomplete when a slot (flex or not) isn't logged.
+3. **Four numbers per food.** Calories, protein, fat, carbs. No micronutrients, no fibre, no sugar.
+4. **No accounts, no backend.** Personal build syncs through `shared/persist.js`. Public build is local-only.
+5. **Today and this week.** Screens look at today's plan and the current week, never further back. Old logs are purged automatically.
+6. **When in doubt, cut it.** Anything not in this document is out of scope for v1.
 
 ---
 
@@ -74,7 +75,7 @@ tools/macro-planner/
 
 Activity multipliers: sedentary 1.2 · light 1.375 · moderate 1.55 · very active 1.725 · extreme 1.9
 
-Goal adjustment: rate in kg or lb per week × 7700 kcal/kg (≈ 3500 kcal/lb) ÷ 7. Rate options: 0.25, 0.5, 0.75 kg/week (0.5, 1, 1.5 lb/week). Negative for lose, positive for gain, zero for maintain.
+Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0.5, 0.75 kg/week (0.5, 1, 1.5 lb/week). The rate is stored in kg; an imperial option is converted from lb, so 1 lb/week gives ≈ 499 kcal/day, not 500. Negative for lose, positive for gain, zero for maintain.
 
 **Macro defaults:**
 - Protein: 1.8 g/kg bodyweight (≈ 0.8 g/lb)
@@ -86,6 +87,8 @@ Goal adjustment: rate in kg or lb per week × 7700 kcal/kg (≈ 3500 kcal/lb) ÷
 - Warn, but don't block, if the calorie target falls below BMR.
 - If carbs would go negative, clamp to 0 and warn.
 - Imperial/metric toggle. Store everything in metric internally; convert for display only.
+- **Weight is a profile value, not a log.** Update it in Settings whenever you weigh in, and the targets recalculate straight away. No weight history is kept.
+- Switching units snaps the goal rate to the matching option in the new system (0.5 lb ↔ 0.25 kg, 1 lb ↔ 0.5 kg, 1.5 lb ↔ 0.75 kg per week), so the calorie target can move by 25–77 kcal/day.
 
 ### 3.2 Foods
 
@@ -135,7 +138,10 @@ A meal is a named list of foods with quantities.
 - **Slots:** 3–6, user-named (e.g. Breakfast, Lunch, Pre-workout, Dinner). Set in Settings.
 - **Template:** each slot holds either a meal or a flex budget. The same template applies every day.
 - **Swap:** tapping a slot's meal on a given day lets you swap it for another meal **for that day only**. A "make this the default" option updates the template.
-- **Flex slot:** a slot with no fixed meal. It displays the **remaining** calories and macros for the day after every other slot is accounted for (planned or eaten). Optionally the user can pin a fixed budget instead. A flex slot is resolved by logging a meal, foods, or quick numbers into it.
+- **Flex slot:** a slot with no fixed meal. It displays the **remaining** calories and macros for the day: the targets, minus everything eaten so far, minus the meals and pinned flex budgets still planned in other slots. With nothing logged, that's the targets minus the planned meals, so it works as a passive planner. Optionally the user can pin a fixed budget instead. A flex slot is resolved by logging a meal, foods, or quick numbers into it.
+- **More than one flex slot:** what's left is never split between them. Each open flex slot shows the full remaining, because you might fill it all with the first one or skip one. Once one is logged, the others show what's still left.
+- **Open flex slots are normal.** A flex slot that's never logged is just open, today or on a past day. It isn't shown as missed or incomplete.
+- **Plan totals:** the Plan view shows what the template adds up to (its meals plus any pinned flex budgets) against the targets, and one "left for flex" figure that isn't split between flex slots. A plan over target shows as over, never as a negative number.
 
 ### 3.5 Logging
 
@@ -156,15 +162,13 @@ A meal is a named list of foods with quantities.
 - Four rings: calories, protein, fat, carbs. Each shows eaten / target and remaining.
 - Slots listed in order, each showing planned meal (or flex remaining), its totals, and eaten state.
 - Date switcher: previous/next day, back to today.
-- Weight check-in field (optional, one number per day).
 
 ### 3.7 Stats
 
-- Range toggle: 7 days / 30 days.
-- The same four rings showing **daily averages** against target.
-- **Days on target:** count of logged days where calories are within ±10% of target and protein ≥ 90% of target. Thresholds are constants in `calc.js`.
-- **Weight trend:** simple SVG line of check-ins over the range. If enough data exists (≥ 2 weeks), show average weekly change and offer "recalculate targets?" using the latest weight.
+- **This week only:** Monday to today. No range toggle, nothing further back.
+- The same four rings showing **daily averages** against target over the days logged this week, with "N days logged".
 - Days with no entries are excluded from averages, not counted as zero.
+- With fewer than 2 logged days this week, show the empty state (DESIGN §13).
 
 ### 3.8 Settings
 
@@ -203,7 +207,7 @@ Firestore caps a document at 1 MB, so logs are split by month.
 | docId | Contents |
 |---|---|
 | `macro-planner` | profile, targets, overrides, settings, slots, template, custom foods, meals |
-| `macro-planner-log-YYYY-MM` | that month's days: `{ "2026-10-09": { entries: [], swaps: {}, weight } }` |
+| `macro-planner-log-YYYY-MM` | that month's days: `{ "2026-10-09": { entries: [], swaps: {} } }` |
 
 ### 4.3 Retention
 
@@ -233,6 +237,18 @@ All visual rules (colour, type, spacing, components, motion, accessibility) are 
 
 ---
 
+### 5.2 Numbers and rounding
+
+Storage and math keep raw values. Only what's shown is rounded, to what's useful:
+
+- **kcal and grams:** whole numbers (DESIGN §3). On a ring, "left" is the shown target minus the shown eaten, so the three numbers on screen always agree.
+- **Bodyweight:** one decimal, in kg or lb. It's stored unrounded, so 180 lb entered shows 180.0 lb again, never 179.9.
+- **Height:** whole cm, or feet and whole inches.
+- **Goal rate:** shown as its option (0.5 / 1 / 1.5 lb per week), never as a converted value like 0.454 kg.
+- **Food quantities:** as entered (1.5 eggs, 150 g).
+
+---
+
 ## 6. Build phases
 
 0. **Setup** — scaffold, app shell and shared base components, styled per `DESIGN.md` from the start.
@@ -241,7 +257,7 @@ All visual rules (colour, type, spacing, components, motion, accessibility) are 
 3. **Foods** — bundled `foods.json`, search, emoji assets and picker, custom food CRUD, archive behaviour.
 4. **Meals** — meal CRUD and totals.
 5. **Plan + Today** — slots, template, per-day swaps, flex slot, logging, rings.
-6. **Stats + Settings** — averages, days on target, weight trend, retention, export/import.
+6. **Stats + Settings** — profile and targets, this week's averages, retention, export/import.
 7. **Polish and publish** — public build check, mobile pass, design audit, dashboard check.
 
 ---
@@ -253,7 +269,8 @@ All visual rules (colour, type, spacing, components, motion, accessibility) are 
 - Recipes with instructions or cooked-yield math
 - Water, steps, exercise logging
 - Social features, sharing, accounts
-- Long-term history and charts beyond 30 days
+- History views and stats beyond the current week
+- Weight log, weight trend chart and days-on-target counts. DESIGN §7 says how they'd look, but v1 doesn't include them.
 - Daily calorie bars and stacked macro bars. DESIGN §7 says how they'd look, but v1 doesn't include them.
 
 ---
@@ -278,6 +295,9 @@ All visual rules (colour, type, spacing, components, motion, accessibility) are 
 | Repeat | Single daily template + per-day swaps | Weekday templates deferred to v2 |
 | Flex slot | Auto "remaining", optional fixed budget | Most useful default with zero setup |
 | Log integrity | Snapshot numbers at log time | Edits never rewrite history |
+| Goal rate | Stored in kg/week, one constant (7700 kcal/kg) | Store metric; imperial options convert from lb rather than using a separate 3500 kcal/lb |
+| Stats range | This week, Monday to today | The app is about today's plan and this week; history adds little, so retention can stay short |
+| Weight | One profile value, updated by hand | Weigh-ins are occasional; the point is keeping targets current, not tracking a trend |
 | Log storage | One Firestore doc per month | Stays under 1 MB; purge = delete old months |
 | Visual design | `DESIGN.md` + `tokens.css`, applied from step 0.1 | No restyle pass at the end |
 | UI icons | Lucide, inlined SVG | Matches DESIGN §12's stroke style; no icon font or CDN |
