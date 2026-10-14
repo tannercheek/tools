@@ -117,6 +117,8 @@
   --emoji-size:     26px;
   --emoji-size-sm:  22px;
   --dot-size:       8px;  /* macro dot beside P / F / C */
+  --switch-w:       52px; /* settings switch track */
+  --switch-h:       32px;
   --header-h:       64px;
   --tabbar-h:       56px; /* item height, excluding safe area */
   --safe-bottom:    env(safe-area-inset-bottom, 0px);
@@ -169,6 +171,7 @@
   --pop-scale-up:   1.12;
   --hop-lift:       -6px;
   --hop-tilt:       -6deg;
+  --icon-press-scale: 0.92; /* icon button press (DESIGN §9) */
 
   /* ---------- Layering ---------- */
   --z-header: 10;

@@ -50,7 +50,7 @@ Never edit files outside `tools/macro-planner/`, except `shared/persist.js` when
 
 ## Testing
 
-- Use Node's built-in runner: `node --test tools/macro-planner/tests/`. No test libraries.
+- Use Node's built-in runner: `node --test "tools/macro-planner/tests/*.test.js"` from the repo root (keep the quotes; passing the folder itself fails). No test libraries.
 - Every pure function in `calc.js`, `store.js` and `purge.js` gets tests. Use a tiny in-memory fake for localStorage.
 - Run the tests before saying a step is done, and report the result. Don't mark a step done with failing tests.
 - UI is checked by hand. At the end of each UI step, give me a short "how to check it" list (what to click, what should happen), including light and dark.
@@ -59,14 +59,16 @@ Never edit files outside `tools/macro-planner/`, except `shared/persist.js` when
 
 - All work happens on `main`. Don't create or switch branches.
 - Never run git commands that change the repo: no add, commit, push, branch, checkout, merge, stash, reset or rebase. Read-only commands (status, diff, log) are fine.
-- At the end of each step, suggest a commit message in the format `Macro Planner: <step id> — <short title>` for me to use.
+- I commit once per phase, not per step. At the end of a phase's last step, suggest a commit message in the format `Macro Planner: Phase <n> — <phase title>` for me to use.
 
 ## Working style
 
 - **One PLAN.md step per task.** Finish it, then stop. Don't start the next step.
+- When a step is done and its tests pass, tick its box in PLAN.md: `- [ ] **0.1 Scaffold**` becomes `- [x] **0.1 Scaffold**`. Don't tick anything else.
 - At the start of a step, say in two or three lines what you're going to change.
-- At the end, give me: files changed, the diff, test results, how to check it, anything you were unsure about, and the suggested commit message. New files are untracked, so `git diff` skips them. Show those in full or list them with `git status`.
-- I review the diff, commit and push it myself.
+- At the end, give me: files changed, this step's changes, test results, how to check it, and anything you were unsure about. On a phase's last step, add the suggested commit message.
+- Earlier steps in the phase are still uncommitted, so `git diff` shows the whole phase so far. Show only what this step changed. New files are untracked, so `git diff` skips them. Show those in full or list them with `git status`.
+- I review each step, then commit and push once the phase is done.
 - If a step turns out bigger than expected, stop and propose splitting it rather than pushing through.
 - If something in SPEC.md looks wrong once you're in the code, flag it. Don't quietly work around it.
 

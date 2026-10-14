@@ -24,7 +24,8 @@ Vanilla HTML, CSS and JS with ES modules. No framework, no build step, no depend
 tools/macro-planner/
 ├─ index.html            # dashboard meta tags live here
 ├─ tokens.css            # design tokens (final; see DESIGN.md)
-├─ style.css             # component and view styles, tokens only
+├─ components.css        # shared component styles (js/ui/), tokens only
+├─ style.css             # base, shell and view styles, tokens only
 ├─ app.js                # boot, routing between views
 ├─ config.js             # MODE = 'personal' | 'public'
 ├─ assets/
