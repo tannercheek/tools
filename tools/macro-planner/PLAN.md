@@ -71,6 +71,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 - [ ] **2.2 Personal adapter**
       **Ask before editing `shared/persist.js`.** Add `remove` and `list` there if feasible (otherwise use the fallback in SPEC §4.1). Wrap it as the personal adapter with localStorage fallback, chosen by `MODE`. Expose sync status and show it as the header sync icon (SPEC §4.1, DESIGN §11). This is the only UI in Phase 2.
+      Personal mode calls `gate('#app')` before first render; public mode never loads `persist.js`, so it never gates.
       _Done when:_ personal mode syncs between two browsers; the sync icon shows synced after a save and offline with the network turned off in DevTools; public mode never requests `persist.js` and shows no sync icon (check the Network tab); tests still pass.
 
 - [ ] **2.3 Data model**

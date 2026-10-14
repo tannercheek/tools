@@ -28,6 +28,7 @@ async function createStore(docId){
     // Path assumes tools/daily-flow/index.html — use '../shared/persist.js'
     // if this ends up as a flat file directly in tools/.
     const mod = await import("../../shared/persist.js");
+    await mod.gate("#app");
     const remote = await mod.syncedState(docId);
     return {
       mode: "synced",
@@ -40,6 +41,12 @@ async function createStore(docId){
     };
   } catch (err) {
     console.warn("[daily-flow] sync unavailable, falling back to localStorage:", err);
+    // The gate didn't load either. Trust a device that has unlocked before;
+    // otherwise stay locked (init shows why).
+    let trusted = false;
+    try { trusted = !!localStorage.getItem("toolsPassphrase"); } catch {}
+    if (!trusted) return null;
+    el("app").hidden = false;
     return {
       mode: "local",
       reason: err,
@@ -540,6 +547,12 @@ function renderAll(){
 async function init(){
   statusEl.textContent = "Loading…";
   store = await createStore(DOC_ID);
+  if (!store){
+    const msg = document.createElement("p");
+    msg.textContent = "Can't unlock right now. Check your connection and reload.";
+    el("app").before(msg);
+    return;
+  }
 
   let saved = null;
   try { saved = await store.get("days"); }

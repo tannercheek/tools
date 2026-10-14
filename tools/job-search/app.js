@@ -1,6 +1,5 @@
 // Job Search: a one-time prep checklist, daily and weekly search rounds,
 // and interview problem practice, as three tabs.
-import { syncedState } from "../../shared/persist.js";
 import { mountInterview } from "./interview.js";
 
 // ── Prepare tab ───────────────────────────────────────
@@ -602,6 +601,28 @@ function stateKey(id, kind) {
   if (kind === "plan") return `plan:${id}`;
   return id; // setup / optional: unchanged from the original checklist
 }
+
+// ── Unlock ────────────────────────────────────────────
+// Nothing renders until the passphrase checks out.
+let gate, syncedState;
+try {
+  ({ gate, syncedState } = await import("../../shared/persist.js"));
+} catch (err) {
+  // persist.js didn't load (no signal, Firebase not cached), so there's no
+  // gate and no saved state. Trust a device that has unlocked before and show
+  // the page as it looked before the gate; otherwise say why it's locked.
+  let trusted = false;
+  try {
+    trusted = !!localStorage.getItem("toolsPassphrase");
+  } catch {
+    // storage unavailable — stay locked
+  }
+  const app = document.getElementById("app");
+  if (trusted) app.hidden = false;
+  else app.before(el("p", "page", "Can't unlock right now. Check your connection and reload."));
+  throw err;
+}
+await gate("#app");
 
 // ── Rendering ─────────────────────────────────────────
 function el(tag, className, text) {

@@ -192,6 +192,7 @@ await store.list(prefix)       // → docIds starting with prefix
 
 - **Personal build** (`MODE = 'personal'`): wraps `shared/persist.js`, with localStorage fallback if the import fails. Shows a small sync status icon in the header with three states: synced, saving, and offline (saved on this device). It mirrors `persist.js`'s `onStatus` (`'synced' | 'saved-locally' | 'offline'`). The localStorage fallback after a failed import counts as offline. How it looks: DESIGN §11.
 - **Public build** (`MODE = 'public'`): localStorage only. Must not import `persist.js` or show any passphrase UI.
+- Personal mode calls `gate('#app')` before first render; public mode never loads `persist.js`, so it never gates.
 
 > **Dependency:** `persist.js` currently exposes `get`/`set` per key. `remove` and `list` (needed for purge) may need to be added. If that's not possible, keep an index of month docs in the core doc and blank purged months instead of deleting them.
 
