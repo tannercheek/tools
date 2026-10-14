@@ -85,5 +85,18 @@
     "url": "tools/liftboard/",
     "updated": "2026-10-07T13:18:46-07:00",
     "synced": true
+  },
+  {
+    "name": "Macro Planner",
+    "desc": "Plan routine meals, track four macros",
+    "icon": "chart",
+    "tags": [
+      "health",
+      "nutrition",
+      "fitness"
+    ],
+    "url": "tools/macro-planner/",
+    "updated": "2026-10-13T20:58:30-07:00",
+    "synced": true
   }
 ]
