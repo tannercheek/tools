@@ -1,4 +1,4 @@
-// Unlinked showcase of the shared components at #/components. Step 7.3 removes it.
+// Unlinked showcase of the shared components at #/components. Step 7.2 removes it.
 // The foods and numbers here are sample text for checking layout, not data.
 
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';

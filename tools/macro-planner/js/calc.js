@@ -156,8 +156,8 @@ export function displayRemaining(target, eaten) {
 }
 
 // --- Stats ---
-// Stats cover this week only, Monday to today. A day is { entries?, swaps? };
-// one with no entries (or no log at all) is empty: left out, not counted as zero.
+// Stats cover the 7 days before today. A day is the shape in data.js; only its
+// entries count. One with no entries (or no record at all) is empty: left out, not counted as zero.
 
 function isLogged(day) {
   return (day.entries?.length ?? 0) > 0;
@@ -171,14 +171,55 @@ export function averageDailyTotals(days) {
   return { average, loggedDays: logged.length };
 }
 
-// Monday to today inclusive, as 'YYYY-MM-DD'. today is the local date string;
-// the math runs in UTC so DST never makes a day 23 or 25 hours.
-export function weekDates(today) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
-  if (!match) throw new RangeError(`Not a YYYY-MM-DD date: ${today}`);
+// --- Dates ---
+// Dates are local 'YYYY-MM-DD' strings. The math runs on whole UTC days,
+// so DST never makes a day 23 or 25 hours.
+
+const MS_PER_DAY = 86_400_000;
+
+function dayNumber(date) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new RangeError(`Not a YYYY-MM-DD date: ${date}`);
   const [year, month, day] = match.slice(1).map(Number);
-  const daysSinceMonday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
-  return Array.from({ length: daysSinceMonday + 1 }, (_, i) =>
-    new Date(Date.UTC(year, month - 1, day - daysSinceMonday + i)).toISOString().slice(0, 10),
-  );
+  return Date.UTC(year, month - 1, day) / MS_PER_DAY;
+}
+
+function dateFromDayNumber(dayNum) {
+  return new Date(dayNum * MS_PER_DAY).toISOString().slice(0, 10);
+}
+
+// The 7 days before today, oldest first. Today is still in progress, so it isn't one of them.
+export function lastSevenDates(today) {
+  const todayNum = dayNumber(today);
+  return Array.from({ length: 7 }, (_, i) => dateFromDayNumber(todayNum - 7 + i));
+}
+
+// --- Weight rate ---
+
+const RATE_WINDOW_DAYS = 28;
+const MIN_RATE_SPAN_DAYS = 7;
+
+// Least-squares slope through the weigh-ins from the last 28 days (today and
+// the 27 before it), in kg/week. A slope uses every point, so one heavy morning
+// moves it less than a first-to-last difference would. null unless the window
+// holds two weigh-ins at least 7 days apart. weighIns: [{ date, kg }], any order.
+export function weightRate(weighIns, today) {
+  const todayNum = dayNumber(today);
+  const points = weighIns
+    .map(({ date, kg }) => ({ x: dayNumber(date), y: kg }))
+    .filter(({ x }) => x > todayNum - RATE_WINDOW_DAYS && x <= todayNum);
+  if (points.length < 2) return null;
+
+  const xs = points.map(({ x }) => x);
+  if (Math.max(...xs) - Math.min(...xs) < MIN_RATE_SPAN_DAYS) return null;
+
+  const meanX = xs.reduce((a, b) => a + b, 0) / points.length;
+  const meanY = points.reduce((a, { y }) => a + y, 0) / points.length;
+  let covariance = 0;
+  let variance = 0;
+  for (const { x, y } of points) {
+    covariance += (x - meanX) * (y - meanY);
+    variance += (x - meanX) ** 2;
+  }
+  return (covariance / variance) * 7;
 }

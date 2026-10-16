@@ -21,15 +21,15 @@ Never edit files outside `tools/macro-planner/`, except `shared/persist.js` when
 - Vanilla HTML, CSS, JS with ES modules. No frameworks, no TypeScript, no bundler, no npm dependencies.
 - No CDN scripts. Fonts load from the Google Fonts `<link>` in `tokens.css`'s header comment. Nothing else loads from a CDN.
 - Charts and rings are hand-written SVG.
-- UI icons are Lucide SVGs inlined in `js/icons.js`. Food and meal emoji render from the bundled Fluent SVGs through `js/emoji.js` (SPEC §5.1). No icon fonts. Native emoji only appear as the fallback for a missing SVG.
+- UI icons are Lucide SVGs inlined in `js/icons.js`. Food and meal emoji render as native emoji (SPEC §5.1). No icon fonts.
 - All imports use relative paths with the `.js` extension.
 - The app must run by serving the repo root with any static server (e.g. `python3 -m http.server`) and opening `/tools/macro-planner/`.
 
 ## Code rules
 
-- **Keep logic pure and separate from the DOM.** Math lives in `js/calc.js`, persistence in `js/store.js`, retention in `js/purge.js`. These files must never touch `document` or `window`, so they can be tested in Node.
+- **Keep logic pure and separate from the DOM.** Math lives in `js/calc.js`, persistence in `js/store.js`, doc shapes and day/weigh-in helpers in `js/data.js`. These files must never touch `document` or `window`, so they can be tested in Node.
 - **Store metric, display either.** All weights, heights and food quantities are stored in metric. Convert only at the display layer.
-- **Snapshot rule.** A log entry stores its own label, emoji and numbers at the moment it's logged. Nothing that edits or deletes a food or meal may change a past day. This is the most important data rule in the app.
+- **Snapshot rule.** An entry stores its own label, emoji and numbers at the moment it's added. Past days are locked in the same way: their planned meals are written as snapshot entries (SPEC §3.5). Nothing that edits or deletes a food, a meal or the template may change a past day. This is the most important data rule in the app.
 - **Meal totals are computed, never stored.**
 - **Never invent nutrition values.** Every number in `data/foods.json` must come from USDA FoodData Central with its `fdcId` recorded. If you can't source a value, leave the food out and tell me.
 - **Emoji are data, stored as the character.** A food or meal's `emoji` field holds one Unicode emoji character, never an image path.
@@ -42,16 +42,15 @@ Never edit files outside `tools/macro-planner/`, except `shared/persist.js` when
 ## Storage
 
 - All persistence goes through the adapter in `js/store.js` (`load`, `save`, `remove`, `list`). Views never call `localStorage` or `persist.js` directly.
-- `config.js` exports `MODE = 'personal' | 'public'`.
-  - **personal:** wraps `../../shared/persist.js`, falls back to localStorage if the import fails, shows the sync indicator.
-  - **public:** localStorage only. **Must not import `persist.js`, and must not show any passphrase or sync UI.** Treat a violation of this as a bug.
-- Doc ids: `macro-planner` for the core doc, `macro-planner-log-YYYY-MM` for monthly logs. Don't change these without asking — they're live data keys.
-- Never write code that deletes or overwrites user data without a confirm sheet in the UI, except the retention purge described in the spec.
+- There's one build. It wraps `../../shared/persist.js`, falls back to localStorage if the import fails, gates on the passphrase and shows the sync indicator.
+- A public, local-only version would be a later port to its own repo (SPEC §4.1). `createLocalStore` in `store.js` is kept, with its tests, for that port. Don't delete it, and don't use it in this app.
+- Doc ids: `macro-planner` for the core doc, `macro-planner-days` for the rolling 7-day log, `macro-planner-weight` for weigh-ins. Don't change these without asking — they're live data keys.
+- Never write code that deletes or overwrites user data without a confirm sheet in the UI, except the rolling 7-day prune of `macro-planner-days` described in SPEC §4.3. Weigh-ins are only ever deleted by the user.
 
 ## Testing
 
 - Use Node's built-in runner: `node --test "tools/macro-planner/tests/*.test.js"` from the repo root (keep the quotes; passing the folder itself fails). No test libraries.
-- Every pure function in `calc.js`, `store.js` and `purge.js` gets tests. Use a tiny in-memory fake for localStorage.
+- Every pure function in `calc.js`, `store.js` and `data.js` gets tests. Use a tiny in-memory fake for localStorage.
 - Run the tests before saying a step is done, and report the result. Don't mark a step done with failing tests.
 - UI is checked by hand. At the end of each UI step, give me a short "how to check it" list (what to click, what should happen), including light and dark.
 

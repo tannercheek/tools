@@ -14,8 +14,11 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <header id="header" class="app-header"></header>
-  <main id="view" class="view"></main>
-  <nav id="tabbar" class="tabbar" aria-label="Tabs"></nav>
+  <!-- Hidden until persist.js's passphrase gate passes and storage is ready. -->
+  <div id="app" hidden>
+    <header id="header" class="app-header"></header>
+    <main id="view" class="view"></main>
+    <nav id="tabbar" class="tabbar" aria-label="Tabs"></nav>
+  </div>
 </body>
 </html>

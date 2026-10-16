@@ -27,7 +27,7 @@
   /* ---------- Colour: ink accent ---------- */
   --color-ink:            #24211D; /* the accent: focus rings, selected states, focused input border */
   --color-on-ink:         #FBF9F5; /* text/icons on ink fills */
-  --color-btn-face:       #2E2B27; /* primary button + eaten toggle fill */
+  --color-btn-face:       #2E2B27; /* primary button + switch (on) fill */
   --color-btn-edge:       #0E0D0C; /* primary button bottom edge */
 
   /* ---------- Colour: feedback ---------- */
@@ -147,14 +147,13 @@
   --radius-sm:          8px;   /* chips, bars, small badges */
   --radius-md:          12px;  /* default: cards, buttons, inputs, rows, tiles, tabs */
   --radius-lg:          20px;  /* bottom sheet top corners */
-  --radius-pill:        999px; /* toggles, segmented control pills */
+  --radius-pill:        999px; /* switches, segmented control pills */
 
   /* ---------- Edges (the only "shadows": hard, zero-blur, offset-y) ---------- */
   --press-depth:        4px;
   --press-depth-sm:     3px;
   --edge-primary:       0 var(--press-depth) 0 0 var(--color-btn-edge);
   --edge-secondary:     0 var(--press-depth-sm) 0 0 var(--color-border-strong);
-  --edge-toggle-on:     0 var(--press-depth-sm) 0 0 var(--color-btn-edge);
   --edge-none:          0 0 0 0 transparent;
 
   /* ---------- Motion ---------- */
@@ -164,7 +163,7 @@
   --dur-press:     90ms;   /* press-down / release */
   --dur-fast:      160ms;  /* colour + border changes */
   --dur-base:      240ms;  /* sheets, segmented control slide */
-  --dur-pop:       380ms;  /* eaten toggle pop */
+  --dur-pop:       380ms;  /* add button pop */
   --dur-hop:       460ms;  /* emoji tile hop */
   --dur-ring:      700ms;  /* ring / chart value change */
   --pop-scale-down: 0.82;

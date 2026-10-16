@@ -24,7 +24,8 @@ function todayStart() {
   return [iconButton('chevron-left', 'Previous day'), stack, iconButton('chevron-right', 'Next day')];
 }
 
-export function renderHeader(header, route, { onBack }) {
+// syncStatus: the header's sync status element (js/sync-status.js).
+export function renderHeader(header, route, { onBack, syncStatus }) {
   const start = document.createElement('div');
   start.className = 'app-header__start';
   const end = document.createElement('div');
@@ -40,6 +41,7 @@ export function renderHeader(header, route, { onBack }) {
     start.append(screenTitle(routeLabel(route)));
   }
 
+  if (syncStatus) end.append(syncStatus);
   if (!isPushed(route)) end.append(iconLink('sliders-horizontal', 'Settings', hashFor('settings')));
 
   header.dataset.layout = route === 'today' ? 'today' : isPushed(route) ? 'pushed' : 'tab';

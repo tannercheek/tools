@@ -9,7 +9,7 @@ export const TABS = [
 ];
 
 // Pushed screens open over the tabs with a back button.
-// 'components' is an unlinked showcase of js/ui/ for checking; step 7.3 removes it.
+// 'components' is an unlinked showcase of js/ui/ for checking; step 7.2 removes it.
 export const PUSHED = [
   { id: 'settings', label: 'Settings' },
   { id: 'components', label: 'Components' },

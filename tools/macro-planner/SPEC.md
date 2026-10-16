@@ -1,6 +1,6 @@
 # Macro Planner — SPEC (v1)
 
-A deliberately small calorie and macro tracker that doubles as a meal planner. Built for lifters who eat routine meals: set up a day of meals once, swap them with a tap, log by marking them eaten, and see four rings.
+A deliberately small calorie and macro tracker that doubles as a meal planner. Built for lifters who eat routine meals: set up a day of meals once, note only what changes, and see on four rings where the day will land.
 
 **Working title:** Macro Planner · **Slug:** `macro-planner` · **Status:** v1 spec
 
@@ -8,11 +8,11 @@ A deliberately small calorie and macro tracker that doubles as a meal planner. B
 
 ## 1. Principles
 
-1. **Routine over flexibility.** The common case is eating the same few meals. One tap should cover it.
-2. **Planning works without logging.** Marking meals eaten is optional. The plan alone answers "what should I aim for at dinner?", and nothing nags, warns or marks a day incomplete when a slot (flex or not) isn't logged.
+1. **Routine over flexibility.** The common case is eating the same few meals. On a normal day, that takes no taps at all.
+2. **The plan is what you eat.** Planned meals count without being marked. You only record what changes: a swap, a skip, a portion, and what goes in flex slots. The plan answers "what should I aim for at dinner?", and nothing nags, warns or marks a day incomplete. An open flex slot is just open.
 3. **Four numbers per food.** Calories, protein, fat, carbs. No micronutrients, no fibre, no sugar.
-4. **No accounts, no backend.** Personal build syncs through `shared/persist.js`. Public build is local-only.
-5. **Today and this week.** Screens look at today's plan and the current week, never further back. Old logs are purged automatically.
+4. **No accounts, no backend.** Syncs through `shared/persist.js`. A public, local-only version would be a later port to its own repo (§4.1).
+5. **Today and the last 7 days.** Day records cover today and the 7 days before it, never further back. Older days are dropped automatically. Bodyweight is the one exception: weigh-ins are kept, because a trend needs weeks (§3.1).
 6. **When in doubt, cut it.** Anything not in this document is out of scope for v1.
 
 ---
@@ -27,24 +27,20 @@ tools/macro-planner/
 ├─ tokens.css            # design tokens (final; see DESIGN.md)
 ├─ components.css        # shared component styles (js/ui/), tokens only
 ├─ style.css             # base, shell and view styles, tokens only
-├─ app.js                # boot, routing between views
-├─ config.js             # MODE = 'personal' | 'public'
-├─ assets/
-│  └─ emoji/             # bundled Fluent Emoji Flat SVGs, manifest.json, LICENSE
+├─ app.js                # boot, storage, routing between views
 ├─ data/
 │  ├─ foods.json         # bundled generic food database
-│  └─ emoji-picker.json  # curated emoji picker grid
+│  └─ emoji-picker.json  # small curated emoji picker grid, with names
 ├─ js/
 │  ├─ calc.js            # BMR / TDEE / targets / totals (pure functions)
 │  ├─ store.js           # storage adapter interface + both implementations
-│  ├─ purge.js           # history retention
+│  ├─ data.js            # doc shapes and defaults, day and weigh-in helpers
 │  ├─ rings.js           # SVG ring component
-│  ├─ emoji.js           # emoji character → bundled SVG, native fallback
 │  ├─ icons.js           # inline Lucide UI icons
 │  ├─ LICENSE-lucide.txt
 │  ├─ ui/                # shared components: buttons, rows, inputs, controls, sheets
 │  └─ views/             # today, plan, foods, meals, stats, settings
-├─ scripts/              # build-foods.mjs, food-list.json, build-emoji.mjs
+├─ scripts/              # build-foods.mjs, food-list.json
 └─ tests/                # node --test, pure functions only
 ```
 
@@ -87,12 +83,27 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 - Warn, but don't block, if the calorie target falls below BMR.
 - If carbs would go negative, clamp to 0 and warn.
 - Imperial/metric toggle. Store everything in metric internally; convert for display only.
-- **Weight is a profile value, not a log.** Update it in Settings whenever you weigh in, and the targets recalculate straight away. No weight history is kept.
+- **Weight comes from the weight log.** The profile's weight is the latest weigh-in. Adding one recalculates the targets straight away. Until the first weigh-in, there's no weight.
+- **Targets need a complete profile:** sex, age, height, weight, activity level and goal, plus a rate unless the goal is maintain. Until then there are no targets, calculated or overridden. The rings show the no-targets state (DESIGN §13), open flex slots show no remaining (§3.4), and Plan totals show the template's totals only.
 - Switching units snaps the goal rate to the matching option in the new system (0.5 lb ↔ 0.25 kg, 1 lb ↔ 0.5 kg, 1.5 lb ↔ 0.75 kg per week), so the calorie target can move by 25–77 kcal/day.
+
+**Weight log:** for weighing in whenever you happen to, not on a schedule.
+
+```js
+// weigh-in
+{ date: "2026-10-15", kg: 82.4 }
+```
+
+- Add a weigh-in from Stats, or by entering a weight in the profile form, which logs one for today. The date defaults to today and can be set to an earlier day.
+- One weigh-in per date. Adding another for the same date replaces it.
+- Delete a weigh-in (confirm sheet). The profile weight falls back to the latest one left.
+- Gaps are normal. Nothing reminds you to weigh in or marks a gap as missed.
+- Weigh-ins are kept indefinitely. A year of them is about 10 KB.
+- **Actual rate:** the least-squares slope through the weigh-ins from the last 28 days, in kg/week (shown as lb/week in imperial). It needs at least two weigh-ins at least 7 days apart. With fewer, no rate is shown. A slope uses every weigh-in, so one heavy morning moves it less than it would move a first-to-last difference.
 
 ### 3.2 Foods
 
-**Bundled database:** `data/foods.json`, roughly 300–500 generic whole foods curated from USDA FoodData Central (Foundation + SR Legacy, public domain). Loaded once and searched in memory.
+**Bundled database:** `data/foods.json`, generic whole foods curated from USDA FoodData Central (Foundation + SR Legacy, public domain). Loaded once and searched in memory. It starts with ~50 foods. It grows after a week of real use, adding what you actually missed (PLAN Phase 8), aiming at the priorities below rather than a target count.
 
 **Coverage priorities:** eggs (S/M/L as separate entries), meats and fish (raw and cooked), rice/oats/pasta/potatoes (dry and cooked), bread, dairy, tofu, legumes, common fruit and vegetables, oils, nut butters, protein powder (generic whey).
 
@@ -136,46 +147,81 @@ A meal is a named list of foods with quantities.
 ### 3.4 Daily plan
 
 - **Slots:** 3–6, user-named (e.g. Breakfast, Lunch, Pre-workout, Dinner). Set in Settings.
-- **Template:** each slot holds either a meal or a flex budget. The same template applies every day.
-- **Swap:** tapping a slot's meal on a given day lets you swap it for another meal **for that day only**. A "make this the default" option updates the template.
-- **Flex slot:** a slot with no fixed meal. It displays the **remaining** calories and macros for the day: the targets, minus everything eaten so far, minus the meals and pinned flex budgets still planned in other slots. With nothing logged, that's the targets minus the planned meals, so it works as a passive planner. Optionally the user can pin a fixed budget instead. A flex slot is resolved by logging a meal, foods, or quick numbers into it.
-- **More than one flex slot:** what's left is never split between them. Each open flex slot shows the full remaining, because you might fill it all with the first one or skip one. Once one is logged, the others show what's still left.
-- **Open flex slots are normal.** A flex slot that's never logged is just open, today or on a past day. It isn't shown as missed or incomplete.
-- **Plan totals:** the Plan view shows what the template adds up to (its meals plus any pinned flex budgets) against the targets, and one "left for flex" figure that isn't split between flex slots. A plan over target shows as over, never as a negative number.
+- **Template:** each slot holds either a meal or flex, optionally with a pinned budget. The same template applies every day.
+- **Swap:** a planned slot's actions let you swap its meal for another **for that day only**. A "make this the default" option updates the template.
+- **Flex slot:** a slot with no fixed meal. It displays the **remaining** calories and macros for the day: the targets minus the rest of the day (§3.5), meaning the planned meals after swaps, skips and portions, the pinned budgets of other open flex slots, and everything added to other slots. This is the gap to fill. Optionally the user can pin a budget instead: four numbers (kcal, protein, fat, carbs), entered like quick numbers. It's stored on the template slot as `budget: { kcal, protein, fat, carbs }`. A flex slot is filled by adding a meal, foods, quick numbers or a Recent entry to it.
+- **More than one flex slot:** what's left is never split between them. Each open flex slot shows the full remaining, because you might fill it all with the first one or skip one. Once one is filled, the others show what's still left.
+- **Open flex slots are normal.** A flex slot with nothing in it is just open, today or on a past day. It isn't shown as missed or incomplete. With no targets yet (§3.1), it shows as open, with no remaining. An open flex slot counts as nothing in the day's total, unless it has a pinned budget, which counts like a planned meal.
+- **Off plan:** for vacations and days when the plan doesn't apply. "Off plan until [date]" (default: today only) turns every slot into a flex slot for those days. Each one shows what's left for the day, and you add meals, foods, quick numbers or Recent entries to it as usual. Planned meals, pinned budgets and changes are ignored on those days, and the template is unchanged. "Back on plan" clears it from today on. It's stored per day (`offPlan: true`), so past off-plan days stay off plan. Range: today up to 30 days ahead.
+- **Plan totals:** the Plan view shows what the template adds up to (its meals plus any pinned flex budgets) against the targets, and one "left for flex" figure that isn't split between flex slots. A plan over target shows as over, never as a negative number. With no targets yet (§3.1), it shows the template's totals only, with no "left for flex".
 
-### 3.5 Logging
+### 3.5 Changes and the day's total
 
-- **Mark eaten:** tap a planned slot → logged. Optional portion multiplier (0.5×, 1×, 1.5×, custom).
-- **Quick-add food:** search a food, enter quantity, choose slot.
-- **Quick-add numbers:** kcal + macros directly, with an optional label. For restaurants and guesses.
-- **Undo / remove** any entry for the day.
-- **Copy yesterday:** replace today's entries with yesterday's.
-- **Snapshot rule:** each log entry stores its own name, emoji and numbers at log time. Editing or deleting a food or meal later **never** changes past days. Quick numbers entries use 🍽️.
+The plan counts as eaten. A day is the template plus what you change:
+
+- **Swap** a planned slot's meal for that day (§3.4).
+- **Skip** a planned slot: it counts as nothing that day.
+- **Portion:** 0.5×, 1×, 1.5× or custom, on a planned slot's meal.
+- **As planned** undoes a slot's swap, skip and portion.
+- **Add a meal or food:** pick a saved meal, or search a food and enter a quantity, then choose a slot. In a flex slot it fills the slot. In a planned slot it's an extra alongside the meal.
+- **Add quick numbers:** kcal + macros directly, with an optional label. For restaurants and guesses. Uses 🍽️.
+- **Recent:** the add sheet lists entries from the last 7 days, newest first, merged when label and numbers match. One tap adds one again to the chosen slot. It covers leftovers, a repeated restaurant order and the same stand-in breakfast two days running. It reads the snapshot fields, so it works even if the food or meal has since been edited or deleted.
+- **Remove** any added entry.
+
+**The day's total** is the planned meals (after swaps, skips and portions), the pinned budgets of open flex slots, and every added entry. On an off-plan day it's the added entries only.
 
 ```js
-// log entry
+// day in macro-planner-days
+{
+  changes: { "<slotId>": { mealId, portion } }, // only slots that differ from the template.
+                                                 // mealId: a swap; null: skipped; absent: the template's meal
+  entries: [],     // added foods, quick numbers and Recent entries; after lock-in, the whole day
+  offPlan: false,
+  locked: false
+}
+
+// entry
 { id, slotId, label: "Rice & beef", emoji: "🍚", kcal, protein, fat, carbs, source: "meal" | "food" | "quick" }
 ```
 
+**Lock-in:** once a day has passed, its plan is written into `entries` as snapshot entries and `locked` is set:
+
+- Each planned meal (after swaps, skips and portions) becomes a `meal` entry. Each open flex slot with a pinned budget becomes a `quick` entry labelled with the slot's name. `changes` is then ignored.
+- It runs on app load and when the date changes while the app is open, for every past day in the window that isn't locked, from the core doc's `startedOn` date on. Days you never opened count as on plan. Days before you started using the app don't count.
+- Any edit to a meal or the template happens in a session that has already locked every past day, so it can only affect today and later.
+- A locked day is a list of entries. Correct it by removing an entry and adding what you actually ate.
+
+**Snapshot rule:** each entry stores its own name, emoji and numbers when it's added or locked in. Editing or deleting a food or meal later **never** changes a past day.
+
 ### 3.6 Today view (home)
 
-- Four rings: calories, protein, fat, carbs. Each shows eaten / target and remaining.
-- Slots listed in order, each showing planned meal (or flex remaining), its totals, and eaten state.
-- Date switcher: previous/next day, back to today.
+- Four rings: calories, protein, fat, carbs. Each shows the day's total / target and what's left. The rings show where the day will land, not progress through it. With no targets yet (§3.1), they show the no-targets state (DESIGN §13).
+- Slots listed in order. Each shows its meal (planned, swapped or skipped, with any portion) or the flex remaining, its totals, and anything added to it. Tapping a planned slot opens its actions: Swap, Skip, Portion, As planned, Add.
+- On a locked past day, the slots list that day's entries instead, each with remove, plus Add.
+- Date switcher: previous/next day, back to today. It goes back to 7 days ago (the oldest kept day, §4.3) and forward without a limit, for planning swaps or off-plan days ahead.
+- On an off-plan day, a short "Off plan" line sits above the slots, with "Back on plan".
 
 ### 3.7 Stats
 
-- **This week only:** Monday to today. No range toggle, nothing further back.
-- The same four rings showing **daily averages** against target over the days logged this week, with "N days logged".
-- Days with no entries are excluded from averages, not counted as zero.
-- With fewer than 2 logged days this week, show the empty state (DESIGN §13).
+**Last 7 days:** the 7 days before today, all locked in. Today is still in progress, so it stays on Today. No range toggle, nothing further back.
+
+- The same four rings showing **daily averages** against target, over the days in the last 7 that have entries. Open flex slots count as nothing, so the averages are low by whatever went unrecorded. The weight trend is the real check.
+- A day with no entries isn't counted, rather than counted as zero. That covers an off-plan day with nothing added, a day before you started, or a day with every slot skipped or open.
+- Heading: "Daily average · last 7 days". If fewer than 7 days count, it reads "Daily average · 5 of the last 7 days". Never "logged" or "missed": you don't log days, and an uncounted day isn't a failure.
+- With fewer than 2 counted days, show the empty state (DESIGN §13).
+
+**Weight trend:**
+
+- A line through the weigh-ins from the last 12 weeks, plotted by date, with the latest value labelled. A dashed line shows the goal rate starting from the first weigh-in in the window, so you can see whether you're on pace.
+- Below the chart: the latest weight and its date, and the actual rate against the goal rate, e.g. "−0.3 kg/week · goal −0.5". This is information, not a verdict. Nothing is marked as missed or failed.
+- "Log weigh-in" opens a sheet (weight, date). The most recent weigh-ins are listed below, each with delete.
+- With fewer than 2 weigh-ins in the window, the chart, rate and button are replaced by the empty state (DESIGN §13), whose button is "Log weigh-in". The list still shows.
 
 ### 3.8 Settings
 
 - Profile and targets (3.1), including overrides and "reset to calculated".
 - Units: metric / imperial.
 - Meal slots: count, names, order.
-- **History retention:** 6 months / 1 year / never. Default 1 year.
 - Export all data as JSON. Import JSON (replaces all data, after a confirm sheet).
 - Reset everything (after a confirm sheet).
 
@@ -185,7 +231,7 @@ A meal is a named list of foods with quantities.
 
 ### 4.1 Adapter interface
 
-All persistence goes through one interface in `js/store.js` so the two builds differ in one place only:
+All persistence goes through one interface in `js/store.js`, so storage can be swapped in one place:
 
 ```js
 await store.load(docId)        // → object or {}
@@ -194,25 +240,29 @@ await store.remove(docId)      // delete a document
 await store.list(prefix)       // → docIds starting with prefix
 ```
 
-- **Personal build** (`MODE = 'personal'`): wraps `shared/persist.js`, with localStorage fallback if the import fails. Shows a small sync status icon in the header with three states: synced, saving, and offline (saved on this device). It mirrors `persist.js`'s `onStatus` (`'synced' | 'saved-locally' | 'offline'`). The localStorage fallback after a failed import counts as offline. How it looks: DESIGN §11.
-- **Public build** (`MODE = 'public'`): localStorage only. Must not import `persist.js` or show any passphrase UI.
-- Personal mode calls `gate('#app')` before first render; public mode never loads `persist.js`, so it never gates.
+- **This app:** wraps `shared/persist.js`, with localStorage fallback if the import fails. Shows a small sync status icon in the header with three states: synced, saving, and offline (saved on this device). It mirrors `persist.js`'s `onStatus` (`'synced' | 'saved-locally' | 'offline'`). The localStorage fallback after a failed import counts as offline. How it looks: DESIGN §11.
+- Calls `gate('#app')` before first render.
+- **Public port (not built here):** a public version would be a copy of this app in its own repo, using localStorage only, since it has no Firestore. `store.js` keeps `createLocalStore`, a tested localStorage-only adapter, for that port. This app doesn't use it. The port would switch `app.js` to it and drop `persist.js`, the gate and the sync icon.
 
-> **Dependency:** `persist.js` currently exposes `get`/`set` per key. `remove` and `list` (needed for purge) may need to be added. If that's not possible, keep an index of month docs in the core doc and blank purged months instead of deleting them.
+> **Dependency:** `persist.js` only exposes `get`/`set` per key, so the personal adapter keeps an index of docs in the core doc and blanks a doc instead of deleting it (step 2.2). The app has a fixed set of docs (§4.2) and never needs `remove` or `list` in normal use. They stay on the interface for the public port and for reset.
 
 ### 4.2 Document layout
 
-Firestore caps a document at 1 MB, so logs are split by month.
+Three fixed docs. Each one is saved whole, so days and weigh-ins are kept out of the core doc, and a change to a day never rewrites foods and meals.
 
 | docId | Contents |
 |---|---|
-| `macro-planner` | profile, targets, overrides, settings, slots, template, custom foods, meals |
-| `macro-planner-log-YYYY-MM` | that month's days: `{ "2026-10-09": { entries: [], swaps: {} } }` |
+| `macro-planner` | profile (without weight), targets, overrides, settings, slots, template, custom foods, meals, `startedOn` (first-run date) |
+| `macro-planner-days` | days by date: `{ "2026-10-15": { changes: {}, entries: [], offPlan: false, locked: false } }` (§3.5) |
+| `macro-planner-weight` | weigh-ins, oldest first: `{ weighIns: [{ date, kg }] }` |
 
-### 4.3 Retention
+All three stay far below Firestore's 1 MB cap: about 5 KB of days, and about 10 KB of weigh-ins a year.
 
-- On app load (at most once per day), delete month docs entirely older than the retention window.
-- Purge works at month granularity. A 6-month setting may keep up to ~7 months; that's fine.
+### 4.3 Rolling window
+
+- Every save of `macro-planner-days` drops dates before 7 days ago, so it holds today, the 7 days before it (Stats' window), and any future days with changes or off plan set. There's no setting and no separate purge.
+- "Today" is the device's local date. A device that's been closed for a while drops its stale days on its next save.
+- Weigh-ins are never dropped automatically.
 
 ---
 
@@ -221,8 +271,8 @@ Firestore caps a document at 1 MB, so logs are split by month.
 All visual rules (colour, type, spacing, components, motion, accessibility) are in `DESIGN.md`, and every value is in `tokens.css`. This section only covers behaviour.
 
 - **Mobile-first, single column.** Bottom tab bar: Today · Plan · Foods · Meals · Stats. Settings from a header icon, opening as a pushed screen with a back button (DESIGN §11).
-- Large tap targets; marking a meal eaten is a single tap.
-- No onboarding wizard. First launch opens Settings → Profile with sensible defaults filled in.
+- Large tap targets. A day that goes to plan needs no taps; a swap, skip or portion is two (open the slot, choose).
+- No onboarding wizard. First launch opens Settings → Profile with every field empty: number fields show a placeholder naming the field ("Age", "Height", "Weight"), and choices start with nothing selected.
 - Light and dark themes via `prefers-color-scheme`, handled in `tokens.css`.
 - Calm, legible, numeric. Colour appears only in macro data (rings, macro dots, charts); the rest of the UI is monochrome (DESIGN §1).
 - **No browser dialogs.** Confirmations use the shared confirm sheet. Text and number entry use inputs in the view or in a bottom sheet. Never `confirm()`, `prompt()` or `alert()`.
@@ -231,9 +281,8 @@ All visual rules (colour, type, spacing, components, motion, accessibility) are 
 
 - **UI icons** are [Lucide](https://lucide.dev) (ISC/MIT), copied as inline SVG into `js/icons.js` (only the icons used), styled per DESIGN §12. Lucide's license is committed beside them as `js/LICENSE-lucide.txt`.
 - **Emoji only identify foods and meals** (DESIGN §12). Data stores the character, never an image path.
-- **Rendering:** emoji render as Microsoft's [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) Flat SVGs (MIT), not native OS emoji. `js/emoji.js` maps a character to `assets/emoji/<codepoints>.svg` (lowercase hex code points joined by `-`, with U+FE0F dropped, e.g. 🍽️ → `1f37d.svg`). If no SVG is bundled for a character, it renders the native character instead.
-- **Bundled subset:** `scripts/build-emoji.mjs <path-to-fluentui-emoji-clone>` copies only the SVGs in use into `assets/emoji/`: every emoji in `data/foods.json` (exact emoji and category defaults from `food-list.json`), every emoji in `data/emoji-picker.json`, and 🍽️. It finds each character through the asset folders' `metadata.json`, writes `assets/emoji/manifest.json` (character → file and CLDR name), copies Fluent's `LICENSE` to `assets/emoji/LICENSE`, and lists any character it couldn't find. The clone stays outside the repo.
-- **Emoji picker:** a bottom sheet (DESIGN §10) with a curated grid of ~80–120 food emoji from `data/emoji-picker.json`. The grid includes every category default and 🍽️. Each tile's `aria-label` is the emoji's CLDR name from the manifest.
+- **Rendering:** emoji render as native OS emoji, as text in the emoji tile. Bundled Fluent Emoji SVGs are postponed to v2 (§8). Because data stores only the character, switching later needs no data change.
+- **Emoji picker:** a bottom sheet (DESIGN §10) with a small curated grid of ~40 food emoji from `data/emoji-picker.json`, stored as `[{ "char": "🍚", "name": "cooked rice" }]`. The grid includes every category default and 🍽️. Each tile's `aria-label` is its `name` (the emoji's CLDR short name).
 
 ---
 
@@ -241,7 +290,7 @@ All visual rules (colour, type, spacing, components, motion, accessibility) are 
 
 Storage and math keep raw values. Only what's shown is rounded, to what's useful:
 
-- **kcal and grams:** whole numbers (DESIGN §3). On a ring, "left" is the shown target minus the shown eaten, so the three numbers on screen always agree.
+- **kcal and grams:** whole numbers (DESIGN §3). On a ring, "left" is the shown target minus the shown total, so the three numbers on screen always agree.
 - **Bodyweight:** one decimal, in kg or lb. It's stored unrounded, so 180 lb entered shows 180.0 lb again, never 179.9.
 - **Height:** whole cm, or feet and whole inches.
 - **Goal rate:** shown as its option (0.5 / 1 / 1.5 lb per week), never as a converted value like 0.454 kg.
@@ -253,12 +302,13 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 
 0. **Setup** — scaffold, app shell and shared base components, styled per `DESIGN.md` from the start.
 1. **Core math** — `calc.js` (BMR, TDEE, targets, meal totals, averages) with tests.
-2. **Storage** — adapter interface, both implementations, month docs, purge, with tests.
-3. **Foods** — bundled `foods.json`, search, emoji assets and picker, custom food CRUD, archive behaviour.
+2. **Storage** — adapter interface, both implementations, doc shapes, the rolling days doc and the weight log, with tests.
+3. **Foods** — starter `foods.json`, search, emoji picker, custom food CRUD, archive behaviour.
 4. **Meals** — meal CRUD and totals.
-5. **Plan + Today** — slots, template, per-day swaps, flex slot, logging, rings.
-6. **Stats + Settings** — profile and targets, this week's averages, retention, export/import.
-7. **Polish and publish** — public build check, mobile pass, design audit, dashboard check.
+5. **Profile, Plan + Today** — profile and targets, slots, template, per-day changes, lock-in, flex slot, adding entries, off plan, rings.
+6. **Stats + Settings** — weigh-ins, last 7 days' averages, weight trend, export/import.
+7. **Polish and publish** — mobile pass, design audit, dashboard check.
+8. **After a week of use** — grow the food list from what you actually missed.
 
 ---
 
@@ -269,19 +319,25 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 - Recipes with instructions or cooked-yield math
 - Water, steps, exercise logging
 - Social features, sharing, accounts
-- History views and stats beyond the current week
-- Weight log, weight trend chart and days-on-target counts. DESIGN §7 says how they'd look, but v1 doesn't include them.
+- Meal history, and stats beyond the last 7 days
+- Weigh-in reminders, body-fat or measurement tracking
+- Automatically adjusting targets from the actual weight rate
+- Days-on-target counts. DESIGN §7 says how they'd look, but v1 doesn't include them.
 - Daily calorie bars and stacked macro bars. DESIGN §7 says how they'd look, but v1 doesn't include them.
 
 ---
 
 ## 8. v2 candidates
 
-- **Packaged foods via USDA FoodData Central API.** Runtime search → "save to My Foods", so the bundle stays small and everything lands in the existing custom-food model. Data is CC0. Needs an API key with a default rate limit of roughly 1,000 requests/hour; the public build would need a small proxy to keep the key private, or omit the feature. (Not bundled: the Branded dataset is well over a million records.)
+- **Targets from the actual rate** — the strongest candidate. Once the weight trend has been lived with, suggest adjusted targets when the actual rate differs from the goal.
+- **Edit an entry** — change a quantity or numbers in place, instead of remove and re-add. Entries are snapshots, so this touches nothing else.
+- **Fluent Emoji** — render food and meal emoji as bundled Microsoft Fluent Emoji Flat SVGs (MIT) for the same look on every OS. A build script copies only the SVGs in use; the native character stays as the fallback. Data already stores the character, so nothing migrates.
+- **Packaged foods via USDA FoodData Central API.** Runtime search → "save to My Foods", so the bundle stays small and everything lands in the existing custom-food model. Data is CC0. Needs an API key with a default rate limit of roughly 1,000 requests/hour; a public port would need a small proxy to keep the key private, or omit the feature. (Not bundled: the Branded dataset is well over a million records.)
 - **Weekday templates** — a different default plan per weekday (e.g. training vs rest days).
 - **Training-day / rest-day targets** — different calorie and carb targets by day type.
 - **Micronutrient tracking** (would require a richer food model).
-- **iOS app** — the public build serves as its beta reference.
+- **iOS app** — a public port would serve as its beta reference.
+- **Per-date weight keys** would remove whole-log overwrites entirely; revisit if weight is logged from several devices.
 
 ---
 
@@ -290,16 +346,23 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 | Decision | Choice | Why |
 |---|---|---|
 | Framework | Vanilla JS | Small data model, no build step, matches other tools, `persist.js` drops in |
+| Builds | One: this personal app, synced through `persist.js` | A public, local-only version is a later port to its own repo; `createLocalStore` is kept for it |
 | Food data | Bundled curated USDA JSON | Offline, no key, no backend, public domain |
 | Serving model | One serving per food | Avoids unit conversion complexity |
-| Repeat | Single daily template + per-day swaps | Weekday templates deferred to v2 |
-| Flex slot | Auto "remaining", optional fixed budget | Most useful default with zero setup |
-| Log integrity | Snapshot numbers at log time | Edits never rewrite history |
+| Repeat | Single daily template + per-day changes | Weekday templates deferred to v2 |
+| Flex slot | Auto "remaining", optional pinned budget of four numbers | Most useful default with zero setup; four numbers so a budget counts in the rings and lock-in like a meal |
+| Logging model | Plan by exception: planned meals count, you record changes | You eat the plan most days; marking every meal eaten is busywork |
+| Day integrity | Snapshot entries when added, and lock-in of past days | Edits to meals or the template never change a past day |
 | Goal rate | Stored in kg/week, one constant (7700 kcal/kg) | Store metric; imperial options convert from lb rather than using a separate 3500 kcal/lb |
-| Stats range | This week, Monday to today | The app is about today's plan and this week; history adds little, so retention can stay short |
-| Weight | One profile value, updated by hand | Weigh-ins are occasional; the point is keeping targets current, not tracking a trend |
-| Log storage | One Firestore doc per month | Stays under 1 MB; purge = delete old months |
+| Stats range | The 7 days before today, rolling | Always a full week of finished days; today is still in progress and has its own rings. What you ate weeks ago doesn't change what to eat today |
+| Stats wording | "Daily average · last 7 days", or "· 5 of the last 7 days" when some don't count | Nothing is logged, so "days logged" is wrong; the count only appears when it's informative, and never as missed |
+| Weight | Weight log, latest weigh-in is the profile weight | A trend is the one thing that needs history: it shows whether the chosen rate is actually happening. Tiny data, sporadic entries are fine |
+| Day storage | One rolling `macro-planner-days` doc, pruned to the last 7 days on save | Nothing reads older days, so no month docs, retention setting or purge |
+| Repeating a day | "Recent" entries, not copy yesterday | What repeats is single items (leftovers, a usual order), not whole days; copying a day would overwrite today and needs a confirm sheet |
+| No-plan days | Off plan: every slot becomes flex, stored per day | Reuses the flex slot; vacations need no new logging model |
 | Visual design | `DESIGN.md` + `tokens.css`, applied from step 0.1 | No restyle pass at the end |
 | UI icons | Lucide, inlined SVG | Matches DESIGN §12's stroke style; no icon font or CDN |
-| Food emoji | Character in data, rendered as bundled Fluent Emoji Flat SVGs | Same look on every OS; data stays portable; only the SVGs in use ship |
+| Food emoji | Character in data, rendered natively; small curated picker | Fluent SVGs were polish, not part of the loop; postponed to v2 with no data change needed |
+| Food list size | ~50 to start, grown from real use | You'll find out which foods are missing faster by using it than by guessing 300–500 up front |
 | Dialogs | Shared bottom sheets, never `confirm()` / `prompt()` / `alert()` | Native dialogs can't be styled and have no iOS equivalent |
+| First-run profile | Empty: placeholder hints, nothing selected, no targets until complete | Pre-filled values would just be overwritten, and a skipped form would give confident targets for someone else |

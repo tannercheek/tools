@@ -123,6 +123,15 @@ body {
   white-space: nowrap;
 }
 
+/* Not a button, but sized like the icon buttons beside it so the icons sit evenly. */
+.sync-status {
+  display: grid;
+  place-items: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  color: var(--color-text-2);
+}
+
 /* ---------- View area ---------- */
 
 .view {
@@ -207,7 +216,7 @@ body {
   outline-offset: var(--focus-offset);
 }
 
-/* ---------- Components showcase (#/components; removed in step 7.3) ---------- */
+/* ---------- Components showcase (#/components; removed in step 7.2) ---------- */
 
 .demo-section {
   display: flex;

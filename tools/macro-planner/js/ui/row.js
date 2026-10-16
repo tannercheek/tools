@@ -8,7 +8,7 @@ const MACROS = [
   { key: 'carbs', letter: 'C' },
 ];
 
-// Shows the native character until step 3.4a switches tiles to the bundled SVGs.
+// Native emoji (SPEC §5.1); hidden from screen readers because the title names the item.
 // Hidden from assistive tech: the row title beside it names the item.
 export function emojiTile(emoji) {
   const tile = document.createElement('span');
