@@ -1,0 +1,98 @@
+/* Buttons for js/ui/buttons.js (DESIGN §5, §9). Every value comes from tokens.css. */
+
+/* ---------- Focus (DESIGN §5) ---------- */
+
+.btn:focus-visible,
+.icon-btn:focus-visible {
+  outline: var(--focus-width) solid var(--color-ink);
+  outline-offset: var(--focus-offset);
+}
+
+/* ---------- Icon button (DESIGN §9) ---------- */
+
+.icon-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-press) var(--ease-out);
+}
+
+.icon-btn:active {
+  background: var(--color-surface-sunken);
+  transform: scale(var(--icon-press-scale));
+}
+
+/* ---------- Buttons (DESIGN §9) ---------- */
+
+.btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-min);
+  padding: 0 var(--space-5);
+  border: var(--border-width) solid;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  line-height: var(--line-md);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    box-shadow var(--dur-press) var(--ease-out);
+}
+
+.btn--primary {
+  height: var(--control-h);
+  background: var(--color-btn-face);
+  border-color: var(--color-btn-face);
+  color: var(--color-on-ink);
+  font-weight: var(--weight-black);
+  box-shadow: var(--edge-primary);
+}
+
+.btn--secondary {
+  height: var(--control-h-sm);
+  padding-inline: var(--space-4);
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  font-weight: var(--weight-heavy);
+  box-shadow: var(--edge-secondary);
+}
+
+.btn--primary:not(:disabled):active {
+  transform: translateY(var(--press-depth));
+  box-shadow: var(--edge-none);
+}
+
+.btn--secondary:not(:disabled):active {
+  transform: translateY(var(--press-depth-sm));
+  box-shadow: var(--edge-none);
+}
+
+.btn:disabled {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-3);
+  box-shadow: var(--edge-none);
+  cursor: default;
+}
+
+.btn--block {
+  display: flex;
+  width: 100%;
+}

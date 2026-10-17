@@ -3,8 +3,9 @@
 
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
 import { segmentedControl, switchControl } from '../ui/controls.js';
+import { emojiPickerSheet } from '../ui/emoji-picker.js';
 import { numberField, textField } from '../ui/inputs.js';
-import { listRow, rowList } from '../ui/row.js';
+import { emojiTile, listRow, rowList } from '../ui/row.js';
 import { confirmSheet, openSheet } from '../ui/sheet.js';
 
 function section(title, ...children) {
@@ -135,6 +136,30 @@ function sheets() {
   return section('Sheets', group(openPlain, openConfirm), result);
 }
 
+// Starts on 🍽️, the default for new custom foods and meals; each pick becomes the next current one.
+function emojiPicker() {
+  let current = '🍽️';
+  const tile = emojiTile(current);
+
+  const result = document.createElement('p');
+  result.className = 'demo-note';
+  result.setAttribute('role', 'status');
+  result.textContent = 'Emoji picker result: none yet';
+
+  const open = secondaryButton('Choose emoji', {
+    onClick: async () => {
+      const chosen = await emojiPickerSheet({ current });
+      if (chosen) {
+        current = chosen;
+        tile.textContent = chosen;
+      }
+      result.textContent = `Emoji picker result: ${chosen ?? 'closed without a choice'}`;
+    },
+  });
+
+  return section('Emoji picker', group(tile, open), result);
+}
+
 export function render(container) {
-  container.replaceChildren(buttons(), rows(), inputs(), controls(), sheets());
+  container.replaceChildren(buttons(), rows(), inputs(), controls(), sheets(), emojiPicker());
 }

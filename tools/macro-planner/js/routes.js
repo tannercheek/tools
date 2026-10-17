@@ -3,10 +3,18 @@
 export const TABS = [
   { id: 'today', label: 'Today', icon: 'disc' },
   { id: 'plan', label: 'Plan', icon: 'calendar' },
-  { id: 'foods', label: 'Foods', icon: 'apple' },
   { id: 'meals', label: 'Meals', icon: 'soup' },
   { id: 'stats', label: 'Stats', icon: 'chart-no-axes-column' },
 ];
+
+// Routes shown inside a tab under its segmented control (SPEC §5), by tab.
+// The first is where the tab opens, so it shares the tab's id.
+export const SEGMENTS = {
+  meals: [
+    { id: 'meals', label: 'Meals' },
+    { id: 'foods', label: 'Foods' },
+  ],
+};
 
 // Pushed screens open over the tabs with a back button.
 // 'components' is an unlinked showcase of js/ui/ for checking; step 7.2 removes it.
@@ -17,7 +25,7 @@ export const PUSHED = [
 
 export const DEFAULT_ROUTE = 'today';
 
-const ROUTE_IDS = new Set([...TABS, ...PUSHED].map((route) => route.id));
+const ROUTE_IDS = new Set([...TABS, ...PUSHED, ...Object.values(SEGMENTS).flat()].map((route) => route.id));
 
 export function hashFor(id) {
   return `#/${id}`;
@@ -31,6 +39,11 @@ export function parseRoute(hash) {
 
 export function isPushed(id) {
   return PUSHED.some((route) => route.id === id);
+}
+
+// The tab or pushed screen a route belongs to: 'foods' → 'meals', anything else → itself.
+export function tabFor(id) {
+  return Object.keys(SEGMENTS).find((tab) => SEGMENTS[tab].some((segment) => segment.id === id)) ?? id;
 }
 
 export function routeLabel(id) {

@@ -1,12 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  CoreDocUnavailableError,
   DAYS_DOC_ID,
   createCoreDoc,
   createDays,
   emptyDay,
   loadCoreDoc,
+  localDate,
   pruneDays,
+  updateCoreDoc,
 } from '../js/data.js';
 import { CORE_DOC_ID, createLocalPersist, createLocalStore, createPersonalStore } from '../js/store.js';
 import { createFakePersist } from './fake-persist.js';
@@ -112,6 +115,66 @@ test('an existing core doc loads as it is, without being rewritten', async () =>
   const saved = { ...createCoreDoc('2026-09-01'), meals: [{ id: 'm1', name: 'Rice & beef', emoji: '🍚', items: [] }] };
   await store.save(CORE_DOC_ID, saved);
   assert.deepEqual(await loadCoreDoc(store, '2026-10-15'), saved);
+});
+
+// --- Core doc writes ---
+
+const addFood = (doc) => ({ ...doc, foods: [...doc.foods, { id: 'custom-a', name: 'A' }] });
+
+test('updateCoreDoc saves the changed doc and returns it', async () => {
+  const store = freshStore();
+  await loadCoreDoc(store, '2026-10-15');
+  const next = await updateCoreDoc(store, addFood);
+  assert.deepEqual(next.foods, [{ id: 'custom-a', name: 'A' }]);
+  assert.deepEqual(await store.load(CORE_DOC_ID), next);
+});
+
+test('updateCoreDoc builds on what’s stored, so changes add up', async () => {
+  const store = await createPersonalStore(createFakePersist().openDoc);
+  await loadCoreDoc(store, '2026-10-15');
+  await updateCoreDoc(store, addFood);
+  const next = await updateCoreDoc(store, (doc) => ({ ...doc, foods: [...doc.foods, { id: 'custom-b', name: 'B' }] }));
+  assert.deepEqual(next.foods.map(({ id }) => id), ['custom-a', 'custom-b']);
+});
+
+test('offline on a device that never loaded the core doc, updateCoreDoc saves nothing', async () => {
+  const store = await createPersonalStore(createLocalPersist(createFakeStorage()));
+  await loadCoreDoc(store, '2026-10-15');
+  let called = false;
+  await assert.rejects(
+    updateCoreDoc(store, (doc) => {
+      called = true;
+      return addFood(doc);
+    }),
+    CoreDocUnavailableError,
+  );
+  assert.equal(called, false);
+  assert.deepEqual(await store.load(CORE_DOC_ID), {});
+});
+
+test('the refusal says nothing was saved', async () => {
+  const store = await createPersonalStore(createLocalPersist(createFakeStorage()));
+  await assert.rejects(updateCoreDoc(store, addFood), /nothing was saved/);
+});
+
+test('offline on a device that loaded the core doc before, updateCoreDoc builds on the cached copy', async () => {
+  const storage = createFakeStorage();
+  await (await createPersonalStore(createLocalPersist(storage))).save(CORE_DOC_ID, createCoreDoc('2026-09-01'));
+  const offline = await createPersonalStore(createLocalPersist(storage));
+  const next = await updateCoreDoc(offline, addFood);
+  assert.equal(next.startedOn, '2026-09-01');
+  assert.equal(next.foods.length, 1);
+});
+
+// --- Local date ---
+
+test('localDate reads the device’s calendar, not UTC, late at night', () => {
+  assert.equal(localDate(new Date(2026, 9, 15, 23, 59)), '2026-10-15');
+  assert.equal(localDate(new Date(2026, 9, 16, 0, 1)), '2026-10-16');
+});
+
+test('localDate pads single-digit months and days', () => {
+  assert.equal(localDate(new Date(2027, 0, 5)), '2027-01-05');
 });
 
 // --- Days ---

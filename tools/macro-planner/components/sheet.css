@@ -1,0 +1,98 @@
+/* Bottom sheet and confirm sheet for js/ui/sheet.js (DESIGN §5, §14). Every value comes from tokens.css. */
+
+html:has(.sheet[open]) {
+  overflow: hidden;
+}
+
+/* The <dialog> fills the viewport; the scrim and panel inside it do the visible work. */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  /* clip, not hidden: a hidden box can still be scrolled by focus, which jolts the slide-in. */
+  overflow: clip;
+  background: transparent;
+  border: 0;
+  color: var(--color-text);
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet::backdrop {
+  background: transparent;
+}
+
+.sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.sheet__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+  width: 100%;
+  max-width: var(--content-max);
+  max-height: calc(100% - var(--header-h));
+  margin-inline: auto;
+  padding: var(--card-pad-lg) var(--gutter) calc(var(--space-6) + var(--safe-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  transform: translateY(100%);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+/* The panel only takes focus as a starting point for keyboard users; it isn't a control. */
+.sheet__panel:focus {
+  outline: none;
+}
+
+.sheet--open .sheet__scrim {
+  opacity: 1;
+}
+
+.sheet--open .sheet__panel {
+  transform: none;
+}
+
+.sheet--closing .sheet__scrim,
+.sheet--closing .sheet__panel {
+  transition-timing-function: var(--ease-in-out);
+}
+
+.sheet__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-2xl);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-snug);
+}
+
+.sheet__message {
+  margin: 0;
+}
+
+.sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}

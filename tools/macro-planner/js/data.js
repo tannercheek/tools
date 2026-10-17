@@ -6,10 +6,19 @@ import { CORE_DOC_ID } from './store.js';
 
 export const DAYS_DOC_ID = 'macro-planner-days';
 
+// For custom foods, meals and quick numbers until the user picks one (SPEC §3.2, §3.3, §3.5).
+export const DEFAULT_EMOJI = '🍽️';
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertDate(date) {
   if (!DATE_PATTERN.test(date)) throw new RangeError(`Not a YYYY-MM-DD date: ${date}`);
+}
+
+// A Date as YYYY-MM-DD on the device's own calendar, which is what "today" means (SPEC §4.3).
+export function localDate(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 // --- Core doc ---
@@ -63,6 +72,26 @@ export async function loadCoreDoc(store, today) {
   const fresh = createCoreDoc(today);
   if (currentStatus(store) !== 'offline') await store.save(CORE_DOC_ID, fresh);
   return fresh;
+}
+
+// Thrown by updateCoreDoc when there's no core doc on this device to build on.
+export class CoreDocUnavailableError extends Error {
+  constructor() {
+    super('Your foods and meals haven’t loaded on this device yet and storage can’t be reached, so nothing was saved.');
+    this.name = 'CoreDocUnavailableError';
+  }
+}
+
+// Saves change(doc) as the core doc and returns it; change takes the stored doc and returns
+// a new one. loadCoreDoc saves a first-run doc whenever that's safe, so a missing doc means
+// this device never loaded it and storage can't be reached. Saving then would replace the
+// real doc on the next sync, so nothing is saved.
+export async function updateCoreDoc(store, change) {
+  const doc = await store.load(CORE_DOC_ID);
+  if (!doc.schemaVersion) throw new CoreDocUnavailableError();
+  const next = change(doc);
+  await store.save(CORE_DOC_ID, next);
+  return next;
 }
 
 // --- Days ---

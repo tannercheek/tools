@@ -1,18 +1,19 @@
 // Boot, storage, and hash routing between views.
 
+import { loadCoreDoc, localDate } from './js/data.js';
 import { createLocalPersist, createPersonalStore } from './js/store.js';
 import { syncStatus } from './js/sync-status.js';
-import { DEFAULT_ROUTE, hashFor, isPushed, parseRoute } from './js/routes.js';
+import { DEFAULT_ROUTE, hashFor, isPushed, parseRoute, tabFor } from './js/routes.js';
 import { buildTabBar, renderHeader, updateTabBar } from './js/shell.js';
 import * as today from './js/views/today.js';
 import * as plan from './js/views/plan.js';
-import * as foods from './js/views/foods.js';
 import * as meals from './js/views/meals.js';
 import * as stats from './js/views/stats.js';
 import * as settings from './js/views/settings.js';
 import * as components from './js/views/components.js';
 
-const VIEWS = { today, plan, foods, meals, stats, settings, components };
+// By tab or pushed screen; a tab with segments renders whichever one the route names.
+const VIEWS = { today, plan, meals, stats, settings, components };
 
 const app = document.getElementById('app');
 const header = document.getElementById('header');
@@ -47,8 +48,15 @@ function show() {
   renderHeader(header, route, { onBack: goBack, syncStatus: syncIcon });
   updateTabBar(tabBar, route);
   view.classList.toggle('view--pushed', isPushed(route));
-  VIEWS[route].render(view);
+  VIEWS[tabFor(route)].render(view, { route, replaceRoute, store });
   window.scrollTo(0, 0);
+}
+
+// For a switch inside a view that shouldn't add a history entry, like a segment:
+// the address changes so refresh keeps it, Back skips it, and the view updates itself.
+function replaceRoute(route) {
+  history.replaceState(null, '', hashFor(route));
+  currentRoute = route;
 }
 
 // iOS Safari only applies :active (the button press styles) when a touch listener exists.
@@ -69,9 +77,11 @@ async function openStore() {
   return createPersonalStore(persist.syncedState);
 }
 
-// Exported so it can be reached from the console until views use it.
+// Exported so it can be reached from the console when checking stored data.
 export const store = await openStore();
 const syncIcon = syncStatus(store);
+// On a first run this creates the core doc, so startedOn is the day the app first opened.
+await loadCoreDoc(store, localDate(new Date()));
 
 buildTabBar(tabBar);
 window.addEventListener('hashchange', show);

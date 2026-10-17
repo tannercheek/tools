@@ -1,0 +1,103 @@
+/* Segmented control and switch for js/ui/controls.js (DESIGN §9). Every value comes from tokens.css. */
+
+/* ---------- Focus (DESIGN §5) ---------- */
+
+.segmented__input:focus-visible + .segmented__label,
+.switch__input:focus-visible + .switch__track {
+  outline: var(--focus-width) solid var(--color-ink);
+  outline-offset: var(--focus-offset);
+}
+
+/* ---------- Segmented control (DESIGN §9) ---------- */
+
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
+  background: var(--color-surface-sunken);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.segmented__pill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: calc(100% / var(--segment-count));
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  transform: translateX(calc(var(--segment-index) * 100%));
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+/* Positioned after the pill in the DOM, so labels paint above it without a z-index. */
+.segmented__label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  line-height: var(--line-md);
+  font-weight: var(--weight-heavy);
+  color: var(--color-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.segmented__input:checked + .segmented__label {
+  color: var(--color-text);
+}
+
+/* ---------- Switch (DESIGN §9) ---------- */
+
+.switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--inline-gap);
+  min-height: var(--tap-min);
+  cursor: pointer;
+}
+
+.switch__label {
+  min-width: 0;
+}
+
+.switch__track {
+  position: relative;
+  flex: none;
+  width: var(--switch-w);
+  height: var(--switch-h);
+  background: var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.switch__knob {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  width: calc(var(--switch-h) - 2 * var(--space-1));
+  height: calc(var(--switch-h) - 2 * var(--space-1));
+  background: var(--color-surface);
+  border-radius: var(--radius-pill);
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.switch__input:checked + .switch__track {
+  background: var(--color-btn-face);
+}
+
+.switch__input:checked + .switch__track .switch__knob {
+  transform: translateX(calc(var(--switch-w) - var(--switch-h)));
+}

@@ -111,6 +111,7 @@
   --control-h:      48px; /* inputs, primary buttons */
   --control-h-sm:   44px; /* secondary buttons, icon buttons, toggles */
   --icon-size:      24px;
+  --icon-size-sm:   20px; /* quiet hints, e.g. a row's trailing action icon */
   --icon-stroke:    2;    /* SVG stroke-width, matches --border-width */
   --tile-size:      48px; /* emoji sticker tile */
   --tile-size-sm:   40px; /* emoji tile in dense pickers */

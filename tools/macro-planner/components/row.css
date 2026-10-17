@@ -1,0 +1,135 @@
+/* List rows and the emoji tile for js/ui/row.js (DESIGN §8, §12). Every value comes from tokens.css. */
+
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--inline-gap);
+  min-height: var(--tap-min);
+  padding: var(--row-pad);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* A row that is one button: same look, with a sunken fill while pressed. */
+.row--button {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.row--button:active {
+  background: var(--color-surface-sunken);
+}
+
+.row--button:focus-visible {
+  outline: var(--focus-width) solid var(--color-ink);
+  outline-offset: var(--focus-offset);
+}
+
+/* Quiet like the header's sync icon, and a size down: a hint, not a button of its own. */
+.row__action-icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-2);
+}
+
+.row__action-icon .icon {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+.emoji-tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  background: var(--color-surface-sunken);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--emoji-size);
+  line-height: var(--emoji-size);
+}
+
+.row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.row__eyebrow,
+.row__title {
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__eyebrow {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text-2);
+}
+
+.row__title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-lg);
+  font-weight: var(--weight-heavy);
+}
+
+.row__numbers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
+.row__kcal {
+  color: var(--color-text);
+  font-weight: var(--weight-heavy);
+}
+
+.row__macro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.macro-dot {
+  flex: none;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: var(--radius-pill);
+}
+
+.macro-dot--kcal { background: var(--macro-kcal); }
+.macro-dot--protein { background: var(--macro-protein); }
+.macro-dot--fat { background: var(--macro-fat); }
+.macro-dot--carbs { background: var(--macro-carbs); }

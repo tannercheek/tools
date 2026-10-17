@@ -1,0 +1,70 @@
+/* Emoji picker sheet and emoji field for js/ui/emoji-picker.js (DESIGN §10, §12). Every value comes from tokens.css. */
+
+/* ---------- A button around an emoji tile: picker options and the emoji field ---------- */
+
+.emoji-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.emoji-button .emoji-tile {
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+/* Same press as an icon button (DESIGN §9). */
+.emoji-button:active .emoji-tile {
+  transform: scale(var(--icon-press-scale));
+}
+
+/* The ring goes on the tile, not any wider hit area around it (DESIGN §5). */
+.emoji-button:focus-visible {
+  outline: none;
+}
+
+.emoji-button:focus-visible .emoji-tile {
+  outline: var(--focus-width) solid var(--color-ink);
+  outline-offset: var(--focus-offset);
+}
+
+/* ---------- Picker grid ---------- */
+
+/* Cells are at least --tap-min and share the spare width, so tiles spread evenly at any width. */
+.emoji-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tap-min), 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The whole square cell is the hit target (DESIGN §15); the smaller tile is drawn inside it. */
+.emoji-picker__option {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+/* The dense-picker size of the shared emoji tile (row.css). */
+.emoji-picker .emoji-tile {
+  width: var(--tile-size-sm);
+  height: var(--tile-size-sm);
+  font-size: var(--emoji-size-sm);
+  line-height: var(--emoji-size-sm);
+}
+
+.emoji-picker__option[aria-current="true"] .emoji-tile {
+  border-color: var(--color-ink);
+}
+
+/* ---------- Emoji field ---------- */
+
+/* The button is just the full-size tile, so it doesn't stretch to the label's width. */
+.emoji-field__button {
+  align-self: flex-start;
+}

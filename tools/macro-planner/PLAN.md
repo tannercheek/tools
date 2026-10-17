@@ -35,7 +35,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 - [x] **0.3 Base components**
       Shared components in `js/ui/`, with their styles in `style.css`, per DESIGN §5 and §8–§10:
   - primary, secondary and icon buttons with press edges
-  - list row (emoji tile → text stack → one trailing control; the tile shows the native character until 3.4a)
+  - list row (emoji tile → text stack → one trailing control; the tile shows the native character until 3.5a)
   - text input and numeric input (unit suffix, `inputmode="decimal"`, error state)
   - segmented control
   - switch
@@ -88,26 +88,30 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 3 — Foods
 
-- [ ] **3.1 Food data pipeline (starter set)**
+- [x] **3.1 Food data pipeline (starter set)**
       `scripts/build-foods.mjs` reads USDA FoodData Central CSV downloads (SR Legacy + Foundation) from a local folder you pass as an argument (kept outside the repo), filters by `scripts/food-list.json` (fdcId + display name + serving choice + emoji), and writes `data/foods.json`. Servings come from USDA portion data (e.g. "1 large egg") or default to 100 g. Each `food-list.json` entry has either an exact `emoji` (e.g. 🥚) or a `category`. The script fills in the category default from SPEC §3.2 and fails on an entry with neither. Start with ~50 foods to prove it works.
       _You'll need to:_ download the two CSV zips from fdc.nal.usda.gov/download-datasets and unzip them outside the repo.
       _Done when:_ `foods.json` has ~50 entries, each with `fdcId` and an `emoji` character; you spot-check three against the USDA website.
 
-- [ ] **3.2 Search**
+- [x] **3.2 Search**
       Pure search function: case-insensitive, word-prefix matching, custom foods ranked first, archived foods excluded.
       _Done when:_ tests cover partial words ("chick bre"), ranking, and archived exclusion.
 
-- [ ] **3.3 Foods view**
-      Search field (DESIGN §10) and result rows (DESIGN §8 food search result) showing emoji, name, serving and the four numbers. Add the "No match" empty state from DESIGN §13; its button is wired up in 3.4.
+- [x] **3.3 Foods view**
+      Search field (DESIGN §10) and result rows (DESIGN §8 food search result) showing emoji, name, serving and the four numbers. Add the "No match" empty state from DESIGN §13; its button is wired up in 3.5.
       _Done when:_ searching the starter set feels instant on your phone.
 
-- [ ] **3.4a Emoji picker**
+- [x] **3.4 Foods inside Meals**
+      Foods moves into the Meals tab (SPEC §5). The tab bar drops to four items, Today · Plan · Meals · Stats (DESIGN §11). The Meals tab gets a full-width Meals / Foods segmented control at the top and opens on Meals, which keeps its placeholder until 4.2. Foods is the 3.3 view plus a "Custom foods only" switch (SPEC §3.2) and the "No custom foods yet" empty state (DESIGN §13), whose button is wired up in 3.5.
+      _Done when:_ the tab bar shows four equal items at 360px in light and dark; the Meals tab opens on Meals; switching to Foods and refreshing keeps you on Foods; with "Custom foods only" on, Foods shows the "No custom foods yet" state, since custom foods arrive in 3.5.
+
+- [x] **3.5a Emoji picker**
       Curate `data/emoji-picker.json`: ~40 food emoji as `{ char, name }`, including every category default and 🍽️ (SPEC §5.1). Build the emoji picker sheet on the 0.3 bottom sheet, per DESIGN §10, with native emoji. Each tile's `aria-label` is its name. It returns the chosen character. No Fluent SVGs; they're a v2 candidate.
       _Done when:_ the picker opens, shows the current pick selected, and returns the new one; every category default and 🍽️ is in the grid; tests check that the JSON has no duplicate characters and every entry has a name.
 
-- [ ] **3.4 Custom foods**
-      Add / edit / delete form in DESIGN §10 order (name, serving qty + unit, kcal, P, F, C), with an emoji tile beside the name that opens the picker. New custom foods default to 🍽️. Duplicate a bundled food into a custom one (keeps its emoji). Delete archives the food if any meal uses it, and always asks first with the confirm sheet.
-      _Done when:_ custom foods and their emoji persist, sync between browsers, and an archived food still shows correctly inside its meal.
+- [x] **3.5 Custom foods**
+      Add / edit / delete form in DESIGN §10 order (name, serving qty + unit, kcal, P, F, C), with an emoji tile beside the name that opens the picker. New custom foods default to 🍽️. Every "Add custom food" button on Foods opens it. Duplicate a bundled food into a custom one (keeps its emoji). Delete archives the food if any meal uses it, and always asks first with the confirm sheet.
+      _Done when:_ custom foods and their emoji persist, sync between browsers, show first in the Foods list and alone with "Custom foods only" on, and an archived food still shows correctly inside its meal.
 
 ## Phase 4 — Meals
 
@@ -116,7 +120,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       _Done when:_ tests pass.
 
 - [ ] **4.2 Meals list**
-      Saved meal rows (DESIGN §8) with emoji and totals; new, duplicate, delete (confirm sheet). "No saved meals yet" empty state from DESIGN §13.
+      In the Meals tab's Meals segment (3.4): saved meal rows (DESIGN §8) with emoji and totals; new, duplicate, delete (confirm sheet). "No saved meals yet" empty state from DESIGN §13.
       _Done when:_ meals persist and totals match the editor.
 
 - [ ] **4.3 Meal editor**
@@ -190,7 +194,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       _Done when:_ you've used it on your phone for one full day.
 
 - [ ] **7.2 Design audit**
-      Search `style.css`, `components.css` and `js/` for hard-coded colours, sizes, spacing, radii, shadows, durations, easings and z-index values, and replace each with a token (SVG geometry in viewBox units is fine). Walk the DESIGN §15 checklist item by item. Check every view and sheet in light and dark, and with reduced motion on. Remove the `#/components` route.
+      Search `style.css`, `components/` and `js/` for hard-coded colours, sizes, spacing, radii, shadows, durations, easings and z-index values, and replace each with a token (SVG geometry in viewBox units is fine). Walk the DESIGN §15 checklist item by item. Check every view and sheet in light and dark, and with reduced motion on. Remove the `#/components` route.
       _Done when:_ no hard-coded values remain outside `tokens.css`; every DESIGN §15 item passes; every view has been checked in both light and dark.
 
 - [ ] **7.3 Ship**

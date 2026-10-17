@@ -28,7 +28,7 @@ Never edit files outside `tools/macro-planner/`, except `shared/persist.js` when
 ## Code rules
 
 - **Keep logic pure and separate from the DOM.** Math lives in `js/calc.js`, persistence in `js/store.js`, doc shapes and day/weigh-in helpers in `js/data.js`. These files must never touch `document` or `window`, so they can be tested in Node.
-- **Store metric, display either.** All weights, heights and food quantities are stored in metric. Convert only at the display layer.
+- **Store metric, display either.** Bodyweight, height and goal rate are stored in metric and converted only at the display layer. Food quantities aren't converted: each food is counted in its own serving unit (g, tbsp, slice, egg) and shown as entered (SPEC §5.2).
 - **Snapshot rule.** An entry stores its own label, emoji and numbers at the moment it's added. Past days are locked in the same way: their planned meals are written as snapshot entries (SPEC §3.5). Nothing that edits or deletes a food, a meal or the template may change a past day. This is the most important data rule in the app.
 - **Meal totals are computed, never stored.**
 - **Never invent nutrition values.** Every number in `data/foods.json` must come from USDA FoodData Central with its `fdcId` recorded. If you can't source a value, leave the food out and tell me.

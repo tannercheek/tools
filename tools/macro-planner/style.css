@@ -1,4 +1,4 @@
-/* Base, app shell and view styles. Shared components live in components.css. Every value comes from tokens.css. */
+/* Base, app shell and view styles. Shared components live in components/. Every value comes from tokens.css. */
 
 *,
 *::before,
@@ -164,8 +164,10 @@ body {
   inset-inline: 0;
   bottom: 0;
   z-index: var(--z-tabbar);
+  /* One equal column per tab, however many there are. */
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: var(--space-1);
   /* The bar spans the window like a native tab bar; the padding keeps the tabs
      themselves in the content column on wide screens. */
@@ -214,6 +216,59 @@ body {
 .tab:focus-visible {
   outline: var(--focus-width) solid var(--color-ink);
   outline-offset: var(--focus-offset);
+}
+
+/* ---------- Meals tab (DESIGN §11) ---------- */
+
+/* Lays out the chosen segment's content the way .view lays out a whole view. */
+.segment-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+/* ---------- Foods (DESIGN §8, §10) ---------- */
+
+.food-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+.food-search__note {
+  margin: 0;
+  color: var(--color-text-2);
+}
+
+/* ---------- Custom food form (DESIGN §10) ---------- */
+
+.food-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* The emoji tile sits beside the name, each under its own label. */
+.food-form__name {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--inline-gap);
+}
+
+.food-form__name > .field {
+  flex: 1;
+}
+
+.food-form__name > .emoji-field {
+  flex: none;
+}
+
+/* Serving amount and unit, then the four numbers, two to a row. */
+.food-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--stack-gap);
 }
 
 /* ---------- Components showcase (#/components; removed in step 7.2) ---------- */

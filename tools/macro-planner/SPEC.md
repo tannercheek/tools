@@ -25,7 +25,7 @@ Vanilla HTML, CSS and JS with ES modules. No framework, no build step, no depend
 tools/macro-planner/
 ├─ index.html            # dashboard meta tags live here
 ├─ tokens.css            # design tokens (final; see DESIGN.md)
-├─ components.css        # shared component styles (js/ui/), tokens only
+├─ components/           # shared component styles, one per js/ui/ module, tokens only
 ├─ style.css             # base, shell and view styles, tokens only
 ├─ app.js                # boot, storage, routing between views
 ├─ data/
@@ -111,7 +111,7 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 
 ```js
 {
-  id: "usda-171287",         // or "custom-<uuid>"
+  id: "usda-171287-large",   // "usda-<fdcId>", plus "-<variant>" if needed (below); or "custom-<uuid>"
   name: "Egg, large",
   serving: { qty: 1, unit: "egg" },   // or { qty: 100, unit: "g" }
   emoji: "🥚",
@@ -122,6 +122,7 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 ```
 
 - Each food has **one** serving definition. Quantities are expressed in that unit. Egg sizes, raw vs cooked, and so on are separate entries rather than conversions.
+- **Bundled ids:** `usda-<fdcId>`. When one USDA food gives several entries, each gets a variant suffix: egg sizes are one USDA food with three portions, so they're `usda-171287-small`, `-medium` and `-large`. Ids never change once set, because meals refer to foods by id.
 - Name labels must be unambiguous about state: "Rice, white, cooked" vs "Rice, white, dry".
 - **Emoji:** every food has an `emoji` field holding a single Unicode emoji character (never an image path). Bundled foods get an exact emoji where one exists (🥚, 🍌, 🍚), otherwise their category default: meat 🥩, poultry 🍗, fish 🐟, grains 🌾, legumes 🫘, dairy 🥛, vegetables 🥦, fruit 🍎, nuts/seeds 🥜, oils/fats 🫒, supplements 🥤. See §5.1 for how emoji render.
 
@@ -130,6 +131,7 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 - Edit and delete custom foods. Bundled foods are read-only (but can be duplicated into a custom food to adjust).
 - Deleting a food that's used in a meal **archives** it: hidden from search, still resolvable inside existing meals.
 - Search matches across bundled and custom foods. Custom foods rank first.
+- **Foods list:** the Foods segment of the Meals tab (§5). It lists every food that isn't archived, with search, an "Add custom food" button, and a "Custom foods only" switch that hides bundled foods. The switch isn't saved, so it starts off each visit. Custom foods are edited and deleted from here, and bundled foods are duplicated from here.
 
 ### 3.3 Meals
 
@@ -270,7 +272,7 @@ All three stay far below Firestore's 1 MB cap: about 5 KB of days, and about 10 
 
 All visual rules (colour, type, spacing, components, motion, accessibility) are in `DESIGN.md`, and every value is in `tokens.css`. This section only covers behaviour.
 
-- **Mobile-first, single column.** Bottom tab bar: Today · Plan · Foods · Meals · Stats. Settings from a header icon, opening as a pushed screen with a back button (DESIGN §11).
+- **Mobile-first, single column.** Bottom tab bar: Today · Plan · Meals · Stats. The Meals tab has two segments at the top, Meals (saved meals, §3.3) and Foods (the foods list, §3.2), and opens on Meals. Settings from a header icon, opening as a pushed screen with a back button (DESIGN §11).
 - Large tap targets. A day that goes to plan needs no taps; a swap, skip or portion is two (open the slot, choose).
 - No onboarding wizard. First launch opens Settings → Profile with every field empty: number fields show a placeholder naming the field ("Age", "Height", "Weight"), and choices start with nothing selected.
 - Light and dark themes via `prefers-color-scheme`, handled in `tokens.css`.
@@ -364,5 +366,6 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 | UI icons | Lucide, inlined SVG | Matches DESIGN §12's stroke style; no icon font or CDN |
 | Food emoji | Character in data, rendered natively; small curated picker | Fluent SVGs were polish, not part of the loop; postponed to v2 with no data change needed |
 | Food list size | ~50 to start, grown from real use | You'll find out which foods are missing faster by using it than by guessing 300–500 up front |
+| Foods placement | A Foods segment inside the Meals tab, not a tab of its own | Foods matter mostly as meal ingredients, so they sit beside meals and the bar keeps four tabs. Food search also appears where it's used: the meal editor and the add sheet |
 | Dialogs | Shared bottom sheets, never `confirm()` / `prompt()` / `alert()` | Native dialogs can't be styled and have no iOS equivalent |
 | First-run profile | Empty: placeholder hints, nothing selected, no targets until complete | Pre-filled values would just be overwritten, and a skipped form would give confident targets for someone else |

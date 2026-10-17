@@ -182,6 +182,7 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 - **Flex slot:** no fill, **dashed** `--color-border-strong` outline, and a dashed tile with an outline icon instead of emoji. Title: "N kcal to fill". The numbers line shows what's left for the day. Trailing control: a secondary "Log" button.
 - **Empty slot (Plan):** same dashed treatment. Title: "Add a meal". The whole row is the button.
 - **Food search result:** title plus serving ("100 g") in the eyebrow. Trailing: a 44px add icon button.
+- **Food row (Foods list):** like a food search result, but the whole row is one button. A custom food's eyebrow starts with "Custom" ("CUSTOM · 150 G"). Trailing: a `--icon-size-sm` outline icon in `--color-text-2` that shows what a tap does, a pencil on custom foods (edit) and a copy icon on bundled foods (duplicate). It's a hint inside the row button, not a button of its own, and the action is also in the row's accessible name. Adding a food here means "Add custom food", a full-width secondary button above the search field.
 - **Saved meal:** trailing chevron. The row navigates to the editor.
 - **Ingredient row (meal editor):** a quantity input replaces the trailing control. Live totals sit in a sticky card above the list.
 - **Recent entry (quick-add sheet):** like a food search result: the entry's emoji, label and numbers, with "Yesterday" or the weekday in the eyebrow. Trailing: a 44px add icon button.
@@ -206,8 +207,8 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 - **One primary per screen or sheet.** Everything else is secondary.
 - **Destructive actions** (delete meal, clear history, import over existing data) use a **secondary** button with an explicit verb ("Delete meal") and a confirm sheet. There's no red button.
 - **Disabled:** `--color-text-3` text, `--color-border` outline, no edge, no press.
-- **Segmented control** (7/30 days, units, sex): a `--color-surface-sunken` track with `--radius-pill` and a `--border-width` `--color-border-strong` outline. The selected segment is a `--color-surface` pill with an ink outline. Items are ≥ `--tap-min` high. The pill slides over `--dur-base` with `--ease-spring`. With nothing selected yet (a profile field not filled in), there's no pill and every label stays `--color-text-2`.
-- **Switch** (settings toggles): use the platform-like pill. Track `--color-border-strong` when off, `--color-btn-face` when on; knob `--color-surface`. Pair it with a visible text label.
+- **Segmented control** (Meals / Foods, 7/30 days, units, sex): a `--color-surface-sunken` track with `--radius-pill` and a `--border-width` `--color-border-strong` outline. The selected segment is a `--color-surface` pill with an ink outline. Items are ≥ `--tap-min` high. The pill slides over `--dur-base` with `--ease-spring`. With nothing selected yet (a profile field not filled in), there's no pill and every label stays `--color-text-2`.
+- **Switch** (settings toggles, and the Foods list's "Custom foods only" filter): use the platform-like pill. Track `--color-border-strong` when off, `--color-btn-face` when on; knob `--color-surface`. Pair it with a visible text label.
 
 ---
 
@@ -229,12 +230,13 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 **Header** (`--header-h`, `--color-bg`, no outline):
 - Today: previous-day icon button, date stack (title "Today" or the weekday, plus an `sm` `--color-text-2` date), next-day icon button. Settings icon button on the right.
 - Other tabs: the screen title (`2xl` black) on the left, Settings on the right.
+- Meals: like other tabs. Its Meals / Foods segmented control is a full-width control at the top of the content, under the header, not part of it.
 - Tapping the date title jumps back to today.
 - **Sync status:** one `--icon-size` outline icon in `--color-text-2`, just left of Settings on every screen. A cloud with a check (Lucide `cloud-check`) means synced. A cloud with an up arrow (`cloud-upload`) means saving, shown only if a save is still in flight after a second, so normal saves don't flicker. A crossed-out cloud (`cloud-off`) means offline, with changes kept on this device. It isn't a button. It sits in a `role="status"` element with visually hidden text ("Synced", "Saving", "Offline, saved on this device"). The icon swaps with no animation. Shape carries the meaning, not colour.
 
 **Tab bar:**
 - Fixed to the bottom, `--color-surface` fill, `--border-width` `--color-border` top outline, `--z-tabbar`.
-- 5 equal columns: Today, Plan, Foods, Meals, Stats. Each item is `--tabbar-h` high with `--radius-md`: a 24px icon over an `xs` label.
+- 4 equal columns: Today, Plan, Meals, Stats. Each item is `--tabbar-h` high with `--radius-md`: a 24px icon over an `xs` label.
 - **Active item:** `aria-current="page"`, `--color-surface-sunken` fill, `--color-border-strong` outline, label weight heavy, `--color-text`.
 - **Inactive items:** `--color-text-2`, no fill.
 - Labels are always visible. Never show icon-only tabs.
@@ -245,7 +247,7 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 ## 12. Icons and emoji
 
 - **UI icons:** rendered at `--icon-size` from a 24×24 viewBox, `fill="none"`, `stroke="currentColor"`, `stroke-width` = `--icon-stroke`, round caps and joins. Inline SVG, `aria-hidden="true"`. Icon-only buttons carry an `aria-label`.
-- **Tab icons:** Today (ring), Plan (calendar), Foods (apple), Meals (bowl), Stats (bars), Settings (sliders).
+- **Tab icons:** Today (ring), Plan (calendar), Meals (bowl), Stats (bars), Settings (sliders).
 - **Emoji only identify foods and meals.** Never use them as UI icons, decoration, status or empty-state art.
 - **Emoji tile:** `--tile-size` square, `--radius-md`, `--color-surface-sunken` fill, `--border-width` `--color-border-strong` outline, emoji at `--emoji-size`, centred.
 - Generic foods have a fixed emoji in the database. Custom foods and meals default to 🍽️ until the user picks one.
@@ -269,7 +271,8 @@ Centre it within the content area. No illustrations, no emoji, no jokes.
 |---|---|---|
 | Today, nothing planned | "No meals planned" | "Plan today" |
 | Meals, none saved | "No saved meals yet" | "Build a meal" |
-| Foods, search with no results | "No match for '…'" | "Add custom food" |
+| Meals › Foods, search with no results | "No match for '…'" | "Add custom food" |
+| Meals › Foods, "Custom foods only" with none yet | "No custom foods yet" | "Add custom food" |
 | Stats, under 2 days counted in the last 7 | "Your 7-day averages show up after a couple of days" | none (no action makes sense) |
 | Stats, under 2 weigh-ins in 12 weeks | "Weigh in a couple of times to see a trend" | "Log weigh-in" |
 

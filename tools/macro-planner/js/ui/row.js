@@ -1,5 +1,7 @@
 // List rows (DESIGN §8): emoji tile → text stack → one trailing control.
 
+import { icon } from '../icons.js';
+
 const integer = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 const MACROS = [
@@ -18,8 +20,9 @@ export function emojiTile(emoji) {
   return tile;
 }
 
+// Spans rather than paragraphs, since a row can be a button and a button can't hold a <p>.
 function textLine(className, text) {
-  const line = document.createElement('p');
+  const line = document.createElement('span');
   line.className = className;
   line.textContent = text;
   return line;
@@ -27,7 +30,7 @@ function textLine(className, text) {
 
 // kcal, then P / F / C, each letter after a dot in its macro colour.
 function numbersLine({ kcal, protein, fat, carbs }) {
-  const line = document.createElement('p');
+  const line = document.createElement('span');
   line.className = 'row__numbers';
   const kcalText = document.createElement('span');
   kcalText.className = 'row__kcal';
@@ -44,12 +47,22 @@ function numbersLine({ kcal, protein, fat, carbs }) {
   return line;
 }
 
+// The trailing hint on a row that is one button: an icon showing what a tap does, plus that
+// action as hidden text, since the row's text alone doesn't say it. Not a control itself.
+export function rowActionIcon(iconName, action) {
+  const hint = document.createElement('span');
+  hint.className = 'row__action-icon';
+  hint.innerHTML = `${icon(iconName)}<span class="visually-hidden">${action}</span>`;
+  return hint;
+}
+
 // numbers: { kcal, protein, fat, carbs } or omitted. trailing: one control element or omitted.
-export function listRow({ emoji, eyebrow, title, numbers, trailing }) {
-  const row = document.createElement('li');
+// onClick: makes the whole row one button; its trailing can then only be a rowActionIcon.
+export function listRow({ emoji, eyebrow, title, numbers, trailing, onClick }) {
+  const row = document.createElement(onClick ? 'button' : 'li');
   row.className = 'row';
 
-  const text = document.createElement('div');
+  const text = document.createElement('span');
   text.className = 'row__text';
   if (eyebrow) text.append(textLine('row__eyebrow', eyebrow));
   text.append(textLine('row__title', title));
@@ -57,7 +70,14 @@ export function listRow({ emoji, eyebrow, title, numbers, trailing }) {
 
   row.append(emojiTile(emoji), text);
   if (trailing) row.append(trailing);
-  return row;
+  if (!onClick) return row;
+
+  row.type = 'button';
+  row.classList.add('row--button');
+  row.addEventListener('click', onClick);
+  const item = document.createElement('li');
+  item.append(row);
+  return item;
 }
 
 export function rowList(rows) {

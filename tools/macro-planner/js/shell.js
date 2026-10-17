@@ -1,7 +1,7 @@
 // App shell: header (DESIGN §11) and the fixed bottom tab bar.
 
 import { icon } from './icons.js';
-import { TABS, hashFor, isPushed, routeLabel } from './routes.js';
+import { TABS, hashFor, isPushed, routeLabel, tabFor } from './routes.js';
 import { iconButton, iconLink } from './ui/buttons.js';
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
@@ -38,7 +38,7 @@ export function renderHeader(header, route, { onBack, syncStatus }) {
     back.addEventListener('click', onBack);
     start.append(back, screenTitle(routeLabel(route)));
   } else {
-    start.append(screenTitle(routeLabel(route)));
+    start.append(screenTitle(routeLabel(tabFor(route))));
   }
 
   if (syncStatus) end.append(syncStatus);
@@ -65,7 +65,7 @@ export function buildTabBar(nav) {
 export function updateTabBar(nav, route) {
   nav.hidden = isPushed(route);
   for (const link of nav.querySelectorAll('.tab')) {
-    if (link.dataset.route === route) link.setAttribute('aria-current', 'page');
+    if (link.dataset.route === tabFor(route)) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
 }
