@@ -20,12 +20,13 @@
   border-radius: var(--radius-md);
 }
 
-/* A row that is one button: same look, with a sunken fill while pressed. */
+/* A row that is one button or link: same look, with a sunken fill while pressed. */
 .row--button {
   width: 100%;
   color: inherit;
   font: inherit;
   text-align: start;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out);
 }
@@ -49,6 +50,44 @@
 .row__action-icon .icon {
   width: var(--icon-size-sm);
   height: var(--icon-size-sm);
+}
+
+/* Ingredient row: the quantity field and a remove button. The name wraps rather than
+   truncating, and when it would get narrower than --ingredient-name-min, the controls move
+   to a line of their own under it, kept to the right. The field's error message takes the
+   last line. */
+.row--ingredient {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.row--ingredient .row__text {
+  flex: 1 1 var(--ingredient-name-min);
+}
+
+.row--ingredient .row__title {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.row__controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--inline-gap);
+}
+
+.row__controls > .field {
+  display: contents;
+}
+
+.row--ingredient .input {
+  flex: none;
+  width: var(--qty-input-w);
+}
+
+.row--ingredient .field__error {
+  flex-basis: 100%;
 }
 
 .emoji-tile {

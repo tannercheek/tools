@@ -12,7 +12,8 @@ function setDescribedBy(input, ids) {
 
 // Shared shell for every field type. prefixIcon and trailing sit inside the box,
 // before the input and after everything else. macro ('kcal', 'protein', 'fat' or 'carbs')
-// puts that macro's dot before the label (DESIGN §10).
+// puts that macro's dot before the label (DESIGN §10). Leave label out only when a visible
+// <label> elsewhere names the input, like an ingredient row's title (row.js).
 function field({ label, input, suffix, prefixIcon, trailing, macro }) {
   const id = uniqueId('field');
   input.id = id;
@@ -21,13 +22,16 @@ function field({ label, input, suffix, prefixIcon, trailing, macro }) {
   const element = document.createElement('div');
   element.className = 'field';
 
-  const labelEl = document.createElement('label');
-  labelEl.className = 'field__label';
-  labelEl.htmlFor = id;
-  labelEl.textContent = label;
-  if (macro) {
-    labelEl.classList.add('field__label--macro');
-    labelEl.insertAdjacentHTML('afterbegin', `<span class="macro-dot macro-dot--${macro}" aria-hidden="true"></span>`);
+  if (label) {
+    const labelEl = document.createElement('label');
+    labelEl.className = 'field__label';
+    labelEl.htmlFor = id;
+    labelEl.textContent = label;
+    if (macro) {
+      labelEl.classList.add('field__label--macro');
+      labelEl.insertAdjacentHTML('afterbegin', `<span class="macro-dot macro-dot--${macro}" aria-hidden="true"></span>`);
+    }
+    element.append(labelEl);
   }
 
   const box = document.createElement('div');
@@ -55,10 +59,11 @@ function field({ label, input, suffix, prefixIcon, trailing, macro }) {
   const errorText = document.createElement('span');
   error.append(errorText);
 
-  element.append(labelEl, box, error);
+  element.append(box, error);
   setDescribedBy(input, [suffixId]);
 
-  // Pass a message to show the error state, or null to clear it.
+  // Pass a message to show the error state, or null to clear it. `error` is returned too, for a
+  // layout that places the message apart from the box, like an ingredient row (row.js).
   function setError(message) {
     const hasError = Boolean(message);
     element.classList.toggle('field--error', hasError);
@@ -69,7 +74,7 @@ function field({ label, input, suffix, prefixIcon, trailing, macro }) {
     setDescribedBy(input, [suffixId, hasError && errorId]);
   }
 
-  return { element, input, setError };
+  return { element, input, error, setError };
 }
 
 export function textField({ label, value = '', placeholder = '' } = {}) {
@@ -122,4 +127,23 @@ export function searchField({ label }) {
   input.addEventListener('input', syncClear);
   syncClear();
   return result;
+}
+
+// A message for a whole form or screen, like a save that failed: styled like a field's error
+// and announced as soon as it shows. show(message) shows it; show(null) hides it.
+export function formError() {
+  const element = document.createElement('p');
+  element.className = 'field__error';
+  element.setAttribute('role', 'alert');
+  element.hidden = true;
+  element.innerHTML = icon('circle-alert');
+  const text = document.createElement('span');
+  element.append(text);
+  return {
+    element,
+    show(message) {
+      text.textContent = message ?? '';
+      element.hidden = !message;
+    },
+  };
 }

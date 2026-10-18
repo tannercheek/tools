@@ -115,15 +115,15 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 4 — Meals
 
-- [ ] **4.1 Meal operations**
+- [x] **4.1 Meal operations**
       Pure functions: create, rename, add/remove/update item, duplicate, delete. Totals via `calc.js`.
       _Done when:_ tests pass.
 
-- [ ] **4.2 Meals list**
+- [x] **4.2 Meals list**
       In the Meals tab's Meals segment (3.4): saved meal rows (DESIGN §8) with emoji and totals; new, duplicate, delete (confirm sheet). "No saved meals yet" empty state from DESIGN §13.
       _Done when:_ meals persist and totals match the editor.
 
-- [ ] **4.3 Meal editor**
+- [x] **4.3 Meal editor**
       Emoji (picker, default 🍽️), name, ingredient rows with quantities in each food's serving unit, add food via search, live totals in a sticky card above the list.
       _Done when:_ you can build "Rice & beef" with an emoji in under 30 seconds.
 

@@ -118,7 +118,8 @@
   --emoji-size:     26px;
   --emoji-size-sm:  22px;
   --dot-size:       8px;  /* macro dot beside P / F / C */
-  --switch-w:       52px; /* settings switch track */
+  --qty-input-w:    4ch;  /* quantity in an ingredient row: room for "1000" or "12.5" */
+  --ingredient-name-min: 128px; /* narrower, and an ingredient row's quantity moves under the name */  --switch-w:       52px; /* settings switch track */
   --switch-h:       32px;
   --header-h:       64px;
   --tabbar-h:       56px; /* item height, excluding safe area */

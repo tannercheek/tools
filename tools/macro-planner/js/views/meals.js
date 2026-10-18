@@ -3,13 +3,9 @@
 import { SEGMENTS } from '../routes.js';
 import { segmentedControl } from '../ui/controls.js';
 import * as foods from './foods.js';
-import { renderPlaceholder } from './placeholder.js';
+import * as mealsList from './meals-list.js';
 
-// The Meals segment keeps its placeholder until step 4.2.
-const SEGMENT_VIEWS = {
-  meals: { render: (container) => renderPlaceholder(container, 'Meals') },
-  foods,
-};
+const SEGMENT_VIEWS = { meals: mealsList, foods };
 
 // route: the segment to show. A switch only swaps the content below the control,
 // so the pill slides (DESIGN §14), and replaceRoute records it without a history entry.

@@ -1,6 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TABS, SEGMENTS, DEFAULT_ROUTE, hashFor, parseRoute, isPushed, routeLabel, tabFor } from '../js/routes.js';
+import {
+  TABS,
+  SEGMENTS,
+  DEFAULT_ROUTE,
+  backRoute,
+  hashFor,
+  mealRoute,
+  parseRoute,
+  isPushed,
+  routeLabel,
+  routeParam,
+  tabFor,
+} from '../js/routes.js';
+
+const MEAL_ID = '6f1c2a9e-3b4d-4c5e-8f60-718293a4b5c6';
 
 test('tabs are the four in fixed order', () => {
   assert.deepEqual(TABS.map((tab) => tab.id), ['today', 'plan', 'meals', 'stats']);
@@ -50,4 +64,35 @@ test('routeLabel gives screen titles', () => {
   assert.equal(routeLabel('meals'), 'Meals');
   assert.equal(routeLabel('settings'), 'Settings');
   assert.equal(routeLabel('nope'), null);
+});
+
+// --- Meal screens: #/meal/<id> ---
+
+test('parseRoute reads a meal screen with its id, and mealRoute builds one', () => {
+  assert.equal(parseRoute(hashFor(mealRoute(MEAL_ID))), `meal/${MEAL_ID}`);
+  assert.equal(routeParam(parseRoute(`#/meal/${MEAL_ID}`)), MEAL_ID);
+});
+
+test('parseRoute rejects a meal screen without an id, and an id where none belongs', () => {
+  const hashes = ['#/meal', '#/meal/', `#/meal/${MEAL_ID}/`, '#/meal/a/b', '#/meal/ABC', '#/meal/a b'];
+  hashes.push(`#/settings/${MEAL_ID}`, `#/today/${MEAL_ID}`, `#/foods/${MEAL_ID}`, `#/nope/${MEAL_ID}`);
+  for (const hash of hashes) assert.equal(parseRoute(hash), null, hash);
+});
+
+test('a meal screen is pushed, has its own view and is titled Meal', () => {
+  const route = mealRoute(MEAL_ID);
+  assert.equal(isPushed(route), true);
+  assert.equal(tabFor(route), 'meal');
+  assert.equal(routeLabel(route), 'Meal');
+  assert.equal(TABS.some((tab) => tab.id === 'meal'), false);
+});
+
+test('a route without an id has no param', () => {
+  for (const id of ['today', 'meals', 'foods', 'settings']) assert.equal(routeParam(id), null);
+});
+
+test('Back with nothing to pop goes from a meal screen to Meals, and from the rest to Today', () => {
+  assert.equal(backRoute(mealRoute(MEAL_ID)), 'meals');
+  assert.equal(backRoute('settings'), DEFAULT_ROUTE);
+  assert.equal(backRoute('components'), DEFAULT_ROUTE);
 });

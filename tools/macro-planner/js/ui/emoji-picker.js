@@ -80,8 +80,9 @@ export async function emojiPickerSheet({ current }) {
 }
 
 // A labelled emoji tile that opens the picker, for forms (DESIGN §10 custom food form).
-// value: the starting character. Read the current one from `value`.
-export function emojiField({ label = 'Emoji', value }) {
+// value: the starting character. Read the current one from `value`, or pass onChange to hear
+// about each new pick.
+export function emojiField({ label = 'Emoji', value, onChange }) {
   let current = value;
   const id = uniqueId('field');
 
@@ -108,9 +109,10 @@ export function emojiField({ label = 'Emoji', value }) {
 
   button.addEventListener('click', async () => {
     const chosen = await emojiPickerSheet({ current });
-    if (chosen) {
+    if (chosen && chosen !== current) {
       current = chosen;
       show();
+      onChange?.(current);
     }
   });
   show();

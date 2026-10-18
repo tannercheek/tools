@@ -235,31 +235,36 @@ body {
   gap: var(--stack-gap);
 }
 
-.food-search__note {
+.food-search__note,
+.meals__note {
   margin: 0;
   color: var(--color-text-2);
 }
 
-/* ---------- Custom food form (DESIGN §10) ---------- */
+/* ---------- Custom food form, new meal sheet and meal editor name (DESIGN §10) ---------- */
 
-.food-form {
+.food-form,
+.meal-form {
   display: flex;
   flex-direction: column;
   gap: var(--stack-gap);
 }
 
 /* The emoji tile sits beside the name, each under its own label. */
-.food-form__name {
+.food-form__name,
+.meal-form__name {
   display: flex;
   align-items: flex-start;
   gap: var(--inline-gap);
 }
 
-.food-form__name > .field {
+.food-form__name > .field,
+.meal-form__name > .field {
   flex: 1;
 }
 
-.food-form__name > .emoji-field {
+.food-form__name > .emoji-field,
+.meal-form__name > .emoji-field {
   flex: none;
 }
 
@@ -268,6 +273,52 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
+  gap: var(--stack-gap);
+}
+
+/* ---------- Meal editor (DESIGN §8 saved meal, ingredient row) ---------- */
+
+/* Emoji and name, then the totals and foods, then the meal's actions. */
+.meal-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+.meal-screen__group,
+.meal-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* Holds the totals card under the header while its foods scroll, until the end of the list.
+   Its page-colour fill shows in the card's rounded corners, hiding the rows passing under. */
+.meal-totals-strip {
+  position: sticky;
+  top: var(--header-h);
+  background: var(--color-bg);
+}
+
+/* One card, one question: what the meal adds up to (DESIGN §1). */
+.meal-totals {
+  padding: var(--card-pad);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Add food sheet (meal editor) ---------- */
+
+/* Full height, so the search field stays put while the results change under it. */
+.sheet__panel:has(> .add-food) {
+  height: calc(100% - var(--header-h));
+}
+
+.add-food,
+.add-food__form {
+  display: flex;
+  flex-direction: column;
   gap: var(--stack-gap);
 }
 
