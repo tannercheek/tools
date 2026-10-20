@@ -53,12 +53,17 @@ export function tdee(bmrKcal, activity) {
 const KCAL_PER_KG = 7700;
 const GOAL_SIGN = { lose: -1, maintain: 0, gain: 1 };
 
+// The goal's rate in kg/week, signed: negative for lose, positive for gain, 0 for maintain,
+// which needs no rate.
+export function goalRate(goal, rateKgPerWeek) {
+  if (!Object.hasOwn(GOAL_SIGN, goal)) throw new RangeError(`Unknown goal: ${goal}`);
+  return GOAL_SIGN[goal] === 0 ? 0 : GOAL_SIGN[goal] * rateKgPerWeek;
+}
+
 // kcal/day added to TDEE. The rate is always kg/week; imperial options are
 // converted from lb first, so 1 lb/week gives ≈ 499 kcal/day, not 500.
 export function goalAdjustment(goal, rateKgPerWeek) {
-  if (!Object.hasOwn(GOAL_SIGN, goal)) throw new RangeError(`Unknown goal: ${goal}`);
-  if (GOAL_SIGN[goal] === 0) return 0;
-  return (GOAL_SIGN[goal] * rateKgPerWeek * KCAL_PER_KG) / 7;
+  return (goalRate(goal, rateKgPerWeek) * KCAL_PER_KG) / 7;
 }
 
 const PROTEIN_G_PER_KG = 1.8;
@@ -244,6 +249,12 @@ export function averageDailyTotals(days) {
   return { average, loggedDays: logged.length };
 }
 
+// Stats' daily averages (SPEC §3.7) from the days doc: over the 7 days before today, so today,
+// still in progress, doesn't count, and neither does an older day the doc hasn't pruned yet.
+export function lastSevenDaysAverage(daysDoc, today) {
+  return averageDailyTotals(lastSevenDates(today).map((date) => daysDoc[date] ?? {}));
+}
+
 // --- Dates ---
 // Dates are local 'YYYY-MM-DD' strings. The math runs on whole UTC days,
 // so DST never makes a day 23 or 25 hours.
@@ -264,6 +275,11 @@ function dateFromDayNumber(dayNum) {
 // The date `days` days after `date`; negative goes back.
 export function addDays(date, days) {
   return dateFromDayNumber(dayNumber(date) + days);
+}
+
+// Whole days from `from` to `to`; negative when `to` is earlier.
+export function daysBetween(from, to) {
+  return dayNumber(to) - dayNumber(from);
 }
 
 // The 7 days before today, oldest first. Today is still in progress, so it isn't one of them.

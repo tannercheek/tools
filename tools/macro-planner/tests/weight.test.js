@@ -6,7 +6,9 @@ import {
   addWeighIn,
   createWeightLog,
   currentWeight,
+  listedWeighIns,
   loadCoreDoc,
+  readWeighInDate,
   removeWeighIn,
 } from '../js/data.js';
 import { CORE_DOC_ID, createLocalPersist, createLocalStore, createPersonalStore } from '../js/store.js';
@@ -73,6 +75,69 @@ test('addWeighIn rejects a bad date or weight', () => {
     assert.throws(() => addWeighIn([], { date: '2026-10-15', kg }), RangeError);
   }
   assert.throws(() => removeWeighIn([], 'today'), RangeError);
+});
+
+test('a weigh-in can be for today or an earlier day, however far back', () => {
+  assert.equal(readWeighInDate('2026-10-20', '2026-10-20'), '2026-10-20');
+  assert.equal(readWeighInDate('2026-10-19', '2026-10-20'), '2026-10-19');
+  assert.equal(readWeighInDate('2024-01-31', '2026-10-20'), '2024-01-31');
+});
+
+test('a weigh-in can’t be for a day after today, including across a month or year', () => {
+  assert.equal(readWeighInDate('2026-10-21', '2026-10-20'), null);
+  assert.equal(readWeighInDate('2026-11-01', '2026-10-31'), null);
+  assert.equal(readWeighInDate('2027-01-01', '2026-12-31'), null);
+});
+
+test('a weigh-in date must be a YYYY-MM-DD date', () => {
+  for (const text of ['', '   ', '20/10/2026', '2026-10-2', 'today', null, undefined]) {
+    assert.equal(readWeighInDate(text, '2026-10-20'), null);
+  }
+  assert.throws(() => readWeighInDate('2026-10-20', 'today'), RangeError);
+});
+
+test('Stats lists the last 12 weeks of weigh-ins, today and the 83 days before, newest first', () => {
+  const weighIns = [
+    { date: '2026-07-27', kg: 85.0 }, // 85 days ago
+    { date: '2026-07-28', kg: 84.8 }, // 84 days ago
+    { date: '2026-07-29', kg: 84.6 }, // 83 days ago
+    { date: '2026-10-01', kg: 83.1 },
+    { date: '2026-10-20', kg: 82.4 },
+  ];
+  assert.deepEqual(
+    listedWeighIns(weighIns, '2026-10-20').map((w) => w.date),
+    ['2026-10-20', '2026-10-01', '2026-07-29'],
+  );
+});
+
+test('the 12 weeks run back across a year boundary', () => {
+  const weighIns = [
+    { date: '2025-11-10', kg: 84.0 },
+    { date: '2025-11-11', kg: 83.9 },
+    { date: '2026-01-15', kg: 83.0 },
+  ];
+  assert.deepEqual(
+    listedWeighIns(weighIns, '2026-02-02').map((w) => w.date),
+    ['2026-01-15', '2025-11-11'],
+  );
+});
+
+test('the latest weigh-in is listed even when it’s older than 12 weeks, since it’s still the profile’s weight', () => {
+  const weighIns = [
+    { date: '2025-01-05', kg: 86.0 },
+    { date: '2025-03-01', kg: 85.2 },
+  ];
+  assert.deepEqual(listedWeighIns(weighIns, '2026-10-20'), [{ date: '2025-03-01', kg: 85.2 }]);
+});
+
+test('with no weigh-ins, Stats lists none, and the log passed in is left alone', () => {
+  assert.deepEqual(listedWeighIns([], '2026-10-20'), []);
+  const weighIns = [
+    { date: '2026-10-01', kg: 83.1 },
+    { date: '2026-10-20', kg: 82.4 },
+  ];
+  listedWeighIns(weighIns, '2026-10-20');
+  assert.deepEqual(weighIns.map((w) => w.date), ['2026-10-01', '2026-10-20']);
 });
 
 // --- Weight log ---

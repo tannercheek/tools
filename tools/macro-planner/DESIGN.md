@@ -138,12 +138,13 @@ arc:   circle, stroke = --macro-X, stroke-linecap: round,
 
 | Ring | Size | Stroke | Where |
 |---|---|---|---|
-| Hero | `--ring-hero-size` | `--ring-hero-stroke` | Calories on Today; average calories on Stats |
-| Macro | `--ring-macro-size` | `--ring-macro-stroke` | Protein, Fat and Carbs in a 3-column grid |
-| Mini | `--ring-mini-size` | `--ring-mini-stroke` | Inline in lists (Stats days, Plan); no centre text |
+| Hero | `--ring-hero-size` | `--ring-hero-stroke` | Calories on Today |
+| Macro | `--ring-macro-size` | `--ring-macro-stroke` | Protein, Fat and Carbs on Today, in a 3-column grid |
+| Mini | `--ring-mini-size` | `--ring-mini-stroke` | Four in a row, calories first: Plan totals and Stats' daily averages; no centre text |
 
 - **The SVG is `aria-hidden="true"`.** The label and numbers beside it are real text. The container's accessible name reads like "Protein, 89 of 190 grams, 101 left".
-- **Centre text:** the day's total (display, black) over target (`--color-text-2`). On Stats, the daily average. Below the ring: macro name, then "N g left" or "N g over".
+- **Centre text:** the day's total (display, black) over target (`--color-text-2`). Below the ring: macro name, then "N g left" or "N g over".
+- **Mini rings** have no centre text. Under each: the macro name, the total, then "of N g", or "N g over" once over target. On Stats the total is the daily average; "of target" suits days already over better than what's left.
 - **Over target:** the arc stays full and the text switches to "over". Don't use a second lap, a colour change or a warning colour.
 - **Zero:** show the track only. Don't draw a rounded-cap dot at 0%.
 - **Animate only `stroke-dashoffset`:** `transition: stroke-dashoffset var(--dur-ring) var(--ease-spring)`.

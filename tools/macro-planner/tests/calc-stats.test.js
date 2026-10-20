@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, averageDailyTotals, lastSevenDates, weightRate } from '../js/calc.js';
+import { addDays, averageDailyTotals, lastSevenDates, lastSevenDaysAverage, weightRate } from '../js/calc.js';
 
 // Float math: compare to within a hair, not exactly.
 function assertClose(actual, expected, tolerance = 1e-9, message = '') {
@@ -165,21 +165,25 @@ test('addDays rejects a date that isn’t YYYY-MM-DD', () => {
 
 // --- A week of test data ---
 
-test('the 7-day average leaves out today and 8 days ago, and skips an empty day', () => {
+test('the 7-day average leaves out today, 8 days ago and later days, and skips an empty day', () => {
   const log = {
     '2026-10-07': { entries: [entry(5000, 300)] }, // 8 days ago: outside the window
     '2026-10-08': { entries: [entry(2100, 150, 70, 220), entry(300, 20, 10, 30)] }, // 7 days ago
     '2026-10-10': { entries: [] },
     '2026-10-14': { entries: [entry(2000, 140, 60, 210)] }, // yesterday
     '2026-10-15': { entries: [entry(9000, 500)] }, // today: still in progress
+    '2026-10-16': { entries: [entry(9000, 500)] }, // tomorrow: kept for planning ahead
   };
-  const week = lastSevenDates('2026-10-15').map((date) => log[date] ?? {});
-  const { average, loggedDays } = averageDailyTotals(week);
+  const { average, loggedDays } = lastSevenDaysAverage(log, '2026-10-15');
   assert.equal(loggedDays, 2);
   assertClose(average.kcal, 2200);
   assertClose(average.protein, 155);
   assertClose(average.fat, 70);
   assertClose(average.carbs, 230);
+});
+
+test('with no days stored yet, the 7-day average is empty', () => {
+  assert.deepEqual(lastSevenDaysAverage({}, '2026-10-15'), { average: null, loggedDays: 0 });
 });
 
 // --- Weight rate ---

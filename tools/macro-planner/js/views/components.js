@@ -1,10 +1,11 @@
 // Unlinked showcase of the shared components at #/components. Step 7.2 removes it.
 // The foods and numbers here are sample text for checking layout, not data.
 
+import { localDate } from '../data.js';
 import { iconButton, primaryButton, secondaryButton, textLink } from '../ui/buttons.js';
 import { newTagPill, segmentedControl, switchControl, tagFilterRow, tagGroup, tagPill } from '../ui/controls.js';
 import { emojiPickerSheet } from '../ui/emoji-picker.js';
-import { numberField, selectField, textField } from '../ui/inputs.js';
+import { dateField, numberField, selectField, textField } from '../ui/inputs.js';
 import { emojiTile, listRow, noticeRow, rowList } from '../ui/row.js';
 import { confirmSheet, openSheet } from '../ui/sheet.js';
 import { newTagSheet } from './new-tag-sheet.js';
@@ -62,6 +63,7 @@ function rows() {
         trailing: iconButton('plus', 'Add long meal'),
       }),
       listRow({ placeholderIcon: 'plus', eyebrow: 'Lunch · Flex', title: 'Add a meal', onClick: () => {} }),
+      listRow({ eyebrow: 'Tue, Oct 14', title: '82.4 kg', trailing: iconButton('trash-2', 'Delete weigh-in, October 14') }),
     ]),
   );
 }
@@ -81,7 +83,9 @@ function inputs() {
       { value: 'moderate', label: 'Moderate' },
     ],
   });
-  return section('Inputs', name.element, weight.element, protein.element, activity.element);
+  const today = localDate(new Date());
+  const date = dateField({ label: 'Date', value: today, max: today });
+  return section('Inputs', name.element, weight.element, protein.element, activity.element, date.element);
 }
 
 function controls() {

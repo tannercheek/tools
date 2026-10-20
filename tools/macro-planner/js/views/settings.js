@@ -1,7 +1,8 @@
 // Settings (SPEC §3.8), pushed from the header: the profile, the targets worked out from it
-// (SPEC §3.1), and the meal slots (SPEC §3.4). Every profile field starts empty (SPEC §5). Each
-// change saves as soon as it's made, so there's no Save button, and the targets follow along as
-// you type. Weight comes from the weight log, so entering one here logs a weigh-in for today.
+// (SPEC §3.1), the meal slots (SPEC §3.4), and export, import and reset (data-section.js). Every
+// profile field starts empty (SPEC §5). Each change saves as soon as it's made, so there's no Save
+// button, and the targets follow along as you type. Weight comes from the weight log, so entering
+// one here logs a weigh-in for today.
 
 import { ACTIVITY_MULTIPLIERS } from '../calc.js';
 import {
@@ -29,6 +30,7 @@ import {
 import { CORE_DOC_ID } from '../store.js';
 import { segmentedControl } from '../ui/controls.js';
 import { formError, numberField, selectField } from '../ui/inputs.js';
+import { dataSection } from './data-section.js';
 import { slotsSection } from './slots-section.js';
 import { targetsSection } from './targets-section.js';
 
@@ -338,7 +340,9 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   return element;
 }
 
-export function render(container, { store }) {
+// context.done: set when redrawing after an import or reset (data-section.js).
+export function render(container, context) {
+  const { store, done } = context;
   // Built into its own element, so a load that finishes after leaving the screen changes nothing.
   const screen = document.createElement('div');
   container.replaceChildren(screen);
@@ -346,7 +350,10 @@ export function render(container, { store }) {
   Promise.all([store.load(CORE_DOC_ID), weightLog.list()]).then(([doc, weighIns]) => {
     if (!screen.isConnected) return;
     const form = profileForm({ store, weightLog, doc, weightKg: currentWeight(weighIns) });
-    form.append(section('Meal slots', ...slotsSection({ store, doc })));
+    // Every doc was replaced, so the whole screen is drawn again from what's stored now.
+    const data = dataSection({ store, done, onReplaced: (next) => render(container, { ...context, done: next }) });
+    form.append(section('Meal slots', ...slotsSection({ store, doc })), section('Data', ...data.elements));
     screen.replaceWith(form);
+    data.focusDone();
   });
 }

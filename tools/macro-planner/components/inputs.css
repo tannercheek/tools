@@ -92,6 +92,17 @@
   color: var(--color-text);
 }
 
+/* Date field: drops the platform's own box, which iOS draws as a grey pill, and lines the date
+   up at the start like every other field's text, since iOS centres it. */
+.input--date {
+  appearance: none;
+  font-variant-numeric: var(--numeric);
+}
+
+.input--date::-webkit-date-and-time-value {
+  text-align: start;
+}
+
 .input-box__chevron {
   display: flex;
   color: var(--color-text-2);

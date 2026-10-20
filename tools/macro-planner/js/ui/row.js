@@ -89,7 +89,8 @@ function extrasLines(entries) {
 // omitted. extras: entries added to a slot, listed under the numbers, or omitted. trailing: one
 // control element or omitted. onClick or href: makes the whole row one button or link; its
 // trailing can then only be a rowActionIcon. placeholderIcon, in place of emoji: the dashed
-// placeholder row with that icon in its tile, like Plan's empty slot. muted: the title and
+// placeholder row with that icon in its tile, like Plan's empty slot. With neither, the row has
+// no tile, like a weigh-in, since emoji only identify foods and meals. muted: the title and
 // numbers in secondary text, like a skipped slot (DESIGN §8).
 export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, extras = [], trailing, onClick, href, muted = false }) {
   const row = document.createElement(href ? 'a' : onClick ? 'button' : 'li');
@@ -104,7 +105,9 @@ export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, extra
   else if (numbers) text.append(numbersLine(numbers));
   if (extras.length > 0) text.append(extrasLines(extras));
 
-  row.append(placeholderIcon ? iconTile(placeholderIcon) : emojiTile(emoji), text);
+  if (placeholderIcon) row.append(iconTile(placeholderIcon));
+  else if (emoji) row.append(emojiTile(emoji));
+  row.append(text);
   if (trailing) row.append(trailing);
   if (!onClick && !href) return row;
 

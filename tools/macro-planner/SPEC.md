@@ -224,7 +224,7 @@ The same goes for slots: an entry also stores its slot's name (`slotName`) when 
 
 - A line through the weigh-ins from the last 12 weeks, plotted by date, with the latest value labelled. A dashed line shows the goal rate starting from the first weigh-in in the window, so you can see whether you're on pace.
 - Below the chart: the latest weight and its date, and the actual rate against the goal rate, e.g. "−0.3 kg/week · goal −0.5". This is information, not a verdict. Nothing is marked as missed or failed.
-- "Log weigh-in" opens a sheet (weight, date). The most recent weigh-ins are listed below, each with delete.
+- "Log weigh-in" opens a sheet (weight, date). The weigh-ins from the last 12 weeks, the chart's window, are listed below, newest first, each with delete. The latest is listed even when it's older, since it's still the profile's weight.
 - With fewer than 2 weigh-ins in the window, the chart, rate and button are replaced by the empty state (DESIGN §13), whose button is "Log weigh-in". The list still shows.
 
 ### 3.8 Settings

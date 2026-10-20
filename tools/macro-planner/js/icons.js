@@ -22,6 +22,7 @@ const PATHS = {
     '<path d="M6.252 3c.268.1.794.53.745 1.36-.06.83-.923 1.2-.993 2.02-.05.78.338 1.24.735 1.62"/>' +
     '<path d="M7 21h10"/>',
   'chart-no-axes-column': '<path d="M5 21v-6"/><path d="M12 21V3"/><path d="M19 21V9"/>',
+  'chart-line': '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   'cloud-check':
     '<path d="m17 15-5.5 5.5L9 18"/>' +

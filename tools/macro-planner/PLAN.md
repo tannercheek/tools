@@ -175,19 +175,19 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 6 — Settings and Stats
 
-- [ ] **6.1 Weigh-ins**
+- [x] **6.1 Weigh-ins**
       On Stats: "Log weigh-in" sheet (weight with unit suffix, date defaulting to today), and the recent weigh-ins listed below it, newest first, each with delete (confirm sheet).
       _Done when:_ a weigh-in for an earlier date slots into order; one for an existing date replaces it; deleting the latest moves targets to the one before.
 
-- [ ] **6.2 Export, import, reset**
+- [x] **6.2 Export, import, reset**
       Export all docs as one JSON file; import replaces all (confirm sheet); reset everything (confirm sheet).
       _Done when:_ export → reset → import restores everything exactly.
 
-- [ ] **6.3 Stats: last 7 days**
+- [x] **6.3 Stats: last 7 days**
       Average rings over the 7 days before today that have entries, under "Daily average · last 7 days", or "· N of the last 7 days" when fewer count (SPEC §3.7). Empty state for fewer than 2 counted days (DESIGN §13). No range toggle, days on target or bar charts; they aren't in SPEC.
       _Done when:_ numbers match a hand calculation on a week of test data; today doesn't count, and neither does 8 days ago; an off-plan day with nothing added drops the heading to "6 of the last 7 days".
 
-- [ ] **6.4 Weight trend**
+- [x] **6.4 Weight trend**
       SVG line chart of the weigh-ins from the last 12 weeks, plotted by date, latest value labelled, dashed goal-rate line from the first weigh-in in the window (DESIGN §7). Below it: latest weight and date, and actual rate vs goal ("−0.3 kg/week · goal −0.5"), shown only when `weightRate` returns one. Empty state with fewer than 2 weigh-ins in the window.
       _Done when:_ with sporadic test weigh-ins the line connects them by date, the rate matches `weightRate`, and imperial shows lb/week.
 

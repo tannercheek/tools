@@ -315,6 +315,24 @@ export function removeWeighIn(weighIns, date) {
   return weighIns.filter((w) => w.date !== date);
 }
 
+// A weigh-in's date as typed into Stats' sheet: today or an earlier day, never ahead, since the
+// latest weigh-in is the profile's weight (SPEC §3.1). null unless it's a YYYY-MM-DD date up to today.
+export function readWeighInDate(text, today) {
+  assertDate(today);
+  return DATE_PATTERN.test(text ?? '') && text <= today ? text : null;
+}
+
+// The weight trend's window: today and the 83 days before it (SPEC §3.7).
+export const TREND_WINDOW_DAYS = 84;
+
+// The weigh-ins Stats lists, newest first: those in the trend's window, and the latest even when
+// it's older, since it's still the profile's weight and should be there to see and delete.
+// weighIns: oldest first.
+export function listedWeighIns(weighIns, today) {
+  const oldest = addDays(today, 1 - TREND_WINDOW_DAYS);
+  return weighIns.filter((w, i) => w.date >= oldest || i === weighIns.length - 1).reverse();
+}
+
 // The profile's weight: the latest weigh-in by date, or null before the first one (SPEC §3.1).
 export function currentWeight(weighIns) {
   const latest = weighIns.reduce((found, w) => (!found || w.date > found.date ? w : found), null);

@@ -121,6 +121,19 @@ export function selectField({ label, options, value = null, placeholder }) {
   return result;
 }
 
+// A calendar date in the same box as the other fields. It opens the platform's own date picker:
+// a wheel on iOS. value and max are 'YYYY-MM-DD'; max is the latest day the picker offers, but
+// not every browser holds to it, so the caller still checks what comes back.
+export function dateField({ label, value = '', max } = {}) {
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.value = value;
+  if (max) input.max = max;
+  const result = field({ label, input });
+  input.classList.add('input--date');
+  return result;
+}
+
 // type="search" gives the keyboard a Search key and screen readers a search box.
 // Our clear button replaces the browser's own, which components/inputs.css hides.
 // Autocorrect is off because it would "fix" partial words like "chick".
