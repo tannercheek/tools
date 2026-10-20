@@ -60,20 +60,51 @@ export function rowActionIcon(iconName, action) {
   return hint;
 }
 
-// numbers: { kcal, protein, fat, carbs } or omitted. trailing: one control element or omitted.
-// onClick or href: makes the whole row one button or link; its trailing can then only be a
-// rowActionIcon.
-export function listRow({ emoji, eyebrow, title, numbers, trailing, onClick, href }) {
+// A placeholder row's tile: dashed, holding a UI outline icon rather than an emoji.
+function iconTile(iconName) {
+  const tile = document.createElement('span');
+  tile.className = 'emoji-tile emoji-tile--placeholder';
+  tile.setAttribute('aria-hidden', 'true');
+  tile.innerHTML = icon(iconName);
+  return tile;
+}
+
+// What's been added to a slot, under its numbers (DESIGN §8): a plain line each of emoji, label
+// and kcal. entries: [{ emoji, label, kcal }].
+function extrasLines(entries) {
+  const lines = document.createElement('span');
+  lines.className = 'row__extras';
+  for (const { emoji, label, kcal } of entries) {
+    const line = document.createElement('span');
+    line.className = 'row__extra';
+    const emojiText = textLine('row__extra-emoji', emoji);
+    emojiText.setAttribute('aria-hidden', 'true');
+    line.append(emojiText, textLine('row__extra-label', label), textLine('row__extra-kcal', `${integer.format(kcal)} kcal`));
+    lines.append(line);
+  }
+  return lines;
+}
+
+// numbers: { kcal, protein, fat, carbs }, a word in their place (a skipped slot's "Skipped"), or
+// omitted. extras: entries added to a slot, listed under the numbers, or omitted. trailing: one
+// control element or omitted. onClick or href: makes the whole row one button or link; its
+// trailing can then only be a rowActionIcon. placeholderIcon, in place of emoji: the dashed
+// placeholder row with that icon in its tile, like Plan's empty slot. muted: the title and
+// numbers in secondary text, like a skipped slot (DESIGN §8).
+export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, extras = [], trailing, onClick, href, muted = false }) {
   const row = document.createElement(href ? 'a' : onClick ? 'button' : 'li');
-  row.className = 'row';
+  row.className = placeholderIcon ? 'row row--placeholder' : 'row';
+  if (muted) row.classList.add('row--muted');
 
   const text = document.createElement('span');
   text.className = 'row__text';
   if (eyebrow) text.append(textLine('row__eyebrow', eyebrow));
   text.append(textLine('row__title', title));
-  if (numbers) text.append(numbersLine(numbers));
+  if (typeof numbers === 'string') text.append(textLine('row__numbers', numbers));
+  else if (numbers) text.append(numbersLine(numbers));
+  if (extras.length > 0) text.append(extrasLines(extras));
 
-  row.append(emojiTile(emoji), text);
+  row.append(placeholderIcon ? iconTile(placeholderIcon) : emojiTile(emoji), text);
   if (trailing) row.append(trailing);
   if (!onClick && !href) return row;
 
@@ -102,12 +133,12 @@ export function ingredientRow({ emoji, title, numbers, quantity, onRemove }) {
   let line = numbersLine(numbers);
   text.append(label, line);
 
-  // The field and remove button wrap under the name together when it needs the room. The
-  // field's error message moves out to the row, so it can take a line of its own.
-  const controls = document.createElement('div');
-  controls.className = 'row__controls';
-  controls.append(quantity.element, iconButton('x', `Remove ${title}`, { onClick: onRemove }));
-  row.append(emojiTile(emoji), text, controls, quantity.error);
+  // The field sits under the name, with the remove button at the end of the row. The field's
+  // error message moves out under the field, so the field's wrapper adds no layout of its own.
+  const body = document.createElement('div');
+  body.className = 'row__body';
+  body.append(text, quantity.element, quantity.error);
+  row.append(emojiTile(emoji), body, iconButton('x', `Remove ${title}`, { onClick: onRemove }));
   return {
     element: row,
     setNumbers(next) {
@@ -116,6 +147,26 @@ export function ingredientRow({ emoji, title, numbers, quantity, onRemove }) {
       line = nextLine;
     },
   };
+}
+
+// The tile's hop when something is added to the row's slot (DESIGN §14). Its duration is a
+// token, which reduced motion collapses, so it needs no check of its own.
+export function hopTile(row) {
+  const tile = row.querySelector('.emoji-tile');
+  tile.classList.remove('emoji-tile--hop');
+  // Reading layout restarts the animation if it's still running from the last add.
+  void tile.offsetWidth;
+  tile.classList.add('emoji-tile--hop');
+  tile.addEventListener('animationend', () => tile.classList.remove('emoji-tile--hop'), { once: true });
+}
+
+// A line about the list under it, like Today's off-plan line (DESIGN §8): sunken, with no tile,
+// one sentence, then one trailing control.
+export function noticeRow({ text, trailing }) {
+  const row = document.createElement('div');
+  row.className = 'row row--notice';
+  row.append(textLine('row__notice', text), trailing);
+  return row;
 }
 
 export function rowList(rows) {

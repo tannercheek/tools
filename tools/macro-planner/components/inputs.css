@@ -68,6 +68,35 @@
   font-variant-numeric: var(--numeric);
 }
 
+/* Select field: the select fills the box, so a tap anywhere opens the picker. It has no fill,
+   so the chevron under it shows through. */
+.field--select .input-box {
+  position: relative;
+  justify-content: flex-end;
+}
+
+.input--select {
+  position: absolute;
+  inset: 0;
+  padding: 0 calc(var(--space-4) + var(--icon-size) + var(--space-2)) 0 var(--space-4);
+  appearance: none;
+  cursor: pointer;
+}
+
+/* Nothing chosen yet: the placeholder shows in placeholder colour, the options in text colour. */
+.input--select:has(> option[value=""]:checked) {
+  color: var(--color-text-3);
+}
+
+.input--select option {
+  color: var(--color-text);
+}
+
+.input-box__chevron {
+  display: flex;
+  color: var(--color-text-2);
+}
+
 .input-box__suffix {
   flex: none;
   font-size: var(--font-size-md);

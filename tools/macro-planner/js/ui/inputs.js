@@ -98,6 +98,29 @@ export function numberField({ label, unit, value = '', placeholder = '', macro }
   return result;
 }
 
+// A choice with more options than a segmented control fits at 360px, in the same box as the
+// other fields. It opens the platform's own picker: a wheel on iOS. options: [{ value, label }].
+// value: the selected option's value, or null for none yet, which shows the placeholder.
+export function selectField({ label, options, value = null, placeholder }) {
+  const select = document.createElement('select');
+  // Selected from the start, so the browser doesn't pick the first real option. It can't be
+  // picked again, so a choice can't be undone into nothing.
+  const none = new Option(placeholder, '', true, true);
+  none.disabled = true;
+  none.hidden = true;
+  select.append(none, ...options.map((option) => new Option(option.label, option.value)));
+  if (value !== null) select.value = value;
+
+  const chevron = document.createElement('span');
+  chevron.className = 'input-box__chevron';
+  chevron.innerHTML = icon('chevron-down');
+
+  const result = field({ label, input: select, trailing: chevron });
+  select.classList.add('input--select');
+  result.element.classList.add('field--select');
+  return result;
+}
+
 // type="search" gives the keyboard a Search key and screen readers a search box.
 // Our clear button replaces the browser's own, which components/inputs.css hides.
 // Autocorrect is off because it would "fix" partial words like "chick".

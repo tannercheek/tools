@@ -1,7 +1,7 @@
 // Doc shapes, defaults, and the day and weigh-in helpers. Pure: the store is passed in,
 // so this never touches window and runs in Node.
 
-import { lastSevenDates } from './calc.js';
+import { addDays, foodTotals, lastSevenDates, mealTotals, roundTotals } from './calc.js';
 import { CORE_DOC_ID } from './store.js';
 
 export const DAYS_DOC_ID = 'macro-planner-days';
@@ -101,14 +101,146 @@ export function emptyDay() {
   return { changes: {}, entries: [], offPlan: false, locked: false };
 }
 
+// 7 days ago: the oldest day kept (SPEC §4.3), and the furthest back Today goes (SPEC §3.6).
+export function oldestKeptDate(today) {
+  return lastSevenDates(today)[0];
+}
+
 // Keeps 7 days ago and everything after it, including future days (SPEC §4.3).
 // Dates compare as strings, since 'YYYY-MM-DD' sorts in date order.
 export function pruneDays(daysDoc, today) {
-  const oldestKept = lastSevenDates(today)[0];
+  const oldestKept = oldestKeptDate(today);
   return Object.fromEntries(Object.entries(daysDoc).filter(([date]) => date >= oldestKept));
 }
 
+// --- Entries (SPEC §3.5) ---
+// An entry is a snapshot: it keeps its own label, emoji and numbers, and its slot's name, so
+// editing or deleting a food, a meal or a slot later never changes it. slot: { id, name }.
+
+export function createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs }) {
+  return { id: crypto.randomUUID(), slotId: slot.id, slotName: slot.name, label, emoji, kcal, protein, fat, carbs, source };
+}
+
+// A saved meal, at one portion. getFood: saved-meals.js's foodLookup over every food it uses.
+export function mealEntry(slot, meal, getFood) {
+  return createEntry(slot, { label: meal.name, emoji: meal.emoji, source: 'meal' }, mealTotals(meal, getFood));
+}
+
+// qty is in the food's serving unit.
+export function foodEntry(slot, food, qty) {
+  return createEntry(slot, { label: food.name, emoji: food.emoji, source: 'food' }, foodTotals(food, qty));
+}
+
+// Quick numbers use 🍽️. With no label they take the slot's name, like a pinned budget at lock-in.
+export function quickEntry(slot, numbers, label = '') {
+  const name = label.trim() || slot.name;
+  return createEntry(slot, { label: name, emoji: DEFAULT_EMOJI, source: 'quick' }, numbers);
+}
+
+// A Recent entry added again: its label, emoji, numbers and source, as a new entry in this slot.
+export function repeatEntry(slot, { label, emoji, source, kcal, protein, fat, carbs }) {
+  return createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs });
+}
+
+// The add sheet's Recent (SPEC §3.5): what was added in the 7 days before today, each as
+// { entry, date }, newest first: the latest day first, and on a day the last added first. The
+// plan that lock-in wrote (planned: true) isn't something added, so it's left out. Entries whose
+// label and numbers match as shown are one, at its newest. Entries are snapshots, so a food, meal
+// or slot that's since been edited or deleted changes nothing here.
+export function recentEntries(daysDoc, today) {
+  const seen = new Set();
+  const recent = [];
+  for (const date of lastSevenDates(today).reverse()) {
+    for (const entry of [...(daysDoc[date]?.entries ?? [])].reverse()) {
+      if (entry.planned) continue;
+      const key = JSON.stringify([entry.label, roundTotals(entry)]);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      recent.push({ entry, date });
+    }
+  }
+  return recent;
+}
+
+// Each returns a new day, leaving the one passed in as it was.
+
+// Added last, so a slot lists its entries in the order they were added.
+export function addEntry(day, entry) {
+  return { ...day, entries: [...(day.entries ?? []), entry] };
+}
+
+// Removing is how a locked day is corrected (SPEC §3.5).
+export function removeEntry(day, entryId) {
+  return { ...day, entries: (day.entries ?? []).filter((entry) => entry.id !== entryId) };
+}
+
+// --- Off plan (SPEC §3.4) ---
+// Stored per day as offPlan: true. A day's changes and entries are kept, so going back on plan
+// brings its changes back and its entries stay.
+
+// The furthest ahead an off-plan stretch can end: 30 days after today.
+export function lastOffPlanDate(today) {
+  return addDays(today, 30);
+}
+
+// The days doc with every date from `from` to `until` off plan. from is today or later, and until
+// is from or later, up to lastOffPlanDate.
+export function setOffPlan(daysDoc, from, until, today) {
+  for (const date of [from, until, today]) assertDate(date);
+  if (from < today || until < from || until > lastOffPlanDate(today)) {
+    throw new RangeError(`Not an off-plan range from ${today}: ${from} to ${until}`);
+  }
+  const next = { ...daysDoc };
+  for (let date = from; date <= until; date = addDays(date, 1)) {
+    next[date] = { ...(next[date] ?? emptyDay()), offPlan: true };
+  }
+  return next;
+}
+
+// Back on plan: clears off plan from today on. An earlier day stays off plan, since it's passed.
+// With nothing to clear, the same doc comes back.
+export function backOnPlan(daysDoc, today) {
+  assertDate(today);
+  const dates = Object.keys(daysDoc).filter((date) => date >= today && daysDoc[date].offPlan);
+  if (dates.length === 0) return daysDoc;
+  const next = { ...daysDoc };
+  for (const date of dates) next[date] = { ...daysDoc[date], offPlan: false };
+  return next;
+}
+
+// The last day of the off-plan stretch that `date` is in, for "Off plan until …", or null when
+// `date` isn't off plan.
+export function offPlanUntil(daysDoc, date) {
+  assertDate(date);
+  if (!daysDoc[date]?.offPlan) return null;
+  let until = date;
+  while (daysDoc[addDays(until, 1)]?.offPlan) until = addDays(until, 1);
+  return until;
+}
+
+// Thrown by the days' writes when a write could wipe the real days doc.
+export class DaysUnavailableError extends Error {
+  constructor() {
+    super('Your days haven’t loaded on this device yet and storage can’t be reached, so nothing was saved.');
+    this.name = 'DaysUnavailableError';
+  }
+}
+
 export function createDays(store) {
+  // An empty days doc that wasn't read from the cloud may just be a read that failed, and building
+  // a write on it would replace every other day on the next sync, like the weight log
+  // (WeightLogUnavailableError). stored: the days doc the write builds on.
+  async function save(stored, next, today) {
+    if (Object.keys(stored).length === 0 && !(await store.loaded(DAYS_DOC_ID))) throw new DaysUnavailableError();
+    await store.save(DAYS_DOC_ID, pruneDays(next, today));
+  }
+
+  async function update(change, today) {
+    const daysDoc = await store.load(DAYS_DOC_ID);
+    const next = change(daysDoc);
+    if (next !== daysDoc) await save(daysDoc, next, today);
+  }
+
   return {
     async getDay(date) {
       assertDate(date);
@@ -116,11 +248,42 @@ export function createDays(store) {
     },
 
     // Every save also drops days before 7 days ago, so a day older than that
-    // isn't kept even when it's the one being saved.
+    // isn't kept even when it's the one being saved. Rejects with DaysUnavailableError without saving.
     async saveDay(date, day, today) {
       assertDate(date);
       const daysDoc = await store.load(DAYS_DOC_ID);
-      await store.save(DAYS_DOC_ID, pruneDays({ ...daysDoc, [date]: day }, today));
+      await save(daysDoc, { ...daysDoc, [date]: day }, today);
+    },
+
+    // change takes the stored days doc and returns a new one, or the same one to save nothing.
+    // For lock-in, which writes several days in one save. Rejects like saveDay.
+    updateDays: update,
+
+    // recentEntries over the stored days.
+    async recent(today) {
+      return recentEntries(await store.load(DAYS_DOC_ID), today);
+    },
+
+    // setOffPlan in the store. Resolves to the last day of the off-plan stretch from `from`,
+    // which runs past `until` when the day after was already off plan. Rejects like saveDay.
+    async setOffPlan(from, until, today) {
+      let stretchEnd;
+      await update((daysDoc) => {
+        const next = setOffPlan(daysDoc, from, until, today);
+        stretchEnd = offPlanUntil(next, from);
+        return next;
+      }, today);
+      return stretchEnd;
+    },
+
+    // backOnPlan in the store, saving nothing when there's nothing to clear. Rejects like saveDay.
+    async backOnPlan(today) {
+      await update((daysDoc) => backOnPlan(daysDoc, today), today);
+    },
+
+    // offPlanUntil over the stored days.
+    async offPlanUntil(date) {
+      return offPlanUntil(await store.load(DAYS_DOC_ID), date);
     },
   };
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { averageDailyTotals, lastSevenDates, weightRate } from '../js/calc.js';
+import { addDays, averageDailyTotals, lastSevenDates, weightRate } from '../js/calc.js';
 
 // Float math: compare to within a hair, not exactly.
 function assertClose(actual, expected, tolerance = 1e-9, message = '') {
@@ -141,6 +141,26 @@ test('lastSevenDates rejects a date that isn’t YYYY-MM-DD', () => {
   for (const today of ['Oct 14', '2026-10-1', '', undefined]) {
     assert.throws(() => lastSevenDates(today), RangeError, String(today));
   }
+});
+
+test('addDays steps forward and back across month and year ends', () => {
+  assert.equal(addDays('2026-10-15', 1), '2026-10-16');
+  assert.equal(addDays('2026-10-15', -7), '2026-10-08');
+  assert.equal(addDays('2026-10-31', 1), '2026-11-01');
+  assert.equal(addDays('2026-01-01', -1), '2025-12-31');
+  assert.equal(addDays('2028-02-28', 1), '2028-02-29');
+  assert.equal(addDays('2026-10-15', 0), '2026-10-15');
+});
+
+test('addDays gives one date per day across a clock change', () => {
+  assert.equal(addDays('2026-03-28', 1), '2026-03-29');
+  assert.equal(addDays('2026-03-29', 1), '2026-03-30');
+  assert.equal(addDays('2026-11-02', -1), '2026-11-01');
+  assert.equal(addDays('2026-11-01', -1), '2026-10-31');
+});
+
+test('addDays rejects a date that isn’t YYYY-MM-DD', () => {
+  assert.throws(() => addDays('Oct 14', 1), RangeError);
 });
 
 // --- A week of test data ---

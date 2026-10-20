@@ -1,4 +1,4 @@
-// Buttons (DESIGN §9): primary, secondary and icon buttons.
+// Buttons (DESIGN §9): primary, secondary and icon buttons, and text links.
 
 import { icon } from '../icons.js';
 
@@ -21,12 +21,13 @@ export function secondaryButton(label, options) {
   return textButton('secondary', label, options);
 }
 
-export function iconButton(iconName, label, { onClick } = {}) {
+export function iconButton(iconName, label, { onClick, disabled = false } = {}) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'icon-btn';
   button.setAttribute('aria-label', label);
   button.innerHTML = icon(iconName);
+  button.disabled = disabled;
   if (onClick) button.addEventListener('click', onClick);
   return button;
 }
@@ -38,5 +39,14 @@ export function iconLink(iconName, label, href) {
   link.href = href;
   link.setAttribute('aria-label', label);
   link.innerHTML = icon(iconName);
+  return link;
+}
+
+// Underlined text that navigates, like "Set your targets in Settings" under rings with no targets.
+export function textLink(label, href) {
+  const link = document.createElement('a');
+  link.className = 'text-link';
+  link.href = href;
+  link.textContent = label;
   return link;
 }

@@ -1,5 +1,5 @@
 // A saved meal's own screen, pushed from the Meals list: the meal editor (SPEC §3.3; DESIGN §8
-// ingredient row). Emoji and name, live totals in a sticky card, the foods with their
+// ingredient row). Emoji, name and tags, live totals in a sticky card, the foods with their
 // quantities, then Duplicate and Delete. Each change saves as soon as it's made, so there's no
 // Save button and nothing to lose on Back.
 
@@ -11,6 +11,7 @@ import { mealRoute, routeParam } from '../routes.js';
 import {
   addItem,
   addMeal,
+  allTags,
   deleteMeal,
   duplicateMeal,
   foodLookup,
@@ -18,16 +19,19 @@ import {
   removeItem,
   renameMeal,
   setMealEmoji,
+  setMealTags,
   updateItem,
   updateMeal,
 } from '../saved-meals.js';
 import { CORE_DOC_ID } from '../store.js';
 import { secondaryButton } from '../ui/buttons.js';
+import { newTagPill, tagGroup, tagPill } from '../ui/controls.js';
 import { emojiField } from '../ui/emoji-picker.js';
 import { formError, numberField, textField } from '../ui/inputs.js';
 import { ingredientRow, numbersLine, rowList } from '../ui/row.js';
 import { confirmSheet } from '../ui/sheet.js';
 import { addFoodSheet } from './add-food-sheet.js';
+import { newTagSheet } from './new-tag-sheet.js';
 
 function group(className, ...children) {
   const element = document.createElement('div');
@@ -133,6 +137,40 @@ export function render(container, { route, replaceRoute, goBack, store }) {
     return { element: group('meal-form__name', emoji.element, name.element), input: name.input };
   }
 
+  // The meal's tags as "on" pills, each removing its tag when tapped, then "New tag" (SPEC §3.3).
+  function tagRow() {
+    const newTag = newTagPill({ onClick: addTag });
+    const row = tagGroup({ label: 'Tags' });
+
+    function showTags() {
+      const pills = (meal.tags ?? []).map((tag) => tagPill({ label: tag, pressed: true, onClick: () => removeTag(tag) }));
+      row.replaceChildren(...pills, newTag);
+    }
+
+    // Focus moves to the pill that takes its place, so several can go one after another; after
+    // the last one, to "New tag".
+    function removeTag(tag) {
+      const index = meal.tags.indexOf(tag);
+      edit((m) => setMealTags(m, m.tags.filter((own) => own !== tag)));
+      showTags();
+      row.children[index].focus();
+    }
+
+    // The tags in use are read when the sheet opens, so one added on another meal is there. A
+    // typed tag that matches one takes its spelling.
+    async function addTag() {
+      const known = allTags((await store.load(CORE_DOC_ID)).meals ?? []);
+      const tag = await newTagSheet({ tags: known.filter((own) => !(meal.tags ?? []).includes(own)) });
+      if (!tag) return;
+      edit((m) => setMealTags(m, [...(m.tags ?? []), tag], known));
+      showTags();
+      newTag.focus();
+    }
+
+    showTags();
+    return row;
+  }
+
   // The totals card, then a row per food with its quantity in the food's serving unit.
   function ingredients() {
     const totals = totalsCard();
@@ -215,7 +253,7 @@ export function render(container, { route, replaceRoute, goBack, store }) {
   function show() {
     const top = nameRow();
     screen.replaceChildren(
-      top.element,
+      group('meal-screen__group', top.element, tagRow()),
       getFood
         ? ingredients()
         : note('This meal’s foods need the food list, which didn’t load. Check your connection, then reload.'),

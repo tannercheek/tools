@@ -1,0 +1,268 @@
+/* Rings for js/rings.js (DESIGN §6) and the cards they sit in. Every value comes from tokens.css;
+   the SVG's own geometry is in its 0 0 100 100 viewBox units. */
+
+.rings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* One idea per card (DESIGN §1): calories, then the three macros. */
+.rings__card {
+  padding: var(--card-pad);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.rings__card--hero {
+  padding: var(--card-pad-lg);
+}
+
+.rings__card--macros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--inline-gap);
+}
+
+/* With no targets: "Set your targets in Settings" (DESIGN §13). */
+.rings__note {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+
+/* ---------- One ring ---------- */
+
+/* Calories: its label and what's left sit beside the ring. */
+.ring--hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* Protein, fat and carbs: the label and what's left sit under the ring. */
+.ring--macro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  text-align: center;
+}
+
+/* Plan's totals: four equal mini rings in a row, each with its name and numbers under it. */
+.rings__mini {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--inline-gap);
+}
+
+.ring--mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  text-align: center;
+}
+
+/* The SVG and the centre text share one grid cell; the text paints over the SVG. */
+.ring__dial {
+  display: grid;
+  flex: none;
+  place-items: center;
+}
+
+.ring--hero .ring__dial {
+  width: var(--ring-hero-size);
+  height: var(--ring-hero-size);
+}
+
+.ring--macro .ring__dial {
+  width: var(--ring-macro-size);
+  height: var(--ring-macro-size);
+}
+
+.ring--mini .ring__dial {
+  width: var(--ring-mini-size);
+  height: var(--ring-mini-size);
+}
+
+.ring__svg,
+.ring__centre {
+  grid-area: 1 / 1;
+}
+
+.ring__svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ring__track,
+.ring__arc {
+  fill: none;
+}
+
+.ring--hero :is(.ring__track, .ring__arc) {
+  stroke-width: var(--ring-hero-stroke);
+}
+
+.ring--macro :is(.ring__track, .ring__arc) {
+  stroke-width: var(--ring-macro-stroke);
+}
+
+.ring--mini :is(.ring__track, .ring__arc) {
+  stroke-width: var(--ring-mini-stroke);
+}
+
+/* Only the arc's length moves (DESIGN §14). */
+.ring__arc {
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--dur-ring) var(--ease-spring);
+}
+
+/* At zero there's no arc, only the track (DESIGN §6). */
+.ring__arc--empty {
+  visibility: hidden;
+}
+
+.ring--kcal .ring__track { stroke: var(--macro-kcal-soft); }
+.ring--kcal .ring__arc { stroke: var(--macro-kcal); }
+.ring--protein .ring__track { stroke: var(--macro-protein-soft); }
+.ring--protein .ring__arc { stroke: var(--macro-protein); }
+.ring--fat .ring__track { stroke: var(--macro-fat-soft); }
+.ring--fat .ring__arc { stroke: var(--macro-fat); }
+.ring--carbs .ring__track { stroke: var(--macro-carbs-soft); }
+.ring--carbs .ring__arc { stroke: var(--macro-carbs); }
+
+/* ---------- Centre: the total over the target ---------- */
+
+.ring__centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-variant-numeric: var(--numeric);
+}
+
+.ring__total {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-snug);
+}
+
+.ring--hero .ring__total {
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-3xl);
+}
+
+.ring--macro .ring__total {
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-2xl);
+}
+
+.ring__target {
+  color: var(--color-text-2);
+}
+
+/* "of 2,600" */
+.ring--hero .ring__target {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-xs);
+  font-weight: var(--weight-semibold);
+}
+
+/* "/190g" */
+.ring--macro .ring__target {
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-2xs);
+  font-weight: var(--weight-bold);
+}
+
+/* ---------- Label and what's left ---------- */
+
+.ring__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* "CALORIES", as an eyebrow over the hero number. */
+.ring--hero .ring__label {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text-2);
+}
+
+/* "Protein" */
+.ring--macro .ring__label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  line-height: var(--line-md);
+  font-weight: var(--weight-heavy);
+}
+
+/* "101 g left" */
+.ring__left {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
+/* Calories left is the screen's one hero number, with "kcal left" under it (DESIGN §3). */
+.ring--hero .ring__left {
+  display: flex;
+  flex-direction: column;
+}
+
+.ring--hero .ring__left-amount {
+  font-family: var(--font-display);
+  font-size: var(--font-size-5xl);
+  line-height: var(--line-5xl);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+
+/* ---------- Mini ring text: name, total, then "of 148 g" or "46 g over" ---------- */
+
+.ring--mini .ring__text {
+  align-items: center;
+  max-width: 100%;
+  font-variant-numeric: var(--numeric);
+}
+
+.ring--mini .ring__text > * {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "Protein", in the secondary-info style so four fit across at 360px. */
+.ring--mini .ring__label {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+}
+
+/* "85", card-title size. */
+.ring--mini .ring__total {
+  font-size: var(--font-size-lg);
+  line-height: var(--line-lg);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--tracking-normal);
+}
+
+/* "of 148 g" */
+.ring--mini .ring__target {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-xs);
+  font-weight: var(--weight-semibold);
+}

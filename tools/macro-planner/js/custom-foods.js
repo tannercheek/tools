@@ -10,6 +10,19 @@ export function parseAmount(text) {
   return /^(\d+\.?\d*|\.\d+)$/.test(trimmed) ? Number(trimmed) : null;
 }
 
+// The four numbers as typed { kcal, protein, fat, carbs }: a food's, quick numbers or a pinned
+// budget (SPEC §3.4). Returns { numbers, errors }: numbers is null if any is wrong, and errors
+// maps each wrong one to its message.
+export function readNumbers(values) {
+  const numbers = {};
+  const errors = {};
+  for (const key of NUMBER_KEYS) {
+    numbers[key] = parseAmount(values[key]);
+    if (numbers[key] === null) errors[key] = 'Enter a number, like 34 or 34.5';
+  }
+  return { numbers: Object.keys(errors).length > 0 ? null : numbers, errors };
+}
+
 // values: the form's text { name, servingQty, servingUnit, kcal, protein, fat, carbs },
 // plus the chosen emoji. Returns { fields, errors }: fields is the food without its id,
 // or null if anything is wrong, and errors maps each wrong field to its message.
@@ -22,11 +35,8 @@ export function readFoodForm(values) {
   if (!qty) errors.servingQty = 'Enter an amount above 0';
   if (!unit) errors.servingUnit = 'Enter a unit, like g or slice';
 
-  const numbers = {};
-  for (const key of NUMBER_KEYS) {
-    numbers[key] = parseAmount(values[key]);
-    if (numbers[key] === null) errors[key] = 'Enter a number, like 34 or 34.5';
-  }
+  const { numbers, errors: numberErrors } = readNumbers(values);
+  Object.assign(errors, numberErrors);
 
   if (Object.keys(errors).length > 0) return { fields: null, errors };
   return { fields: { name, serving: { qty, unit }, emoji: values.emoji, ...numbers }, errors };

@@ -1,9 +1,10 @@
-/* Segmented control and switch for js/ui/controls.js (DESIGN §9). Every value comes from tokens.css. */
+/* Segmented control, switch and tag pills for js/ui/controls.js (DESIGN §9). Every value comes from tokens.css. */
 
 /* ---------- Focus (DESIGN §5) ---------- */
 
 .segmented__input:focus-visible + .segmented__label,
-.switch__input:focus-visible + .switch__track {
+.switch__input:focus-visible + .switch__track,
+.tag-pill:focus-visible {
   outline: var(--focus-width) solid var(--color-ink);
   outline-offset: var(--focus-offset);
 }
@@ -100,4 +101,76 @@
 
 .switch__input:checked + .switch__track .switch__knob {
   transform: translateX(calc(var(--switch-w) - var(--switch-h)));
+}
+
+/* ---------- Tag pill (DESIGN §9) ---------- */
+
+/* No edge and no press depth: the fill change is the feedback. A long tag truncates rather
+   than widening the row. */
+.tag-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-width: var(--tap-min);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-4);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-heavy);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.tag-pill[aria-pressed="true"] {
+  background: var(--color-btn-face);
+  border-color: var(--color-btn-face);
+  color: var(--color-on-ink);
+}
+
+.tag-pill--new {
+  border-style: dashed;
+}
+
+.tag-pill__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A meal's tags: pills that wrap onto more lines as needed. */
+.tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The filter row: one line that scrolls sideways inside its own strip, with no scrollbar, so the
+   page never scrolls sideways (DESIGN §4). The strip bleeds to the screen edges and pads its
+   pills back in by the gutter, so the first one lines up with the column. Scrolling clips the
+   strip top and bottom too, so it's padded by a focus ring's reach and a negative margin takes
+   that room back out of the layout. */
+.tag-filter {
+  display: flex;
+  gap: var(--space-2);
+  margin: calc(-1 * (var(--focus-width) + var(--focus-offset))) calc(-1 * var(--gutter));
+  padding: calc(var(--focus-width) + var(--focus-offset)) var(--gutter);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.tag-filter::-webkit-scrollbar {
+  display: none;
 }

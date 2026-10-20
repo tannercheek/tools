@@ -1,12 +1,13 @@
 // Unlinked showcase of the shared components at #/components. Step 7.2 removes it.
 // The foods and numbers here are sample text for checking layout, not data.
 
-import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
-import { segmentedControl, switchControl } from '../ui/controls.js';
+import { iconButton, primaryButton, secondaryButton, textLink } from '../ui/buttons.js';
+import { newTagPill, segmentedControl, switchControl, tagFilterRow, tagGroup, tagPill } from '../ui/controls.js';
 import { emojiPickerSheet } from '../ui/emoji-picker.js';
-import { numberField, textField } from '../ui/inputs.js';
-import { emojiTile, listRow, rowList } from '../ui/row.js';
+import { numberField, selectField, textField } from '../ui/inputs.js';
+import { emojiTile, listRow, noticeRow, rowList } from '../ui/row.js';
 import { confirmSheet, openSheet } from '../ui/sheet.js';
+import { newTagSheet } from './new-tag-sheet.js';
 
 function section(title, ...children) {
   const element = document.createElement('section');
@@ -31,12 +32,14 @@ function buttons() {
     group(primaryButton('Save'), secondaryButton('Log'), iconButton('plus', 'Add'), iconButton('chevron-left', 'Back')),
     group(primaryButton('Save', { disabled: true }), secondaryButton('Log', { disabled: true })),
     primaryButton('Full-width primary', { block: true }),
+    group(textLink('Set your targets in Settings', '#/settings')),
   );
 }
 
 function rows() {
   return section(
     'List rows',
+    noticeRow({ text: 'Off plan until Fri, Oct 23', trailing: secondaryButton('Back on plan') }),
     rowList([
       listRow({
         emoji: '🍳',
@@ -58,6 +61,7 @@ function rows() {
         numbers: { kcal: 2600, protein: 190, fat: 75, carbs: 290 },
         trailing: iconButton('plus', 'Add long meal'),
       }),
+      listRow({ placeholderIcon: 'plus', eyebrow: 'Lunch · Flex', title: 'Add a meal', onClick: () => {} }),
     ]),
   );
 }
@@ -69,7 +73,15 @@ function inputs() {
   const validate = () => protein.setError(/^\d+(\.\d+)?$/.test(protein.input.value.trim()) ? null : 'Enter a number, like 34 or 34.5');
   protein.input.addEventListener('input', validate);
   validate();
-  return section('Inputs', name.element, weight.element, protein.element);
+  const activity = selectField({
+    label: 'Activity',
+    placeholder: 'Activity',
+    options: [
+      { value: 'light', label: 'Light' },
+      { value: 'moderate', label: 'Moderate' },
+    ],
+  });
+  return section('Inputs', name.element, weight.element, protein.element, activity.element);
 }
 
 function controls() {
@@ -92,9 +104,65 @@ function controls() {
         { value: 'never', label: 'Never' },
       ],
     }).element,
+    segmentedControl({
+      label: 'Nothing selected yet',
+      showLabel: true,
+      options: [
+        { value: 'male', label: 'Male' },
+        { value: 'female', label: 'Female' },
+      ],
+    }).element,
     switchControl({ label: 'Pin a fixed budget' }).element,
     switchControl({ label: 'Switch, on', checked: true }).element,
   );
+}
+
+// Enough tags that the filter row scrolls sideways at 390px.
+const SAMPLE_TAGS = ['Breakfast', 'Dinner', 'Mexican', 'Post-workout', 'Smoothies', 'Snacks'];
+
+// Each tap flips it, to check both looks.
+function togglingPill(label, pressed = false) {
+  const pill = tagPill({
+    label,
+    pressed,
+    onClick: () => pill.setAttribute('aria-pressed', String(pill.getAttribute('aria-pressed') !== 'true')),
+  });
+  return pill;
+}
+
+function tags() {
+  const filterResult = document.createElement('p');
+  filterResult.className = 'demo-note';
+  filterResult.setAttribute('role', 'status');
+  filterResult.textContent = 'Filter: All';
+  const filter = tagFilterRow({
+    tags: SAMPLE_TAGS,
+    onChange: (tag) => (filterResult.textContent = `Filter: ${tag ?? 'All'}`),
+  });
+
+  const sheetResult = document.createElement('p');
+  sheetResult.className = 'demo-note';
+  sheetResult.setAttribute('role', 'status');
+  sheetResult.textContent = 'New tag sheet result: none yet';
+  const newTag = newTagPill({
+    onClick: async () => {
+      const tag = await newTagSheet({ tags: SAMPLE_TAGS.slice(2) });
+      sheetResult.textContent = `New tag sheet result: ${tag ?? 'closed without a tag'}`;
+    },
+  });
+
+  const group = tagGroup({
+    label: 'Tags',
+    pills: [
+      togglingPill('Dinner', true),
+      togglingPill('Mexican', true),
+      togglingPill('Off'),
+      togglingPill('A very long tag that should truncate with an ellipsis on one line', true),
+      newTag,
+    ],
+  });
+
+  return section('Tags', filter.element, filterResult, group, sheetResult);
 }
 
 function sheets() {
@@ -161,5 +229,5 @@ function emojiPicker() {
 }
 
 export function render(container) {
-  container.replaceChildren(buttons(), rows(), inputs(), controls(), sheets(), emojiPicker());
+  container.replaceChildren(buttons(), rows(), inputs(), controls(), tags(), sheets(), emojiPicker());
 }

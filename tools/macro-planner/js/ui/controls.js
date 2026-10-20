@@ -1,21 +1,25 @@
-// Segmented control and switch (DESIGN §9). Both are native inputs underneath,
-// so arrow keys, Space and screen readers behave as the platform expects.
+// Segmented control, switch and tag pills (DESIGN §9). The segmented control and switch are
+// native inputs underneath, so arrow keys, Space and screen readers behave as the platform
+// expects; tag pills are toggle buttons.
 
+import { icon } from '../icons.js';
 import { uniqueId } from './ids.js';
 
 // options: [{ value, label }]. Native radios give arrow-key movement within the group.
-export function segmentedControl({ label, options, value, onChange }) {
+// value: the selected option's value, or null for nothing selected yet, like a profile field
+// not filled in: then there's no pill (DESIGN §9). showLabel puts the label above the control,
+// like a form field's; otherwise only screen readers get it.
+export function segmentedControl({ label, options, value = null, showLabel = false, onChange }) {
   const name = uniqueId('segmented');
-  const element = document.createElement('div');
-  element.className = 'segmented';
-  element.setAttribute('role', 'radiogroup');
-  element.setAttribute('aria-label', label);
-  element.style.setProperty('--segment-count', options.length);
+  const group = document.createElement('div');
+  group.className = 'segmented';
+  group.setAttribute('role', 'radiogroup');
+  group.style.setProperty('--segment-count', options.length);
 
   const pill = document.createElement('span');
   pill.className = 'segmented__pill';
   pill.setAttribute('aria-hidden', 'true');
-  element.append(pill);
+  group.append(pill);
 
   const inputs = options.map((option) => {
     const id = uniqueId('segment');
@@ -29,26 +33,42 @@ export function segmentedControl({ label, options, value, onChange }) {
     optionLabel.className = 'segmented__label';
     optionLabel.htmlFor = id;
     optionLabel.textContent = option.label;
-    element.append(input, optionLabel);
+    group.append(input, optionLabel);
     return input;
   });
 
+  // The pill shows up at the first pick rather than sliding in from somewhere.
   function select(next) {
-    const index = Math.max(0, options.findIndex((option) => option.value === next));
-    inputs[index].checked = true;
-    element.style.setProperty('--segment-index', index);
+    const index = options.findIndex((option) => option.value === next);
+    inputs.forEach((input, i) => (input.checked = i === index));
+    pill.hidden = index === -1;
+    if (index !== -1) group.style.setProperty('--segment-index', index);
   }
 
-  element.addEventListener('change', (event) => {
+  group.addEventListener('change', (event) => {
     select(event.target.value);
     onChange?.(event.target.value);
   });
   select(value);
 
+  let element = group;
+  if (showLabel) {
+    const labelEl = document.createElement('span');
+    labelEl.className = 'field__label';
+    labelEl.id = uniqueId('segmented-label');
+    labelEl.textContent = label;
+    group.setAttribute('aria-labelledby', labelEl.id);
+    element = document.createElement('div');
+    element.className = 'field';
+    element.append(labelEl, group);
+  } else {
+    group.setAttribute('aria-label', label);
+  }
+
   return {
     element,
     get value() {
-      return inputs.find((input) => input.checked).value;
+      return inputs.find((input) => input.checked)?.value ?? null;
     },
     set value(next) {
       select(next);
@@ -79,4 +99,76 @@ export function switchControl({ label, checked = false, onChange }) {
 
   element.append(text, input, track);
   return { element, input };
+}
+
+function pillButton(className) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  const label = document.createElement('span');
+  label.className = 'tag-pill__label';
+  button.append(label);
+  return { button, label };
+}
+
+// A meal tag (SPEC §3.3) as a toggle button. pressed: whether it shows as on.
+export function tagPill({ label, pressed = false, onClick }) {
+  const pill = pillButton('tag-pill');
+  pill.label.textContent = label;
+  pill.button.setAttribute('aria-pressed', String(pressed));
+  if (onClick) pill.button.addEventListener('click', onClick);
+  return pill.button;
+}
+
+// The dashed "New tag" pill at the end of a meal's tags. It opens a sheet rather than
+// toggling, so it has no aria-pressed.
+export function newTagPill({ label = 'New tag', onClick }) {
+  const pill = pillButton('tag-pill tag-pill--new');
+  pill.label.textContent = label;
+  pill.button.insertAdjacentHTML('afterbegin', icon('plus'));
+  if (onClick) pill.button.addEventListener('click', onClick);
+  return pill.button;
+}
+
+// Tag pills on a wrapping row, like a meal's tags in the meal editor. label names the group
+// for screen readers.
+export function tagGroup({ label, pills = [] }) {
+  const group = document.createElement('div');
+  group.className = 'tag-group';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', label);
+  group.append(...pills);
+  return group;
+}
+
+// The single-select tag filter over a list of meals: "All", then each tag, on one line that
+// scrolls sideways in its own strip. One pill is always on, and it starts on All, since the
+// filter isn't saved (SPEC §3.3). onChange gets the picked tag, or null for All.
+export function tagFilterRow({ tags, onChange }) {
+  const choices = [{ value: null, label: 'All' }, ...tags.map((tag) => ({ value: tag, label: tag }))];
+  let selected = null;
+
+  const pills = choices.map(({ value, label }) =>
+    tagPill({ label, pressed: value === selected, onClick: () => select(value) }),
+  );
+
+  function select(value) {
+    if (value === selected) return;
+    selected = value;
+    pills.forEach((pill, i) => pill.setAttribute('aria-pressed', String(choices[i].value === value)));
+    onChange?.(value);
+  }
+
+  const strip = document.createElement('div');
+  strip.className = 'tag-filter';
+  strip.setAttribute('role', 'group');
+  strip.setAttribute('aria-label', 'Filter by tag');
+  strip.append(...pills);
+
+  return {
+    element: strip,
+    get value() {
+      return selected;
+    },
+  };
 }

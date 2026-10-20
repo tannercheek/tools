@@ -1,5 +1,5 @@
-// Add food sheet for the meal editor (SPEC §3.3): search, pick a food, then enter its quantity
-// in that food's serving unit. One step shows at a time, in the same sheet.
+// Adding a food (SPEC §3.3, §3.5): search, pick a food, then enter its quantity in that food's
+// serving unit. One step shows at a time, in the same sheet.
 
 import { parseAmount } from '../custom-foods.js';
 import { searchFoods } from '../search.js';
@@ -28,13 +28,13 @@ function noMatch(query, onAdd) {
   });
 }
 
-// foods: bundled and custom foods together; archived ones are left out of the search.
-// store: the app's store, for a custom food made from "No match".
-// Resolves to { foodId, qty } for the food to add, or null if the sheet closes without one.
-export async function addFoodSheet({ foods, store }) {
+// Search, pick a food, then enter its amount, one step at a time in the same element. Used by
+// the meal editor's add food sheet and the add sheet on Today. foods: bundled and custom foods
+// together; archived ones are left out of the search. store: the app's store, for a custom food
+// made from "No match". submitLabel: the amount step's primary button. onAdd(food, qty) runs
+// when it's submitted. Returns { element, searchInput }.
+export function foodPicker({ foods, store, submitLabel, onAdd }) {
   let choices = foods;
-  let added = null;
-  let sheet;
 
   const body = document.createElement('div');
   body.className = 'add-food';
@@ -99,11 +99,10 @@ export async function addFoodSheet({ foods, store }) {
         amount.input.focus();
         return;
       }
-      added = { foodId: food.id, qty };
-      sheet.close();
+      onAdd(food, qty);
     });
 
-    const submit = primaryButton('Add to meal', { block: true });
+    const submit = primaryButton(submitLabel, { block: true });
     submit.type = 'submit';
     const back = secondaryButton('Back to search', { block: true, onClick: () => showSearch(pickedWith) });
     const picked = listRow({ emoji: food.emoji, eyebrow: eyebrow(food), title: food.name, numbers: food });
@@ -116,7 +115,24 @@ export async function addFoodSheet({ foods, store }) {
   }
 
   body.append(search.element, results);
-  sheet = openSheet({ title: 'Add food', content: body, initialFocus: search.input });
+  return { element: body, searchInput: search.input };
+}
+
+// For the meal editor. Resolves to { foodId, qty } for the food to add, or null if the sheet
+// closes without one.
+export async function addFoodSheet({ foods, store }) {
+  let added = null;
+  let sheet;
+  const picker = foodPicker({
+    foods,
+    store,
+    submitLabel: 'Add to meal',
+    onAdd: (food, qty) => {
+      added = { foodId: food.id, qty };
+      sheet.close();
+    },
+  });
+  sheet = openSheet({ title: 'Add food', content: picker.element, initialFocus: picker.searchInput });
   await sheet.closed;
   return added;
 }

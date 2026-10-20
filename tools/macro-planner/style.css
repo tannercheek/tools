@@ -106,15 +106,46 @@ body {
   padding-inline-start: calc(var(--gutter) - var(--space-3));
 }
 
+/* Today's date stack: a heading holding one button, which goes back to today. */
 .date-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  margin: 0;
   min-width: 0;
 }
 
+.date-stack__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  min-height: var(--tap-min);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.date-stack__button:focus-visible {
+  outline: var(--focus-width) solid var(--color-ink);
+  outline-offset: var(--focus-offset);
+}
+
+/* Screen title type; a long weekday truncates rather than pushing the header wider. */
+.date-stack__title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-2xl);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-snug);
+}
+
 .date-stack__date {
-  margin: 0;
   font-size: var(--font-size-sm);
   line-height: var(--line-sm);
   font-weight: var(--weight-semibold);
@@ -227,6 +258,13 @@ body {
   gap: var(--section-gap);
 }
 
+/* The tag filter row over the saved meals (DESIGN §9). */
+.meals-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
 /* ---------- Foods (DESIGN §8, §10) ---------- */
 
 .food-search {
@@ -236,15 +274,24 @@ body {
 }
 
 .food-search__note,
-.meals__note {
+.meals__note,
+.plan__note,
+.today__note,
+.add-entry__note {
   margin: 0;
   color: var(--color-text-2);
 }
 
-/* ---------- Custom food form, new meal sheet and meal editor name (DESIGN §10) ---------- */
+/* ---------- Custom food form, new meal and new tag sheets, meal editor name (DESIGN §10) ---------- */
 
 .food-form,
-.meal-form {
+.meal-form,
+.tag-form,
+.slot-form,
+.slot-actions__custom,
+.budget-form,
+.off-plan-form,
+.quick-form {
   display: flex;
   flex-direction: column;
   gap: var(--stack-gap);
@@ -268,12 +315,148 @@ body {
   flex: none;
 }
 
-/* Serving amount and unit, then the four numbers, two to a row. */
-.food-form__grid {
+/* Serving amount and unit, then the four numbers, two to a row. Settings uses the same for
+   feet and inches, and for the four targets, and quick numbers and a pinned budget for theirs. */
+.food-form__grid,
+.settings__grid,
+.numbers-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: var(--stack-gap);
+}
+
+/* ---------- Settings: profile and targets (SPEC §3.1) ---------- */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+.settings__section,
+.settings__warnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+.settings__note {
+  margin: 0;
+  color: var(--color-text-2);
+}
+
+/* Under an overridden target: what Reset would give, then Reset, wrapping under it when the
+   column is narrow. */
+.settings__calculated {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
+/* A warning, not a validation error, so it stays monochrome (DESIGN §2). */
+.settings__warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: var(--numeric);
+}
+
+/* ---------- Settings: meal slots (SPEC §3.4) ---------- */
+
+.slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The label over the name box, with move up, move down and remove on the box's line and any
+   error under both. */
+.slot-editor > .field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-2);
+}
+
+.slot-editor > .field > * {
+  grid-column: 1 / -1;
+}
+
+.slot-editor > .field > .input-box {
+  grid-column: 1;
+}
+
+.slot-editor > .field > .slot-editor__controls {
+  display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+/* ---------- Today (SPEC §3.6) ---------- */
+
+/* The rings, then the day's slots. */
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+/* A locked day's entries, then its Add. */
+.today__slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* ---------- Plan (SPEC §3.4) ---------- */
+
+.plan,
+.meal-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* One card, one question: what the template adds up to (DESIGN §1). Its mini rings, then one
+   line of what's left for flex. */
+.plan-totals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+  padding: var(--card-pad);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* "1,597 kcal left for flex": secondary info, with the number in primary text (DESIGN §3). */
+.plan-totals__left {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
+.plan-totals__kcal {
+  color: var(--color-text);
+  font-weight: var(--weight-heavy);
 }
 
 /* ---------- Meal editor (DESIGN §8 saved meal, ingredient row) ---------- */
@@ -317,6 +500,20 @@ body {
 
 .add-food,
 .add-food__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* ---------- Add sheet (Today: a flex slot's Log) ---------- */
+
+/* Full height like the add food sheet, so switching between meal, food and numbers doesn't
+   resize the sheet. */
+.sheet__panel:has(> .add-entry) {
+  height: calc(100% - var(--header-h));
+}
+
+.add-entry {
   display: flex;
   flex-direction: column;
   gap: var(--stack-gap);

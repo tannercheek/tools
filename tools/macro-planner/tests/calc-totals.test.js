@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import {
   foodTotals,
   mealTotals,
-  dayTotals,
+  entriesTotals,
   remaining,
   scaleTotals,
   roundTotals,
   displayRemaining,
+  ringFill,
 } from '../js/calc.js';
 
 // Float math: compare to within a hair, not exactly.
@@ -102,13 +103,13 @@ const ENTRIES = [
   { id: 'e3', slotId: 's3', label: 'Takeaway', emoji: '🍽️', kcal: 850, protein: 40, fat: 35, carbs: 90, source: 'quick' },
 ];
 
-test('day totals add up the log entries’ own numbers', () => {
-  assertTotals(dayTotals(ENTRIES), { kcal: 1320, protein: 63, fat: 50.6, carbs: 147.5 });
+test('entries totals add up the entries’ own numbers', () => {
+  assertTotals(entriesTotals(ENTRIES), { kcal: 1320, protein: 63, fat: 50.6, carbs: 147.5 });
 });
 
-test('an empty day totals zero, with no entries or no day at all', () => {
-  assert.deepEqual(dayTotals([]), ZERO);
-  assert.deepEqual(dayTotals(), ZERO);
+test('no entries total zero, whether the list is empty or missing', () => {
+  assert.deepEqual(entriesTotals([]), ZERO);
+  assert.deepEqual(entriesTotals(), ZERO);
 });
 
 // --- Remaining ---
@@ -116,7 +117,7 @@ test('an empty day totals zero, with no entries or no day at all', () => {
 const TARGETS = { kcal: 2759, protein: 144, fat: 689.75 / 9, carbs: 373.3125, warnings: [] };
 
 test('remaining is target minus eaten, per number', () => {
-  assertTotals(remaining(TARGETS, dayTotals(ENTRIES)), {
+  assertTotals(remaining(TARGETS, entriesTotals(ENTRIES)), {
     kcal: 1439,
     protein: 81,
     fat: 689.75 / 9 - 50.6,
@@ -125,11 +126,11 @@ test('remaining is target minus eaten, per number', () => {
 });
 
 test('on an empty day, remaining is the whole target', () => {
-  assertTotals(remaining(TARGETS, dayTotals()), { kcal: 2759, protein: 144, fat: 689.75 / 9, carbs: 373.3125 });
+  assertTotals(remaining(TARGETS, entriesTotals()), { kcal: 2759, protein: 144, fat: 689.75 / 9, carbs: 373.3125 });
 });
 
 test('remaining goes negative when over target', () => {
-  const big = scaleTotals(dayTotals(ENTRIES), 3);
+  const big = scaleTotals(entriesTotals(ENTRIES), 3);
   const left = remaining(TARGETS, big);
   assertTotals(left, { kcal: -1201, protein: -45, fat: 689.75 / 9 - 151.8, carbs: -69.1875 });
 });
@@ -155,7 +156,7 @@ test('totals sum raw values and round once, not round each entry first', () => {
   // Three entries of 0.5 g fat: raw 1.5 → shows 2. Rounding each first would show 3.
   // Three of 0.4 g protein: raw 1.2 → shows 1. Rounding each first would show 0.
   const small = { kcal: 3.4, protein: 0.4, fat: 0.5, carbs: 0 };
-  const day = dayTotals([small, small, small]);
+  const day = entriesTotals([small, small, small]);
   assertTotals(day, { kcal: 10.2, protein: 1.2, fat: 1.5, carbs: 0 });
   assert.deepEqual(roundTotals(day), { kcal: 10, protein: 1, fat: 2, carbs: 0 });
 });
@@ -184,6 +185,38 @@ test('when shown eaten equals shown target, it’s "0 left", never "0 over"', ()
 });
 
 test('nothing eaten leaves the whole shown target', () => {
-  const left = displayRemaining(TARGETS.fat, dayTotals().fat);
+  const left = displayRemaining(TARGETS.fat, entriesTotals().fat);
   assert.deepEqual(left, { amount: 77, over: false });
+});
+
+// --- Ring fill ---
+
+test('a ring fills by total over target: 0%, 50% and 100%', () => {
+  assert.equal(ringFill(0, 2600), 0);
+  assert.equal(ringFill(1300, 2600), 0.5);
+  assert.equal(ringFill(2600, 2600), 1);
+});
+
+test('over target, a ring stays full rather than lapping', () => {
+  assert.equal(ringFill(3380, 2600), 1);
+  assert.equal(ringFill(247, 190), 1);
+});
+
+test('a ring fills by the shown numbers, so it agrees with them', () => {
+  // Shows 2,600 of 2,600 and "0 left", so the arc is full, though raw it's a hair under.
+  assert.equal(ringFill(2599.6, 2600.4), 1);
+  // Shows 38 of 75 (37.5 rounds up), not raw 37.5 / 75.
+  assert.equal(ringFill(37.5, 75), 38 / 75);
+});
+
+test('a total that shows as 0 draws no arc', () => {
+  assert.equal(ringFill(0.4, 75), 0);
+  assert.equal(ringFill(0.5, 75), 1 / 75);
+});
+
+test('a target of 0: nothing is no arc, anything is over', () => {
+  assert.equal(ringFill(0, 0), 0);
+  assert.equal(ringFill(12, 0), 1);
+  // A target that shows as 0 counts as 0.
+  assert.equal(ringFill(12, 0.4), 1);
 });

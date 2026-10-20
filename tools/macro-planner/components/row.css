@@ -40,6 +40,35 @@
   outline-offset: var(--focus-offset);
 }
 
+/* Placeholder row, like Plan's empty slot (DESIGN §8): no fill and a dashed outline. Its dashed
+   tile follows .emoji-tile below. */
+.row--placeholder {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+}
+
+/* Skipped slot (DESIGN §8): the meal stays, its title and numbers quieter. No strike-through, no colour. */
+.row--muted .row__title,
+.row--muted .row__numbers {
+  color: var(--color-text-2);
+}
+
+/* Notice row, like Today's off-plan line (DESIGN §8): sunken, no tile. The sentence wraps
+   rather than truncating, so the date always shows. */
+.row--notice {
+  background: var(--color-surface-sunken);
+}
+
+.row__notice {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-base);
+  font-weight: var(--weight-bold);
+}
+
 /* Quiet like the header's sync icon, and a size down: a hint, not a button of its own. */
 .row__action-icon {
   display: flex;
@@ -52,17 +81,28 @@
   height: var(--icon-size-sm);
 }
 
-/* Ingredient row: the quantity field and a remove button. The name wraps rather than
-   truncating, and when it would get narrower than --ingredient-name-min, the controls move
-   to a line of their own under it, kept to the right. The field's error message takes the
-   last line. */
-.row--ingredient {
-  flex-wrap: wrap;
-  justify-content: flex-end;
+/* Ingredient row: the name, then the quantity field on a line of its own under it, so every
+   row in the list has the same layout and the fields line up. The name wraps rather than
+   truncating. The tile stays with the name; the remove button is centred on the row, like
+   every other row's trailing control. The field's error message goes under the field. */
+.row--ingredient > .emoji-tile {
+  align-self: flex-start;
 }
 
+.row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* As tall as the tile, so a short name stays centred on it. */
 .row--ingredient .row__text {
-  flex: 1 1 var(--ingredient-name-min);
+  align-self: stretch;
+  justify-content: center;
+  min-height: var(--tile-size);
 }
 
 .row--ingredient .row__title {
@@ -70,24 +110,13 @@
   overflow-wrap: break-word;
 }
 
-.row__controls {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--inline-gap);
-}
-
-.row__controls > .field {
+.row__body > .field {
   display: contents;
 }
 
 .row--ingredient .input {
   flex: none;
   width: var(--qty-input-w);
-}
-
-.row--ingredient .field__error {
-  flex-basis: 100%;
 }
 
 .emoji-tile {
@@ -102,6 +131,24 @@
   border-radius: var(--radius-md);
   font-size: var(--emoji-size);
   line-height: var(--emoji-size);
+}
+
+/* Added to a slot (DESIGN §14): the tile lifts and tilts, then springs back. */
+.emoji-tile--hop {
+  animation: tile-hop var(--dur-hop) var(--ease-spring);
+}
+
+@keyframes tile-hop {
+  50% {
+    transform: translateY(var(--hop-lift)) rotate(var(--hop-tilt));
+  }
+}
+
+/* A placeholder row's tile: dashed, no fill, holding an outline icon instead of an emoji. */
+.emoji-tile--placeholder {
+  background: transparent;
+  border-style: dashed;
+  color: var(--color-text-2);
 }
 
 .row__text {
@@ -172,3 +219,39 @@
 .macro-dot--protein { background: var(--macro-protein); }
 .macro-dot--fat { background: var(--macro-fat); }
 .macro-dot--carbs { background: var(--macro-carbs); }
+
+/* What's been added to a slot, under its numbers (DESIGN §8): plain lines of emoji, label and
+   kcal. A long label truncates, so the kcal always shows. */
+.row__extras {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-1);
+}
+
+.row__extra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
+.row__extra-emoji,
+.row__extra-kcal {
+  flex: none;
+}
+
+.row__extra-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__extra-kcal {
+  color: var(--color-text);
+  font-weight: var(--weight-heavy);
+}

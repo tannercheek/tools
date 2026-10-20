@@ -29,7 +29,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       _Done when:_ page loads at `/tools/macro-planner/` with a title, Nunito fonts and no console errors, in light and dark; `node --test` passes.
 
 - [x] **0.2 App shell**
-      Header and tab bar per DESIGN §11. On Today, the header has previous/next-day icon buttons around the date stack (inert until 5.3) and Settings on the right. Other tabs show the screen title and Settings. The fixed bottom tab bar has five equal items (Today · Plan · Foods · Meals · Stats), each a Lucide icon over a label, with `aria-current="page"` on the active one. Settings opens as a pushed screen with a back button. Add the icons to `js/icons.js` and Lucide's license as `js/LICENSE-lucide.txt`. A tiny router swaps view modules, each rendering a placeholder heading. Hash-based routes (`#/today` etc.) so refresh keeps your place.
+      Header and tab bar per DESIGN §11. On Today, the header has previous/next-day icon buttons around the date stack (inert until 5.4) and Settings on the right. Other tabs show the screen title and Settings. The fixed bottom tab bar has five equal items (Today · Plan · Foods · Meals · Stats), each a Lucide icon over a label, with `aria-current="page"` on the active one. Settings opens as a pushed screen with a back button. Add the icons to `js/icons.js` and Lucide's license as `js/LICENSE-lucide.txt`. A tiny router swaps view modules, each rendering a placeholder heading. Hash-based routes (`#/today` etc.) so refresh keeps your place.
       _Done when:_ every tab and Settings shows its placeholder; back/forward and refresh work; header and tab bar match DESIGN §11 at 360px in light and dark.
 
 - [x] **0.3 Base components**
@@ -129,44 +129,48 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 5 — Profile, Plan and Today
 
-- [ ] **5.0 Profile and targets**
+- [x] **5.0 Profile and targets**
       Profile form with live calculated targets, per-target overrides, reset to calculated, units toggle. Every field starts empty (SPEC §5): age, height and weight show placeholders naming the field ("Age", "Height", "Weight"), and sex, activity, goal and rate start with nothing selected, which needs the 0.3 segmented control to allow no selection (DESIGN §9). A pure helper in `calc.js` returns the targets, or `null` until the profile is complete (SPEC §3.1). The weight field shows the current weight; entering a new one logs a weigh-in for today (SPEC §3.1). First launch opens here.
       _Done when:_ a first launch shows every field empty and no targets; targets appear once the last field is filled; tests cover the helper with each field missing and with maintain needing no rate; changing weight or goal updates targets immediately everywhere; a weight entered here appears as today's weigh-in.
 
-- [ ] **5.1 Rings**
+- [x] **5.1 Meal tags**
+      Pure `setMealTags`, `allTags(meals)` and `filterMeals(meals, tag)` in `saved-meals.js` (SPEC §3.3); `duplicateMeal` copies the tags. A reusable tag pill and single-select filter row in `js/ui/controls.js` (DESIGN §9), shown on `#/components`. The Meals list gets the filter row above its rows; the meal editor gets the tag row under the name and the "New tag" sheet. The meal pickers in later steps reuse the filter row.
+      _Done when:_ tests cover trimming, case-insensitive reuse of an existing spelling, no duplicates on a meal, the A–Z union, filtering, meals saved without `tags`, and a duplicate keeping its tags; tagging two meals shows the filter row and picking a tag filters the list; removing a tag's last use drops its pill and the filter goes back to All; the row scrolls sideways inside its strip with no page scroll at 390px, in light and dark.
+
+- [x] **5.2 Rings**
       SVG ring component per DESIGN §6: total / target, remaining, over-target state, and the no-targets state (DESIGN §13). Render a demo on Today.
       _Done when:_ rings look right at 0%, 50%, 100% and 130%, and with no targets.
 
-- [ ] **5.2 Slots and template**
-      Slot count (3–6), names and order (in Settings). Plan view assigns a meal or "flex" to each slot.
+- [x] **5.3 Slots and template**
+      Slot count (3–6), names and order (in Settings). Plan view assigns a meal or "flex" to each slot; its meal picker has the 5.1 tag pill row (SPEC §3.3).
       _Done when:_ the template persists and survives a reload.
 
-- [ ] **5.3 Today, read-only**
+- [x] **5.4 Today, read-only**
       A pure `dayTotal` (SPEC §3.5: planned meals after changes, pinned budgets of open flex slots, added entries; entries only when off plan or locked). Rings show the day's total; slot list shows planned meals and totals; date switcher (prev / next / tap the date for today). Previous stops at 7 days ago; next has no limit. "No meals planned" empty state from DESIGN §13.
       _Done when:_ tests cover `dayTotal` for a plain template, a pinned budget, off plan and a locked day; any date in range shows the template and the rings show its totals; previous is disabled at 7 days ago.
 
-- [ ] **5.4 Skip, portion and lock-in**
-      Tapping a planned slot opens its actions sheet (DESIGN §8): Skip, Portion (0.5×, 1×, 1.5×, custom), As planned; Swap and Add are wired in 5.5 and 5.7. Changes go in the day's `changes`. Pure `lockDay(day, template, meals, foods)` writes the snapshot entries (SPEC §3.5); app load and a date change lock every unlocked past day in the window from `startedOn` on. A locked day lists its entries with remove.
+- [x] **5.5 Skip, portion and lock-in**
+      Tapping a planned slot opens its actions sheet (DESIGN §8): Skip, Portion (0.5×, 1×, 1.5×, custom), As planned; Swap and Add are wired in 5.6 and 5.7. Changes go in the day's `changes`. Pure `lockDay(day, template, meals, foods)` writes the snapshot entries (SPEC §3.5); app load and a date change lock every unlocked past day in the window from `startedOn` on. A locked day lists its entries with remove.
       _Done when:_ tests cover `lockDay` with a swap, a skip, a 1.5× portion, a pinned budget, an off-plan day and an extra entry; a skipped slot drops out of the rings; editing a meal after its day is locked does **not** change that day; a first run doesn't lock in days before `startedOn`.
 
-- [ ] **5.5 Swaps**
-      Swap a slot's meal for one day (stored in `changes`); "make this the default" updates the template.
+- [x] **5.6 Swaps**
+      Swap a slot's meal for one day (stored in `changes`); "make this the default" updates the template. The meal picker has the 5.1 tag pill row (SPEC §3.3).
       _Done when:_ a swap affects only that date unless made default.
 
-- [ ] **5.6 Flex slot**
-      Shows the gap: targets minus the rest of the day; optional pinned budget of four numbers (kcal, P, F, C) on the template slot, set from Plan; filled by adding a meal, a food or quick numbers. With more than one open flex slot, each shows the full remaining; nothing is split (SPEC §3.4).
-      _Done when:_ with no changes, it shows the targets minus the planned meals; it updates live when another slot is swapped, skipped or re-portioned; with two flex slots, adding to one updates what the other shows; an open flex slot on a past day just shows as open; with no targets, an open flex slot shows as open with no remaining.
+- [x] **5.7 Flex slot**
+      Shows the gap: targets minus the rest of the day; optional pinned budget of four numbers (kcal, P, F, C) on the template slot, set from Plan. With more than one open flex slot, each shows the full remaining; nothing is split (SPEC §3.4). The add sheet (DESIGN §8): a saved meal (picker with the 5.1 tag pill row, SPEC §3.3), a food (search, qty) or quick numbers (kcal + macros + optional label), opened by an open flex slot's Log and by "Add to this slot". Once something is in it, a flex slot is filled and shows its total; tapping it lists its entries, each with remove (confirm sheet), plus Add to this slot. A planned slot's actions sheet lists its extras with remove and gets Add to this slot; extras show under the meal.
+      _Done when:_ with no changes, it shows the targets minus the planned meals; it updates live when another slot is swapped, skipped or re-portioned; with two flex slots, adding to one updates what the other shows; an open flex slot on a past day just shows as open; with no targets, an open flex slot shows as open with no remaining; a filled flex slot shows its total, and removing its last entry opens it again; an extra added to a planned slot shows under the meal and counts in the rings; entries survive reload.
 
-- [ ] **5.7 Quick-add and Recent**
-      The add sheet: a saved meal, a food (search, qty) or quick numbers (kcal + macros + optional label), into the chosen slot. A "Recent" list in the same sheet shows entries from the last 7 days, newest first, merged when label and numbers match; one tap adds it again (SPEC §3.5). Added to a planned slot, an entry is an extra alongside the meal.
-      _Done when:_ all four show up in rings and survive reload; an entry added on a past locked day shows in that day; Recent still shows an entry whose meal has since been deleted.
+- [x] **5.8 Recent and past days**
+      A Recent segment in the add sheet (5.7), alongside Meal, Food and Quick, shows what was added in the last 7 days, newest first, merged when label and numbers match; one tap adds it again to the slot (SPEC §3.5). Planned meals and pinned budgets aren't listed, since they're the plan, not something added. The sheet opens on Recent when it has entries, otherwise on Meal. A locked past day gets Add, which opens the same sheet for a chosen slot (SPEC §3.6).
+      _Done when:_ a Recent entry shows up in the rings and survives reload; an entry added on a past locked day shows in that day; Recent still shows an added entry whose meal has since been deleted, but not the plan a day locked in.
 
-- [ ] **5.8 Plan totals**
+- [x] **5.9 Plan totals**
       On Plan, a totals card above the slots: what the template adds up to (its meals plus any pinned flex budgets) against targets, and one "left for flex" figure that isn't split between flex slots (SPEC §3.4).
       _Done when:_ changing a slot's meal updates the card straight away, and a plan over target shows "over", never a negative number; with no targets, it shows the template's totals only.
 
-- [ ] **5.9 Off plan**
-      "Off plan until [date]" sheet from Today (default today, up to 30 days ahead) sets `offPlan: true` on each of those days. On an off-plan day every slot behaves as a flex slot with the 5.6 remaining logic, planned meals, pinned budgets and changes are ignored, and an "Off plan" line shows "Back on plan", which clears it from today on (SPEC §3.4).
+- [x] **5.10 Off plan**
+      "Off plan until [date]" sheet from Today (default today, up to 30 days ahead) sets `offPlan: true` on each of those days. On an off-plan day every slot behaves as a flex slot with the 5.7 remaining logic, planned meals, pinned budgets and changes are ignored, and an "Off plan" line shows "Back on plan", which clears it from today on (SPEC §3.4).
       _Done when:_ setting it for three days makes all three all-flex while the template is unchanged; logging into one slot updates what the others show; "Back on plan" restores the template from today, and an earlier off-plan day stays off plan.
 
 ## Phase 6 — Settings and Stats

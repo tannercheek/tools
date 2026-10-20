@@ -4,7 +4,10 @@ import { icon } from './icons.js';
 import { TABS, hashFor, isPushed, routeLabel, tabFor } from './routes.js';
 import { iconButton, iconLink } from './ui/buttons.js';
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const todayDateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
+const monthDayFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+const spokenDateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
 function screenTitle(text) {
   const title = document.createElement('h1');
@@ -13,26 +16,75 @@ function screenTitle(text) {
   return title;
 }
 
-// Previous / next day stay inert until step 5.3 wires up the date switcher.
-function todayStart() {
-  const stack = document.createElement('div');
-  stack.className = 'date-stack';
-  const date = document.createElement('p');
-  date.className = 'date-stack__date';
-  date.textContent = dateFormat.format(new Date());
-  stack.append(screenTitle('Today'), date);
-  return [iconButton('chevron-left', 'Previous day'), stack, iconButton('chevron-right', 'Next day')];
+function span(className) {
+  const element = document.createElement('span');
+  element.className = className;
+  return element;
 }
 
-// syncStatus: the header's sync status element (js/sync-status.js).
+// 'YYYY-MM-DD' as local midnight, for formatting.
+function calendarDate(date) {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+// Today's date switcher (SPEC §3.6): previous and next day around the date stack, whose title is
+// a button back to today (DESIGN §11). The Today view drives it: connect() for the taps, show()
+// for the date.
+function dateSwitcher() {
+  const previous = iconButton('chevron-left', 'Previous day');
+  const next = iconButton('chevron-right', 'Next day');
+  const title = span('date-stack__title');
+  const dateLine = span('date-stack__date');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'date-stack__button';
+  button.append(title, dateLine);
+  const heading = document.createElement('h1');
+  heading.className = 'date-stack';
+  heading.append(button);
+
+  let handlers = {};
+  previous.addEventListener('click', () => handlers.onPrevious?.());
+  next.addEventListener('click', () => handlers.onNext?.());
+  button.addEventListener('click', () => handlers.onToday?.());
+
+  return {
+    elements: [previous, heading, next],
+
+    // { onPrevious, onNext, onToday }, each called when its control is tapped.
+    connect(callbacks) {
+      handlers = callbacks;
+    },
+
+    // date: 'YYYY-MM-DD'. isToday titles it "Today" rather than the weekday. canGoBack is false
+    // at the oldest day kept, which disables previous.
+    show({ date, isToday, canGoBack }) {
+      const day = calendarDate(date);
+      title.textContent = isToday ? 'Today' : weekdayFormat.format(day);
+      // The weekday is already the title on any other day.
+      dateLine.textContent = (isToday ? todayDateFormat : monthDayFormat).format(day);
+      const spoken = spokenDateFormat.format(day);
+      button.setAttribute('aria-label', isToday ? `Today, ${spoken}` : `${spoken}, go to today`);
+      // A disabled button drops focus, so it moves to the date first.
+      if (!canGoBack && document.activeElement === previous) button.focus();
+      previous.disabled = !canGoBack;
+    },
+  };
+}
+
+// syncStatus: the header's sync status element (js/sync-status.js). Returns { dateSwitcher } on
+// Today, for the view to drive, and {} on every other screen.
 export function renderHeader(header, route, { onBack, syncStatus }) {
   const start = document.createElement('div');
   start.className = 'app-header__start';
   const end = document.createElement('div');
   end.className = 'app-header__end';
 
+  const parts = {};
   if (route === 'today') {
-    start.append(...todayStart());
+    parts.dateSwitcher = dateSwitcher();
+    start.append(...parts.dateSwitcher.elements);
   } else if (isPushed(route)) {
     const back = iconButton('chevron-left', 'Back');
     back.addEventListener('click', onBack);
@@ -46,6 +98,7 @@ export function renderHeader(header, route, { onBack, syncStatus }) {
 
   header.dataset.layout = route === 'today' ? 'today' : isPushed(route) ? 'pushed' : 'tab';
   header.replaceChildren(start, end);
+  return parts;
 }
 
 // Built once so focus on a tab survives navigation; updateTabBar only moves aria-current.

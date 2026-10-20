@@ -3,12 +3,15 @@ import assert from 'node:assert/strict';
 import {
   CoreDocUnavailableError,
   DAYS_DOC_ID,
+  DaysUnavailableError,
   createCoreDoc,
   createDays,
   emptyDay,
   loadCoreDoc,
   localDate,
+  oldestKeptDate,
   pruneDays,
+  removeEntry,
   updateCoreDoc,
 } from '../js/data.js';
 import { CORE_DOC_ID, createLocalPersist, createLocalStore, createPersonalStore } from '../js/store.js';
@@ -209,6 +212,12 @@ test('saving one day leaves the other days as they were', async () => {
 
 // --- The rolling window ---
 
+test('the oldest day kept is 7 days ago, across month and year ends', () => {
+  assert.equal(oldestKeptDate('2026-10-15'), '2026-10-08');
+  assert.equal(oldestKeptDate('2026-03-03'), '2026-02-24');
+  assert.equal(oldestKeptDate('2026-01-03'), '2025-12-27');
+});
+
 test('the prune keeps 7 days ago and drops 8 days ago', () => {
   const kept = pruneDays({ '2026-10-07': 'x', '2026-10-08': 'x', '2026-10-15': 'x' }, '2026-10-15');
   assert.deepEqual(Object.keys(kept), ['2026-10-08', '2026-10-15']);
@@ -265,4 +274,64 @@ test('getDay and saveDay reject a date that isn’t YYYY-MM-DD', async () => {
   await assert.rejects(days.getDay('2026-10-1'), RangeError);
   await assert.rejects(days.saveDay('Oct 15', emptyDay(), '2026-10-15'), RangeError);
   await assert.rejects(days.saveDay('2026-10-15', emptyDay(), 'today'), RangeError);
+});
+
+test('updateDays saves the changed days doc, pruned', async () => {
+  const store = freshStore();
+  const days = createDays(store);
+  await days.updateDays(() => ({ '2026-10-01': dayWith('old'), '2026-10-14': dayWith('yesterday') }), '2026-10-15');
+  assert.deepEqual(Object.keys(await store.load(DAYS_DOC_ID)), ['2026-10-14']);
+});
+
+test('updateDays saves nothing when the change returns the same doc', async () => {
+  const store = freshStore();
+  await store.save(DAYS_DOC_ID, { '2026-10-01': dayWith('old') });
+  await createDays(store).updateDays((daysDoc) => daysDoc, '2026-10-15');
+  assert.deepEqual(Object.keys(await store.load(DAYS_DOC_ID)), ['2026-10-01'], 'not even pruned');
+});
+
+// --- Removing an entry ---
+
+test('removeEntry takes out only that entry, and leaves the day passed in as it was', () => {
+  const day = { ...dayWith('a'), entries: [...dayWith('a').entries, ...dayWith('b').entries], locked: true };
+  const next = removeEntry(day, 'a');
+  assert.deepEqual(next.entries.map((entry) => entry.id), ['b']);
+  assert.equal(next.locked, true);
+  assert.equal(day.entries.length, 2);
+  assert.deepEqual(removeEntry(next, 'missing').entries, next.entries);
+});
+
+// --- Days offline guard ---
+
+// An offline store reading this device's cache. With daysDoc given, the cache holds a days doc
+// this device loaded before.
+async function offlineStore(storage, daysDoc) {
+  if (daysDoc) await (await createPersonalStore(createLocalPersist(storage))).save(DAYS_DOC_ID, daysDoc);
+  return createPersonalStore(createLocalPersist(storage));
+}
+
+test('offline on a device that never loaded the days doc, saveDay and updateDays save nothing', async () => {
+  const storage = createFakeStorage();
+  const days = createDays(await offlineStore(storage));
+  await assert.rejects(days.saveDay('2026-10-15', dayWith('today'), '2026-10-15'), DaysUnavailableError);
+  await assert.rejects(days.updateDays(() => ({ '2026-10-15': dayWith('today') }), '2026-10-15'), {
+    name: 'DaysUnavailableError',
+    message: /nothing was saved/,
+  });
+  assert.equal(storage.length, 0);
+});
+
+test('offline on a device that loaded the days doc before, saveDay builds on the cached copy', async () => {
+  const storage = createFakeStorage();
+  const days = createDays(await offlineStore(storage, { '2026-10-14': dayWith('yesterday') }));
+  await days.saveDay('2026-10-15', dayWith('today'), '2026-10-15');
+  const cached = await (await offlineStore(storage)).load(DAYS_DOC_ID);
+  assert.deepEqual(Object.keys(cached).sort(), ['2026-10-14', '2026-10-15']);
+});
+
+test('online, a first save of the days doc goes through', async () => {
+  const persist = createFakePersist();
+  const days = createDays(await createPersonalStore(persist.openDoc));
+  await days.saveDay('2026-10-15', dayWith('today'), '2026-10-15');
+  assert.equal((await days.getDay('2026-10-15')).entries[0].label, 'today');
 });

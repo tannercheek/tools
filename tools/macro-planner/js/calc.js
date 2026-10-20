@@ -97,6 +97,22 @@ export function targets(profile, overrides = {}) {
   return { kcal, protein, fat, carbs, warnings };
 }
 
+// What targets need from the core doc's profile (SPEC §3.1). The rate is checked apart,
+// since maintain doesn't use one.
+const PROFILE_KEYS = ['sex', 'age', 'heightCm', 'activity', 'goal'];
+
+// Targets from the saved profile, the current weight (the latest weigh-in, or null before
+// the first) and overrides. null until the profile is complete: until then there are no
+// targets, calculated or overridden.
+export function profileTargets(profile, weightKg, overrides = {}) {
+  const incomplete =
+    PROFILE_KEYS.some((key) => profile[key] == null) ||
+    weightKg == null ||
+    (profile.goal !== 'maintain' && profile.rateKgPerWeek == null);
+  if (incomplete) return null;
+  return targets({ ...profile, weightKg }, overrides);
+}
+
 // --- Totals ---
 // A totals object is { kcal, protein, fat, carbs }: kcal and grams, unrounded.
 
@@ -131,9 +147,51 @@ export function mealTotals(meal, getFood) {
   );
 }
 
-// Log entries carry their own snapshot numbers. A day with no log doc has no entries.
-export function dayTotals(entries = []) {
+// Entries carry their own snapshot numbers, so they add up alone. No entries total zero. For a
+// day's whole total, plan included, use dayTotal.
+export function entriesTotals(entries = []) {
   return sumTotals(entries);
+}
+
+// What one slot adds to the day (SPEC §3.5): its meal at its portion, or an open flex slot's
+// pinned budget. A skipped slot, an open flex slot with no budget and a filled flex slot add
+// nothing of their own; what's added to a slot counts in dayTotal. plan: one of slots.js's daySlots.
+export function slotTotals(plan, getFood) {
+  if (plan.skipped) return sumTotals([]);
+  if (plan.meal) return scaleTotals(mealTotals(plan.meal, getFood), plan.portion);
+  const open = plan.entries.length === 0;
+  return open && plan.budget ? sumTotals([plan.budget]) : sumTotals([]);
+}
+
+// The day's total (SPEC §3.5): the planned meals after swaps, skips and portions, the pinned
+// budgets of open flex slots, and every added entry, including any whose slot is gone. Off plan,
+// the plan is ignored; locked, it's already written into the entries. Either way only the
+// entries count. plans: slots.js's daySlots for the same day.
+export function dayTotal(day, plans, getFood) {
+  const entries = entriesTotals(day.entries);
+  if (day.offPlan || day.locked) return entries;
+  return sumTotals([...plans.map((plan) => slotTotals(plan, getFood)), entries]);
+}
+
+// The gap a flex slot shows (SPEC §3.4): the targets minus the rest of the day, which is the
+// day's total without what the slot adds itself, its pinned budget or its own entries. Every
+// flex slot shows the whole gap, so nothing is split between them. Each key is
+// displayRemaining's { amount, over }, so it agrees with the rings. null with no targets.
+export function flexGap(targetValues, day, plans, slotId, getFood) {
+  if (!targetValues) return null;
+  const others = plans.filter((plan) => plan.id !== slotId);
+  const entries = (day.entries ?? []).filter((entry) => entry.slotId !== slotId);
+  const rest = dayTotal({ ...day, entries }, others, getFood);
+  return displayRemainingTotals(targetValues, rest);
+}
+
+// Plan's "left for flex" (SPEC §3.4): the targets minus what the template adds up to, its meals
+// and pinned budgets. One figure for every flex slot together, never split between them. Each
+// key is displayRemaining's { amount, over }, so a plan over target shows "over", never a
+// negative. null with no targets.
+export function leftForFlex(targetValues, templateTotals) {
+  if (!targetValues) return null;
+  return displayRemainingTotals(targetValues, templateTotals);
 }
 
 // Negative means over target. targets is the result of targets().
@@ -155,6 +213,21 @@ export function displayRemaining(target, eaten) {
   return { amount: Math.abs(left), over: left < 0 };
 }
 
+function displayRemainingTotals(targetValues, totals) {
+  return Object.fromEntries(TOTAL_KEYS.map((key) => [key, displayRemaining(targetValues[key], totals[key])]));
+}
+
+// How much of a ring's arc to draw, from 0 to 1 (DESIGN §6): the shown total over the shown
+// target, so the arc agrees with the numbers beside it. Over target stays full. A total that
+// shows as 0 draws nothing, and anything above a target of 0 is over it.
+export function ringFill(total, target) {
+  const shownTotal = Math.round(total);
+  const shownTarget = Math.round(target);
+  if (shownTotal <= 0) return 0;
+  if (shownTarget <= 0) return 1;
+  return Math.min(shownTotal / shownTarget, 1);
+}
+
 // --- Stats ---
 // Stats cover the 7 days before today. A day is the shape in data.js; only its
 // entries count. One with no entries (or no record at all) is empty: left out, not counted as zero.
@@ -166,7 +239,7 @@ function isLogged(day) {
 export function averageDailyTotals(days) {
   const logged = days.filter(isLogged);
   if (logged.length === 0) return { average: null, loggedDays: 0 };
-  const sum = sumTotals(logged.map((day) => dayTotals(day.entries)));
+  const sum = sumTotals(logged.map((day) => entriesTotals(day.entries)));
   const average = Object.fromEntries(TOTAL_KEYS.map((key) => [key, sum[key] / logged.length]));
   return { average, loggedDays: logged.length };
 }
@@ -186,6 +259,11 @@ function dayNumber(date) {
 
 function dateFromDayNumber(dayNum) {
   return new Date(dayNum * MS_PER_DAY).toISOString().slice(0, 10);
+}
+
+// The date `days` days after `date`; negative goes back.
+export function addDays(date, days) {
+  return dateFromDayNumber(dayNumber(date) + days);
 }
 
 // The 7 days before today, oldest first. Today is still in progress, so it isn't one of them.

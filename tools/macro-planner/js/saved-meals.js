@@ -30,6 +30,39 @@ export function setMealEmoji(meal, emoji) {
   return { ...meal, emoji };
 }
 
+// Tags (SPEC §3.3) match ignoring case. A meal saved without `tags` has none.
+const tagKey = (tag) => tag.toLowerCase();
+const tagOrder = new Intl.Collator(undefined, { sensitivity: 'base' });
+
+// tags: the meal's tags as typed or picked. Each is trimmed, and blank ones are dropped. One
+// that matches a tag in knownTags takes its spelling, so "mexican" becomes an existing
+// "Mexican". The meal keeps each tag once, at its first spelling.
+export function setMealTags(meal, tags, knownTags = []) {
+  const known = new Map(knownTags.map((tag) => [tagKey(tag), tag]));
+  const kept = new Map();
+  for (const typed of tags) {
+    const tag = typed.trim();
+    if (tag && !kept.has(tagKey(tag))) kept.set(tagKey(tag), known.get(tagKey(tag)) ?? tag);
+  }
+  return { ...meal, tags: [...kept.values()] };
+}
+
+// Every tag the meals use, once each at its first spelling, A–Z. There's no list of tags
+// apart from this, so a tag no meal uses is gone.
+export function allTags(meals) {
+  const byKey = new Map();
+  for (const meal of meals) {
+    for (const tag of meal.tags ?? []) if (!byKey.has(tagKey(tag))) byKey.set(tagKey(tag), tag);
+  }
+  return [...byKey.values()].sort(tagOrder.compare);
+}
+
+// The meals with the tag, in their own order. null is the filter's "All": every meal.
+export function filterMeals(meals, tag) {
+  if (tag === null) return meals;
+  return meals.filter((meal) => (meal.tags ?? []).some((own) => tagKey(own) === tagKey(tag)));
+}
+
 // A food that's already in the meal gets the quantity added to its item, not a second item.
 export function addItem(meal, foodId, qty) {
   assertQty(qty);
@@ -48,13 +81,16 @@ export function removeItem(meal, foodId) {
 }
 
 // A new meal with its own id. "copy" in the name tells it apart from the original in the list.
+// It keeps the original's tags, if it has any.
 export function duplicateMeal(meal) {
-  return {
+  const copy = {
     ...meal,
     id: crypto.randomUUID(),
     name: `${meal.name} copy`,
     items: meal.items.map((item) => ({ ...item })),
   };
+  if (meal.tags) copy.tags = [...meal.tags];
+  return copy;
 }
 
 // Each core doc change returns a new doc and leaves the one passed in as it was.

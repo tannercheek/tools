@@ -3,7 +3,8 @@
 /* ---------- Focus (DESIGN §5) ---------- */
 
 .btn:focus-visible,
-.icon-btn:focus-visible {
+.icon-btn:focus-visible,
+.text-link:focus-visible {
   outline: var(--focus-width) solid var(--color-ink);
   outline-offset: var(--focus-offset);
 }
@@ -28,9 +29,15 @@
     background-color var(--dur-press) var(--ease-out);
 }
 
-.icon-btn:active {
+.icon-btn:not(:disabled):active {
   background: var(--color-surface-sunken);
   transform: scale(var(--icon-press-scale));
+}
+
+/* Disabled (DESIGN §9): a quieter icon and no press, like a move button at the end of a list. */
+.icon-btn:disabled {
+  color: var(--color-text-3);
+  cursor: default;
 }
 
 /* ---------- Buttons (DESIGN §9) ---------- */
@@ -95,4 +102,17 @@
 .btn--block {
   display: flex;
   width: 100%;
+}
+
+/* ---------- Text link (DESIGN §9) ---------- */
+
+/* No fill, outline or edge. The box is at least --tap-min tall, so the hit area is too; its
+   radius only shows in the focus ring, which then matches the other controls'. */
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-decoration: underline;
 }

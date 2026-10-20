@@ -113,7 +113,7 @@ Everything sits on a 4px grid (`--space-*`).
 
 ## 5. Shape
 
-- **Radius:** `--radius-md` is the default for cards, buttons, inputs, rows, tiles and tab items. `--radius-sm` for chips and chart bars. `--radius-lg` for bottom sheet top corners only. `--radius-pill` for switches and segmented controls.
+- **Radius:** `--radius-md` is the default for cards, buttons, inputs, rows, tiles and tab items. `--radius-sm` for chips and chart bars. `--radius-lg` for bottom sheet top corners only. `--radius-pill` for switches, segmented controls and tag pills.
 - **Outlines:** always `--border-width` solid.
   - Static grouping uses `--color-border`.
   - Interactive elements use `--color-border-strong`.
@@ -131,8 +131,10 @@ All rings are inline SVG with `viewBox="0 0 100 100"`, rotated −90° so progre
 r = 50 − stroke / 2            circumference C = 2πr
 track: circle, stroke = --macro-X-soft
 arc:   circle, stroke = --macro-X, stroke-linecap: round,
-       stroke-dasharray: C, stroke-dashoffset: C × (1 − min(total / target, 1))
+       stroke-dasharray: 2C 2C, stroke-dashoffset: C × (2 − min(total / target, 1))
 ```
+
+- **Why the doubled dash:** `--ease-spring` overshoots by about 10%. With dashes and gaps twice the circumference, an arc that springs past full stays full instead of opening a gap at 12 o'clock.
 
 | Ring | Size | Stroke | Where |
 |---|---|---|---|
@@ -179,17 +181,24 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 - **Meal slot (Today):** the whole row opens the slot actions sheet. Trailing: a chevron. Extras added to the slot are listed under it as plain text lines (emoji, label, kcal).
 - **Skipped slot:** the meal's title and tile stay, with the title and numbers line in `--color-text-2` and the numbers line reading "Skipped". No strike-through and no colour.
 - **Entry row (locked past day):** an entry's emoji, label and numbers, with its slot in the eyebrow. Trailing: a 44px remove icon button.
-- **Flex slot:** no fill, **dashed** `--color-border-strong` outline, and a dashed tile with an outline icon instead of emoji. Title: "N kcal to fill". The numbers line shows what's left for the day. Trailing control: a secondary "Log" button.
-- **Empty slot (Plan):** same dashed treatment. Title: "Add a meal". The whole row is the button.
+- **Flex slot (open):** no fill, **dashed** `--color-border-strong` outline, and a dashed tile with an outline icon instead of emoji. Title: "N kcal to fill", or "N kcal over" when the rest of the day is already over target, with nothing left on the numbers line. The numbers line shows what's left for the day. With a pinned budget, the title is "Budget" and the numbers line shows the budget. With no targets, or on a past day, the title is "Open", with no numbers line and no Log. Trailing control: a secondary "Log" button that opens the add sheet.
+- **Filled flex slot (Today):** once something is added, it's no longer a placeholder: a solid row like a meal slot, with "FLEX" in the eyebrow ("DINNER · FLEX"). One entry shows its own emoji and label. Several show 🍽️ and "N items", each listed under it as plain text lines like a meal slot's extras. The numbers line is their total. Trailing: a chevron. The whole row opens the filled flex sheet.
+- **Empty slot (Plan):** same dashed treatment. Title: "Add a meal", or "Budget" with the budget on the numbers line when one is pinned. The whole row is the button.
 - **Food search result:** title plus serving ("100 g") in the eyebrow. Trailing: a 44px add icon button.
 - **Food row (Foods list):** like a food search result, but the whole row is one button. A custom food's eyebrow starts with "Custom" ("CUSTOM · 150 G"). Trailing: a `--icon-size-sm` outline icon in `--color-text-2` that shows what a tap does, a pencil on custom foods (edit) and a copy icon on bundled foods (duplicate). It's a hint inside the row button, not a button of its own, and the action is also in the row's accessible name. Adding a food here means "Add custom food", a full-width secondary button above the search field.
 - **Saved meal:** trailing chevron. The row navigates to the editor.
-- **Ingredient row (meal editor):** a quantity input replaces the trailing control. Live totals sit in a sticky card above the list.
-- **Recent entry (quick-add sheet):** like a food search result: the entry's emoji, label and numbers, with "Yesterday" or the weekday in the eyebrow. Trailing: a 44px add icon button.
+- **Ingredient row (meal editor):** the title wraps instead of truncating, and the quantity field always sits on its own line under the numbers line, so every row has the same layout and the fields line up down the list. The tile stays beside the title. Trailing: a 44px remove icon button, centred on the row. Live totals sit in a sticky card above the list.
+- **Recent entry (add sheet):** like a food search result: the entry's emoji, label and numbers, with "Yesterday" or the weekday in the eyebrow. Trailing: a 44px add icon button.
 - **Weigh-in row (Stats):** no emoji tile, because emoji only identify foods and meals (§12). Eyebrow: the date ("TUE 14 OCT"). Title: the weight to one decimal with its unit, tabular figures. Trailing: a 44px delete icon button labelled like "Delete weigh-in, 14 October".
 - **Off-plan line (Today):** one row above the slots, `--color-surface-sunken` fill, no tile. Text: "Off plan until Fri 23 Oct" (or "Off plan today") in body bold. Trailing: a secondary "Back on plan" button. Monochrome, like the rest of the chrome.
 
-**Slot actions sheet:** a bottom sheet (§10) titled with the slot and meal ("Breakfast · Oats & whey"). In order: Swap, Skip, Portion, Add to this slot, then As planned when the slot has a change. Each action is a full-width secondary button. Portion is a segmented control (0.5× · 1× · 1.5× · Custom); Custom shows a numeric input. Skip and As planned apply and close straight away, with no confirm sheet, because either one undoes the other.
+**Slot actions sheet:** a bottom sheet (§10) titled with the slot and meal ("Breakfast · Oats & whey"). In order: Swap, Skip, Portion, the slot's added entries, Add to this slot, then As planned when the slot has a change. Each action is a full-width secondary button. Portion is a segmented control (0.5× · 1× · 1.5× · Custom); Custom shows a numeric input. Skip and As planned apply and close straight away, with no confirm sheet, because either one undoes the other. Added entries are entry rows without the eyebrow, since the title names the slot, each with a 44px remove icon button. Removing asks first with the confirm sheet.
+
+**Filled flex sheet:** a bottom sheet titled with the slot ("Dinner · Flex"): its entries as rows with remove, as in the slot actions sheet, then Add to this slot.
+
+**Add sheet:** a bottom sheet titled with the slot ("Dinner · Log"), opened by Log, by Add to this slot and by a locked day's Add. A segmented control (Recent · Meal · Food · Quick) picks what to add: Recent entries, the meal picker with its tag filter row, food search then an amount, or quick numbers (an optional label, then the four numbers laid out like the custom food form's). It opens on Recent when Recent has entries, otherwise on Meal; an empty Recent shows one line of `--color-text-2` body text. Tapping a meal, or a Recent entry's add button, adds it. Food and Quick each end in one primary button: "Log food", "Log numbers".
+
+**Budget sheet (Plan):** opened from a flex slot's "Pin a budget" (or "Change budget"), above its meal list. Titled "Dinner · Budget": one sentence, the four numbers laid out like the custom food form's, a primary "Pin budget", and a secondary "Remove budget" when one is pinned.
 
 ---
 
@@ -207,8 +216,11 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 - **One primary per screen or sheet.** Everything else is secondary.
 - **Destructive actions** (delete meal, clear history, import over existing data) use a **secondary** button with an explicit verb ("Delete meal") and a confirm sheet. There's no red button.
 - **Disabled:** `--color-text-3` text, `--color-border` outline, no edge, no press.
-- **Segmented control** (Meals / Foods, 7/30 days, units, sex): a `--color-surface-sunken` track with `--radius-pill` and a `--border-width` `--color-border-strong` outline. The selected segment is a `--color-surface` pill with an ink outline. Items are ≥ `--tap-min` high. The pill slides over `--dur-base` with `--ease-spring`. With nothing selected yet (a profile field not filled in), there's no pill and every label stays `--color-text-2`.
+- **Segmented control** (Meals / Foods, the add sheet's Recent / Meal / Food / Quick, 7/30 days, units, sex): a `--color-surface-sunken` track with `--radius-pill` and a `--border-width` `--color-border-strong` outline. The selected segment is a `--color-surface` pill with an ink outline. Items are ≥ `--tap-min` high. The pill slides over `--dur-base` with `--ease-spring`. With nothing selected yet (a profile field not filled in), there's no pill and every label stays `--color-text-2`.
 - **Switch** (settings toggles, and the Foods list's "Custom foods only" filter): use the platform-like pill. Track `--color-border-strong` when off, `--color-btn-face` when on; knob `--color-surface`. Pair it with a visible text label.
+- **Tag pill** (meal tags, SPEC §3.3): a toggle button with `aria-pressed`, `--control-h-sm` high, `--radius-pill`, padding `0 var(--space-4)`, display heavy `sm` label on one line. Off: `--color-surface` fill, `--border-width` `--color-border-strong` outline, `--color-text`. On: `--color-btn-face` fill and outline, `--color-on-ink` text. No edge, no press depth; the fill change is the feedback. Pills sit `--space-2` apart.
+  - **Filter row** (Meals list, meal pickers): "All" first, then the tags. One line that scrolls sideways inside its own strip, with no visible scrollbar, so the page never scrolls sideways (§4). The strip bleeds to the screen edges and pads its content by `--gutter`, so the first pill lines up with the column. It's a single-select group: selecting one deselects the rest, and one is always on.
+  - **Meal editor:** the meal's tags as "on" pills on a wrapping row under the name, each one removing its tag when tapped, then a "New tag" pill with a **dashed** `--color-border-strong` outline and a plus icon. "New tag" opens a bottom sheet (§10) with a text field and the existing tags as "off" pills to pick from; typing filters them.
 
 ---
 

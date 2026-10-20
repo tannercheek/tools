@@ -5,14 +5,17 @@ import { createCoreDoc } from '../js/data.js';
 import {
   addItem,
   addMeal,
+  allTags,
   createMeal,
   deleteMeal,
   duplicateMeal,
+  filterMeals,
   foodLookup,
   isMealPlanned,
   removeItem,
   renameMeal,
   setMealEmoji,
+  setMealTags,
   updateItem,
   updateMeal,
 } from '../js/saved-meals.js';
@@ -150,8 +153,85 @@ test('changes to a meal leave the one passed in as it was', () => {
   addItem(meal, 'rice', 50);
   updateItem(meal, 'beef', 100);
   removeItem(meal, 'rice');
+  setMealTags(meal, ['Dinner']);
   duplicateMeal(meal);
   assert.deepEqual(meal, before);
+});
+
+// --- Tags ---
+
+test('setting tags changes only the tags, and a new meal has none', () => {
+  const meal = riceAndBeef();
+  assert.equal('tags' in meal, false);
+  const tagged = setMealTags(meal, ['Dinner', 'Mexican']);
+  assert.deepEqual(tagged.tags, ['Dinner', 'Mexican']);
+  assert.deepEqual({ ...tagged, tags: undefined }, { ...meal, tags: undefined });
+});
+
+test('tags are trimmed, and blank ones are dropped', () => {
+  const meal = setMealTags(riceAndBeef(), ['  Dinner ', '   ', '', '\tPost-workout\n']);
+  assert.deepEqual(meal.tags, ['Dinner', 'Post-workout']);
+});
+
+test('a tag typed in another case takes the spelling already in use', () => {
+  const meal = setMealTags(riceAndBeef(), ['mexican', ' DINNER ', 'Spicy'], ['Dinner', 'Mexican']);
+  assert.deepEqual(meal.tags, ['Mexican', 'Dinner', 'Spicy']);
+});
+
+test('a meal has each tag once, at its first spelling', () => {
+  const meal = setMealTags(riceAndBeef(), ['Dinner', 'dinner', ' DINNER ', 'Mexican', 'Dinner']);
+  assert.deepEqual(meal.tags, ['Dinner', 'Mexican']);
+  const again = setMealTags(meal, [...meal.tags, 'mexican'], allTags([meal]));
+  assert.deepEqual(again.tags, ['Dinner', 'Mexican']);
+});
+
+test('removing a tag keeps the rest in order, and removing the last leaves none', () => {
+  const meal = setMealTags(riceAndBeef(), ['Breakfast', 'Dinner', 'Mexican']);
+  const fewer = setMealTags(meal, meal.tags.filter((tag) => tag !== 'Dinner'));
+  assert.deepEqual(fewer.tags, ['Breakfast', 'Mexican']);
+  assert.deepEqual(setMealTags(fewer, []).tags, []);
+});
+
+test('the tag list is every tag the meals use, once each, A–Z ignoring case', () => {
+  const meals = [
+    setMealTags(createMeal({ name: 'Smoothie' }), ['Smoothies', 'breakfast']),
+    setMealTags(createMeal({ name: 'Burrito' }), ['Mexican', 'Dinner']),
+    setMealTags(createMeal({ name: 'Tacos' }), ['mexican', 'Dinner', 'BREAKFAST']),
+  ];
+  assert.deepEqual(allTags(meals), ['breakfast', 'Dinner', 'Mexican', 'Smoothies']);
+  assert.deepEqual(allTags([]), []);
+});
+
+test('a tag no meal uses is gone from the tag list', () => {
+  const smoothie = setMealTags(createMeal({ name: 'Smoothie' }), ['Smoothies', 'Breakfast']);
+  const oats = setMealTags(createMeal({ name: 'Oats' }), ['Breakfast']);
+  assert.deepEqual(allTags([setMealTags(smoothie, ['Breakfast']), oats]), ['Breakfast']);
+});
+
+test('filtering by a tag keeps the meals with it, in order, ignoring case', () => {
+  const burrito = setMealTags(createMeal({ name: 'Burrito' }), ['Mexican', 'Dinner']);
+  const oats = setMealTags(createMeal({ name: 'Oats' }), ['Breakfast']);
+  const tacos = setMealTags(createMeal({ name: 'Tacos' }), ['Dinner', 'Mexican']);
+  const meals = [burrito, oats, tacos];
+  assert.deepEqual(filterMeals(meals, 'Mexican'), [burrito, tacos]);
+  assert.deepEqual(filterMeals(meals, 'mexican'), [burrito, tacos]);
+  assert.deepEqual(filterMeals(meals, 'Breakfast'), [oats]);
+  assert.deepEqual(filterMeals(meals, 'Snacks'), []);
+});
+
+test('filtering by All (null) keeps every meal, tagged or not', () => {
+  const meals = [setMealTags(createMeal({ name: 'Burrito' }), ['Mexican']), createMeal({ name: 'Oats' })];
+  assert.deepEqual(filterMeals(meals, null), meals);
+});
+
+test('meals saved without tags have none, and can be given some', () => {
+  const plain = { id: 'saved-before-tags', name: 'Oats', emoji: '🥣', items: [] };
+  const tagged = setMealTags(createMeal({ name: 'Burrito' }), ['Mexican']);
+  assert.deepEqual(allTags([plain]), []);
+  assert.deepEqual(allTags([plain, tagged]), ['Mexican']);
+  assert.deepEqual(filterMeals([plain, tagged], 'Mexican'), [tagged]);
+  assert.deepEqual(setMealTags(plain, ['Breakfast']).tags, ['Breakfast']);
+  assert.equal('tags' in duplicateMeal(plain), false);
 });
 
 // --- Duplicating ---
@@ -165,6 +245,14 @@ test('a duplicate gets its own id and a "copy" name, with the same emoji, items 
   assert.equal(copy.emoji, '🍚');
   assert.deepEqual(copy.items, meal.items);
   assertTotals(mealTotals(copy, getFood), RICE_AND_BEEF_TOTALS);
+});
+
+test('a duplicate keeps the original’s tags, in its own list', () => {
+  const meal = setMealTags(riceAndBeef(), ['Dinner', 'Mexican']);
+  const copy = duplicateMeal(meal);
+  assert.deepEqual(copy.tags, ['Dinner', 'Mexican']);
+  assert.notEqual(copy.tags, meal.tags);
+  assert.deepEqual(filterMeals([meal, copy], 'Mexican'), [meal, copy]);
 });
 
 test('a duplicate’s items are its own, not shared with the original', () => {
