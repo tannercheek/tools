@@ -18,11 +18,10 @@ export const SEGMENTS = {
 
 // Pushed screens open over the tabs with a back button. One with `param` always takes a
 // record id after its own ('#/meal/<id>'); `parent` is where Back goes when there's no
-// history to pop. 'components' is an unlinked showcase of js/ui/ for checking; step 7.2 removes it.
+// history to pop.
 export const PUSHED = [
   { id: 'settings', label: 'Settings' },
   { id: 'meal', label: 'Meal', param: true, parent: 'meals' },
-  { id: 'components', label: 'Components' },
 ];
 
 export const DEFAULT_ROUTE = 'today';

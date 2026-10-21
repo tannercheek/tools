@@ -317,7 +317,7 @@ Only animate in response to a user action. Every duration is a token, and reduce
 ## 15. Accessibility checklist
 
 - [ ] Every hit target is ≥ `--tap-min` in both axes.
-- [ ] Works at 360px with no horizontal scroll, and at 200% text zoom.
+- [ ] Works at 360px with no horizontal scroll, and at 200% browser zoom on a desktop-width window. Zoom on a phone isn't covered: type sizes are px tokens, so 200% on a 360px phone lays out at 180px, narrower than the tab bar and ring grid allow.
 - [ ] Text contrast is ≥ 4.5:1. `--color-text-3` is never used for essential text.
 - [ ] Every macro mark has a text label or letter next to it.
 - [ ] Rings and charts are `aria-hidden`, with the same numbers available as text.

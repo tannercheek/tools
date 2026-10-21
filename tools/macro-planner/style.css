@@ -21,6 +21,17 @@ body {
   display: none !important;
 }
 
+/* A control scrolled into view as it takes focus, by Tab or the iOS keyboard's field arrows,
+   stops clear of the sticky header and, while it shows, the fixed tab bar, not under them.
+   The bottom matches the tab bar's height in .view's padding. */
+html {
+  scroll-padding-top: var(--header-h);
+}
+
+html:has(.tabbar:not([hidden])) {
+  scroll-padding-bottom: calc(var(--border-width) + var(--space-2) + var(--tabbar-h) + var(--space-6) + var(--safe-bottom));
+}
+
 /* Standard visually-hidden pattern; the 1px is not a design value. */
 .visually-hidden {
   position: absolute;
@@ -477,6 +488,12 @@ body {
   background: var(--color-bg);
 }
 
+/* Moving focus back up the foods stops below the sticky totals card as well as the header. The
+   card is its border, padding, the "Total" eyebrow and one numbers line, then the gap to the list. */
+.meal-editor .row--ingredient :is(input, button) {
+  scroll-margin-top: calc(2 * var(--border-width) + 2 * var(--card-pad) + var(--line-xs) + var(--line-sm) + var(--stack-gap));
+}
+
 /* One card, one question: what the meal adds up to (DESIGN §1). */
 .meal-totals {
   padding: var(--card-pad);
@@ -702,26 +719,4 @@ body {
   margin: 0;
   color: var(--color-text-2);
   font-variant-numeric: var(--numeric);
-}
-
-/* ---------- Components showcase (#/components; removed in step 7.2) ---------- */
-
-.demo-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--stack-gap);
-}
-
-.demo-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--stack-gap);
-}
-
-.demo-note {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  line-height: var(--line-sm);
-  color: var(--color-text-2);
 }

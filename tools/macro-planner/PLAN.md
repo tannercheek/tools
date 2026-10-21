@@ -193,15 +193,15 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 7 — Polish and publish
 
-- [ ] **7.1 Mobile and accessibility pass**
+- [x] **7.1 Mobile and accessibility pass**
       Tap targets ≥ 44px, focus states, labels on inputs, reduced-motion, no horizontal scroll at 360px.
       _Done when:_ you've used it on your phone for one full day.
 
-- [ ] **7.2 Design audit**
+- [x] **7.2 Design audit**
       Search `style.css`, `components/` and `js/` for hard-coded colours, sizes, spacing, radii, shadows, durations, easings and z-index values, and replace each with a token (SVG geometry in viewBox units is fine). Walk the DESIGN §15 checklist item by item. Check every view and sheet in light and dark, and with reduced motion on. Remove the `#/components` route.
       _Done when:_ no hard-coded values remain outside `tokens.css`; every DESIGN §15 item passes; every view has been checked in both light and dark.
 
-- [ ] **7.3 Ship**
+- [x] **7.3 Ship**
       Final check of the four dashboard meta tags. Nothing to merge; all work is already on `main`.
       _Done when:_ after you push, the "Build tool index" action has run, the card shows on the live dashboard, and the tool opens from it.
 

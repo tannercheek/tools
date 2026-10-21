@@ -14,10 +14,9 @@ import * as meals from './js/views/meals.js';
 import * as meal from './js/views/meal-editor.js';
 import * as stats from './js/views/stats.js';
 import * as settings from './js/views/settings.js';
-import * as components from './js/views/components.js';
 
 // By tab or pushed screen; a tab with segments renders whichever one the route names.
-const VIEWS = { today, plan, meals, stats, settings, meal, components };
+const VIEWS = { today, plan, meals, stats, settings, meal };
 
 const app = document.getElementById('app');
 const header = document.getElementById('header');

@@ -26,19 +26,19 @@ test('the Meals tab has Meals and Foods segments and opens on Meals', () => {
 
 test('foods belongs to the Meals tab; every other route is its own', () => {
   assert.equal(tabFor('foods'), 'meals');
-  for (const id of ['today', 'plan', 'meals', 'stats', 'settings', 'components']) assert.equal(tabFor(id), id);
+  for (const id of ['today', 'plan', 'meals', 'stats', 'settings']) assert.equal(tabFor(id), id);
 });
 
 test('every tab with segments is a tab', () => {
   for (const tab of Object.keys(SEGMENTS)) assert.ok(TABS.some(({ id }) => id === tab), tab);
 });
 
-test('the components showcase is not a tab, so nothing links to it', () => {
-  assert.equal(TABS.some((tab) => tab.id === 'components'), false);
+test('the components showcase is gone', () => {
+  assert.equal(parseRoute('#/components'), null);
 });
 
-test('parseRoute reads every tab, the Foods segment, settings and the components showcase', () => {
-  for (const id of ['today', 'plan', 'foods', 'meals', 'stats', 'settings', 'components']) {
+test('parseRoute reads every tab, the Foods segment and settings', () => {
+  for (const id of ['today', 'plan', 'foods', 'meals', 'stats', 'settings']) {
     assert.equal(parseRoute(hashFor(id)), id);
   }
 });
@@ -53,9 +53,8 @@ test('default route is a tab', () => {
   assert.ok(TABS.some((tab) => tab.id === DEFAULT_ROUTE));
 });
 
-test('settings and components are pushed, tabs and segments are not', () => {
+test('settings is pushed, tabs and segments are not', () => {
   assert.equal(isPushed('settings'), true);
-  assert.equal(isPushed('components'), true);
   for (const tab of TABS) assert.equal(isPushed(tab.id), false);
   assert.equal(isPushed('foods'), false);
 });
@@ -94,5 +93,4 @@ test('a route without an id has no param', () => {
 test('Back with nothing to pop goes from a meal screen to Meals, and from the rest to Today', () => {
   assert.equal(backRoute(mealRoute(MEAL_ID)), 'meals');
   assert.equal(backRoute('settings'), DEFAULT_ROUTE);
-  assert.equal(backRoute('components'), DEFAULT_ROUTE);
 });
