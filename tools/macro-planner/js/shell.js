@@ -9,6 +9,17 @@ const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
 const monthDayFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const spokenDateFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
+// The brand mark (DESIGN §17): icons/logo-mark-color.svg's geometry, with fills from tokens in
+// style.css so it follows dark mode. Decorative; the title beside it names the screen.
+const LOGO_MARK =
+  '<svg class="logo-mark" viewBox="0 0 73 64.5" aria-hidden="true">' +
+  '<rect class="logo-mark__body" width="73" height="64.5" rx="14.5"/>' +
+  '<rect class="logo-mark__interior" x="5" y="5" width="63" height="51" rx="9.5"/>' +
+  '<rect class="logo-mark__protein" x="9.5" y="9.5" width="26" height="42" rx="6"/>' +
+  '<rect class="logo-mark__carbs" x="40.5" y="9.5" width="23" height="18.5" rx="6"/>' +
+  '<rect class="logo-mark__fat" x="40.5" y="33" width="23" height="18.5" rx="6"/>' +
+  '</svg>';
+
 function screenTitle(text) {
   const title = document.createElement('h1');
   title.className = 'screen-title';
@@ -43,6 +54,9 @@ function dateSwitcher() {
   const heading = document.createElement('h1');
   heading.className = 'date-stack';
   heading.append(button);
+  const element = document.createElement('div');
+  element.className = 'date-switcher';
+  element.append(previous, heading, next);
 
   let handlers = {};
   previous.addEventListener('click', () => handlers.onPrevious?.());
@@ -50,7 +64,7 @@ function dateSwitcher() {
   button.addEventListener('click', () => handlers.onToday?.());
 
   return {
-    elements: [previous, heading, next],
+    element,
 
     // { onPrevious, onNext, onToday }, each called when its control is tapped.
     connect(callbacks) {
@@ -84,7 +98,7 @@ export function renderHeader(header, route, { onBack, syncStatus }) {
   const parts = {};
   if (route === 'today') {
     parts.dateSwitcher = dateSwitcher();
-    start.append(...parts.dateSwitcher.elements);
+    start.append(parts.dateSwitcher.element);
   } else if (isPushed(route)) {
     const back = iconButton('chevron-left', 'Back');
     back.addEventListener('click', onBack);
@@ -92,6 +106,8 @@ export function renderHeader(header, route, { onBack, syncStatus }) {
   } else {
     start.append(screenTitle(routeLabel(tabFor(route))));
   }
+  // Pushed screens lead with Back instead.
+  if (!isPushed(route)) start.insertAdjacentHTML('afterbegin', LOGO_MARK);
 
   if (syncStatus) end.append(syncStatus);
   if (!isPushed(route)) end.append(iconLink('sliders-horizontal', 'Settings', hashFor('settings')));

@@ -244,6 +244,7 @@ All rows: `--color-surface` fill, `--border-width` `--color-border` outline, `--
 - Today: previous-day icon button, date stack (title "Today" or the weekday, plus an `sm` `--color-text-2` date), next-day icon button. Settings icon button on the right.
 - Other tabs: the screen title (`2xl` black) on the left, Settings on the right.
 - Meals: like other tabs. Its Meals / Foods segmented control is a full-width control at the top of the content, under the header, not part of it.
+- **Brand mark:** the four tab screens start with the colour mark (§17), lined up with the content gutter. Pushed screens start with Back instead.
 - Tapping the date title jumps back to today.
 - **Sync status:** one `--icon-size` outline icon in `--color-text-2`, just left of Settings on every screen. A cloud with a check (Lucide `cloud-check`) means synced. A cloud with an up arrow (`cloud-upload`) means saving, shown only if a save is still in flight after a second, so normal saves don't flicker. A crossed-out cloud (`cloud-off`) means offline, with changes kept on this device. It isn't a button. It sits in a `role="status"` element with visually hidden text ("Synced", "Saving", "Offline, saved on this device"). The icon swaps with no animation. Shape carries the meaning, not colour.
 
@@ -341,6 +342,47 @@ Only animate in response to a user action. Every duration is a token, and reduce
 | `--ease-spring` | `.spring(response: 0.4, dampingFraction: 0.6)` |
 | Press edge | a `ButtonStyle` that offsets y by the edge depth when `isPressed` |
 | Haptics (iOS only) | light impact on press, success notification on adding to a slot |
+
+---
+
+## 17. Brand mark
+
+The mark is a prep box: an outline around three compartments, one per macro. It's the brand, not an emoji or a UI icon.
+
+### Assets
+
+Served from `icons/`. `design/` holds the source files and is never referenced by the app.
+
+| File | For |
+|---|---|
+| `favicon.svg` | Browser tab icon |
+| `favicon-32.png`, `favicon-16.png` | Tab icon for browsers without SVG favicons |
+| `favicon-48.png` | Spare size, not linked |
+| `apple-touch-icon.png` | iOS "Add to Home Screen" icon, 180×180 |
+| `icon-192.png`, `icon-512.png` | Manifest icons, purpose `any` |
+| `icon-maskable-512.png` | Manifest icon, purpose `maskable`; Android crops it to its own shape |
+| `og-image.png` | Link preview, 1200×630. `og:image` needs its absolute URL |
+| `logo-mark-color.svg` | Full-colour mark, light values |
+| `logo-mark.svg` | One-colour mark, `fill="currentColor"` |
+
+### Colour
+
+| Part | Token |
+|---|---|
+| Icon background | `--color-bg` |
+| Outline | `--color-text` |
+| Interior | `--color-surface` |
+| Protein, carbs, fat compartments | `--macro-protein`, `--macro-carbs`, `--macro-fat` |
+
+- The dark variant uses the same tokens' dark values. The exported PNGs and `logo-mark-color.svg` bake in the light values, so wherever the mark should follow the theme, inline it with token fills, as the header does.
+- **Never recolour, reorder or redraw the compartments:** protein is the big one on the left, carbs top right, fat bottom right.
+- Use `logo-mark.svg` wherever the mark must take on the text colour. `currentColor` only works inline; as an `<img>` it falls back to black.
+
+### In the app
+
+- The header's colour mark is `--logo-size` high, which puts its outline at `--border-width`. It's `aria-hidden`; the title beside it names the screen.
+- It's the one place macro colours appear outside data, because its compartments stand for the macros.
+- Emoji rules are unchanged (§12). The mark isn't an emoji or a UI icon, and neither stands in for it.
 
 ---
 

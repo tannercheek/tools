@@ -112,9 +112,50 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--space-1);
 }
 
-/* A bare title lines up with the content gutter rather than the icon-button edge. */
-.app-header[data-layout="tab"] .screen-title {
+/* Previous day's own padding already spaces it from the brand mark, close to the gap a title gets. */
+.app-header[data-layout="today"] .app-header__start {
+  gap: 0;
+}
+
+/* The chevrons' button padding adds to this gap, so it stays airy while leaving room for
+   "Wednesday" beside the brand mark at 390px. */
+.date-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The brand mark leads tab screens and lines up with the content gutter rather than the
+   icon-button edge. Pushed screens lead with Back, which keeps the edge. */
+.app-header:not([data-layout="pushed"]) .app-header__start {
   padding-inline-start: calc(var(--gutter) - var(--space-3));
+}
+
+/* Brand mark (DESIGN §17). Fills are tokens, so it follows dark mode. */
+.logo-mark {
+  flex: none;
+  height: var(--logo-size);
+}
+
+.logo-mark__body {
+  fill: var(--color-text);
+}
+
+.logo-mark__interior {
+  fill: var(--color-surface);
+}
+
+.logo-mark__protein {
+  fill: var(--macro-protein);
+}
+
+.logo-mark__carbs {
+  fill: var(--macro-carbs);
+}
+
+.logo-mark__fat {
+  fill: var(--macro-fat);
 }
 
 /* Today's date stack: a heading holding one button, which goes back to today. */

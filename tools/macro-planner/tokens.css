@@ -122,6 +122,7 @@
   --switch-w:       52px; /* settings switch track */
   --switch-h:       32px;
   --header-h:       64px;
+  --logo-size:      26px; /* header brand mark height; draws its outline at --border-width */
   --tabbar-h:       56px; /* item height, excluding safe area */
   --safe-bottom:    env(safe-area-inset-bottom, 0px);
 
