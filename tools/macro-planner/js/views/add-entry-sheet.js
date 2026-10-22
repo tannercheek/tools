@@ -1,7 +1,7 @@
 // The add sheet (SPEC §3.5): what goes in a slot for the day, as a snapshot entry. A Recent entry
 // added again in one tap, a saved meal, a food and its amount, or quick numbers, one at a time
-// under a segmented control. Opened by an open flex slot's Log button, by Add to this slot in a
-// slot's sheet, and by a locked day's Add.
+// under a segmented control. Opened by an open flex slot's Log button, by Add or Add to this slot
+// in a slot's sheet, by a locked day's Add, and by Today's Add food and Quick numbers.
 
 import { addDays } from '../calc.js';
 import { foodEntry, mealEntry, quickEntry, repeatEntry } from '../data.js';
@@ -65,10 +65,10 @@ function quickNumbersForm(done) {
 // slot: { id, name }, the slot the entry goes in. meals: the saved meals. foods: bundled and
 // custom foods together. getFood: saved-meals.js's foodLookup over every food. store: the app's
 // store, for a custom food or a meal made from here. recent: data.js's recentEntries, as of
-// today. Opens on Recent when it has anything, otherwise on Meal. Resolves to the new entry, or
-// null if the sheet closes without one. With no saved meals, "Build a meal" closes it and opens
-// a new meal.
-export async function addEntrySheet({ slot, meals, foods, getFood, store, recent, today }) {
+// today. kind: the segment to open on, 'food' or 'quick', for Today's quick actions; otherwise it
+// opens on Recent when it has anything, else on Meal. Resolves to the new entry, or null if the
+// sheet closes without one. With no saved meals, "Build a meal" closes it and opens a new meal.
+export async function addEntrySheet({ slot, meals, foods, getFood, store, recent, today, kind }) {
   let added = null;
   let buildMeal = false;
   let sheet;
@@ -109,8 +109,8 @@ export async function addEntrySheet({ slot, meals, foods, getFood, store, recent
     pane.replaceChildren(built.get(kind));
   }
 
-  // Recent first, so adding one again stays one tap.
-  const first = recent.length > 0 ? 'recent' : 'meal';
+  // Recent first, unless asked for another, so adding one again stays one tap.
+  const first = kind ?? (recent.length > 0 ? 'recent' : 'meal');
   const kinds = segmentedControl({
     label: 'What to log',
     options: [

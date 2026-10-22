@@ -104,6 +104,25 @@
   width: 100%;
 }
 
+/* ---------- Compact button (DESIGN §9) ---------- */
+
+/* A secondary button with an icon over an xs label, like a tab bar item (DESIGN §11). The label
+   keeps to one line and truncates if it ever runs out of room (DESIGN §4). */
+.btn--compact {
+  flex-direction: column;
+  gap: var(--space-1);
+  height: var(--control-h-compact);
+  padding-inline: var(--space-1);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-xs);
+}
+
+.btn__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---------- Text link (DESIGN §9) ---------- */
 
 /* No fill, outline or edge. The box is at least --tap-min tall, so the hit area is too; its

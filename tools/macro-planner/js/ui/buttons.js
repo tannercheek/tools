@@ -21,6 +21,20 @@ export function secondaryButton(label, options) {
   return textButton('secondary', label, options);
 }
 
+// An icon over an xs label, like a tab bar item, for a row too narrow for secondary buttons'
+// padding and labels, such as Today's quick actions. It fills its column, and presses and
+// disables like a secondary button.
+export function compactButton(iconName, label, { onClick, disabled = false } = {}) {
+  const button = textButton('secondary', '', { onClick, disabled, block: true });
+  button.classList.add('btn--compact');
+  const text = document.createElement('span');
+  text.className = 'btn__label';
+  text.textContent = label;
+  button.innerHTML = icon(iconName);
+  button.append(text);
+  return button;
+}
+
 export function iconButton(iconName, label, { onClick, disabled = false } = {}) {
   const button = document.createElement('button');
   button.type = 'button';

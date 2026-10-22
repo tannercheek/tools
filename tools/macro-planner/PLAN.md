@@ -205,8 +205,95 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       Final check of the four dashboard meta tags. Nothing to merge; all work is already on `main`.
       _Done when:_ after you push, the "Build tool index" action has run, the card shows on the live dashboard, and the tool opens from it.
 
-## Phase 8 — After a week of use
+## Phase 8 — Post-v1 improvements
 
-- [ ] **8.1 Grow the food list**
+- [x] **8.1 Settings gear**
+      The header's Settings icon button becomes a gear: Lucide `settings` replaces `sliders-horizontal` in `js/icons.js`, and the unused one goes. Its accessible name stays "Settings". Update DESIGN §12's tab icons line to "Settings (gear)".
+      _Done when:_ every screen's header shows the gear at the same size and stroke as the other header icons, in light and dark; `js/icons.js` has no `sliders-horizontal`; DESIGN §12 says gear.
+
+- [x] **8.2 Compact slot actions**
+      In the slot actions sheet, Swap, Skip and Add to this slot become one row of three equal secondary buttons at the top, labelled "Swap", "Skip" and "Add", since the sheet's title already names the slot. Portion, the slot's added entries and As planned follow, in that order. A button that doesn't apply (Swap with no other saved meal, Skip on a skipped slot) is disabled rather than hidden, so the row keeps its three places. The filled flex sheet is unchanged. Update DESIGN §8's slot actions sheet to match.
+      _Done when:_ the three buttons share one line at 360px and 390px with no truncated labels and tap targets of at least 44px, in light and dark; each does what its full-width button did; Swap and Skip show disabled when they don't apply; DESIGN §8 describes the row.
+
+- [x] **8.3 Quick actions on Today**
+      A row of four equal buttons between the rings and the slots, opening sheets that already exist. It replaces the full-width "Go off plan" button under the slots.
+  - **Add food** and **Quick numbers** ask which slot (the locked day's slot chooser, 5.8), then open the add sheet on its Food or Quick segment. Recent and Meal stay one tap away in that sheet.
+  - **Weigh in** opens the Stats "Log weigh-in" sheet (6.1). A new weigh-in moves the targets, so the rings update straight away (SPEC §3.1).
+  - **Off plan** opens the "Off plan until [date]" sheet (5.10). It's disabled on days off plan can't start (before today, more than 30 days ahead) and on a day that's already off plan, whose off-plan line with "Back on plan" sits under the row.
+
+  At 360px each button gets about 76px, too narrow for a secondary button's padding and `md` label, so the row uses a compact button: an icon over an `xs` label, like a tab bar item (DESIGN §11). Add it to DESIGN §9, with any new value as a token in `tokens.css`. Add the row to SPEC §3.6 and DESIGN §8.
+  _Done when:_ the row fits on one line at 360px and 390px with no truncated labels and tap targets of at least 44px, in light and dark; "Go off plan" no longer shows under the slots; an entry added through Add food or Quick numbers lands in the chosen slot and counts in the rings, on today and on a locked past day; a weigh-in from Today shows on Stats and moves the targets; going off plan from the row, then back on plan, works as in 5.10; SPEC §3.6, DESIGN §8 and DESIGN §9 describe the row.
+
+- [ ] **8.4 Ingredient changes**
+      The pure logic for SPEC §3.5's ingredient changes, with no UI.
+  - A new `js/ingredients.js`:
+    - an ingredient snapshot from a food and an amount, and a meal's ingredients
+    - scaling a list by a portion
+    - changing an amount, whose numbers rescale in proportion with no food lookup
+    - swapping a food in place, merging into the same food if it's already in the list, like `addItem`
+    - removing a food and adding one
+    - the list a slot eats: its ingredients, or else its meal's, at its portion
+  - In `slots.js`:
+    - `daySlots` gives each plan `ingredients` and `edited`, applied only when the change's `mealId` is the meal the slot shows that day.
+    - `setSlotIngredients` keeps a swap, clears the portion and refuses an empty list.
+    - `resetSlotIngredients` takes the change back off.
+    - `swapSlot` drops the ingredients.
+  - In `calc.js`: `ingredientsTotals`, and `slotTotals` uses a plan's ingredients when it has them.
+  - `lock-in.js` and Plan need no change.
+
+  _Done when:_ tests cover:
+  - a meal's ingredients adding up to `mealTotals`
+  - an amount change, a swap keeping its place, a swap merging, and a remove
+  - 1.5× folded into the amounts with the portion cleared
+  - the change ignored after a swap, a template change and a deleted meal
+  - Swap and Skip dropping it, As planned clearing it, and Reset keeping a swap
+  - `dayTotal`, `flexGap` and `lockDay` using the edited numbers while Plan's total doesn't move
+  - deleting or editing a food afterwards leaving the day's total as it was
+  - an off-plan day ignoring it
+
+- [ ] **8.5 Ingredients sheet**
+      In a planned slot's actions sheet, "Edit ingredients" goes after Portion and is hidden while the slot is skipped.
+  - It opens the Ingredients sheet, titled with the meal ("Breakfast sandwich · Ingredients"). In order:
+    - the meal editor's sticky totals card
+    - a row per ingredient, with its amount in the row and a trailing swap icon button (Lucide `arrow-left-right`)
+    - "Add food"
+    - "Reset to original meal", once something has changed
+  - The swap button opens a sheet with "Remove from meal" (disabled on the last ingredient) above food search. The picked food's amount starts at the old one when the units match.
+  - Each change saves straight away and the rings move behind the sheet. Reset applies and closes, like As planned.
+  - The sheet opens from the slot as it is now, so a portion just picked is folded in.
+  - The slot's eyebrow gains "Edited" ("Breakfast · Swapped · Edited · 1.5×"), and As planned shows for an edited slot.
+  - Reuse rather than copy:
+    - Move the meal editor's totals card into `js/ui/`, with its styles in `components/`.
+    - `ingredientRow` takes its trailing action.
+    - `foodPicker` takes a starting amount.
+  - Add the sheet, the swap sheet, the row and "EDITED" to DESIGN §8, and the icon to DESIGN §12.
+
+  _Done when:_
+  - swapping the bread and setting 3 eggs in today's breakfast shows "Edited" and moves the rings and an open flex slot's "to fill" by the difference, while Plan's total and the saved meal stay as they were
+  - tomorrow shows the saved meal, and Reset brings it back today
+  - at 1.5× the sheet shows the amounts ×1.5, and an edit sets Portion to 1×
+  - a custom food swapped in and then deleted leaves today's totals unchanged after a reload
+  - the day locks in with the edited numbers
+  - the sheet works at 360px and 390px in light and dark
+  - DESIGN §8 and §12 describe it
+
+- [ ] **8.6 Ingredients of added meals**
+      A meal added to a slot keeps its ingredients: `mealEntry` saves them, and `repeatEntry` carries them over from Recent.
+  - New in `data.js`:
+    - `setEntryIngredients`: the entry's numbers become the ingredients' total, and the list as added is kept the first time.
+    - `resetEntryIngredients`: back to the list and numbers as added.
+  - In the slot actions sheet and the filled flex sheet, a meal entry with ingredients is a row with a chevron. It opens the 8.5 sheet, which then ends in "Remove from slot" (confirm sheet).
+  - Food and quick entries, and meals added before this step, keep their remove button. Locked days are unchanged.
+  - Update DESIGN §8's entry rows.
+
+  _Done when:_
+  - tests cover an added meal's ingredients adding up to its numbers, an edit changing its numbers and keeping the original list once, reset giving back the numbers exactly as added, and a Recent entry added again keeping its edited ingredients
+  - a meal added to a flex slot opens, takes an edit that shows in its numbers and the rings, and resets
+  - "Remove from slot" in the sheet takes the entry out after the confirm sheet
+  - an entry added before this step still shows its remove button
+
+## Phase 9 — After a week of use
+
+- [ ] **9.1 Grow the food list**
       Only after a week of real use with the ~50 starter foods. List the foods you added as custom or went looking for, then add those to `food-list.json`, guided by SPEC §3.2's coverage list. Re-run `build-foods.mjs`. This step is data only — no code changes.
       _Done when:_ every food you missed during the week is in `foods.json`, and you've skimmed the new entries for naming clarity (raw vs cooked, dry vs cooked) and emoji choices.

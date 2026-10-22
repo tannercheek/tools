@@ -1,8 +1,9 @@
-// Today (SPEC §3.6): the four rings showing where the day will land, then the day's slots, for
-// today or any day from 7 days ago on. Today and later days take changes: tapping a planned slot
-// opens its actions, an open flex slot's Log adds to it, and tapping a filled flex slot lists
-// what's in it. A locked past day lists its entries instead, each with remove, plus Add. An
-// off-plan day has every slot as flex, under a line with "Back on plan" (SPEC §3.4).
+// Today (SPEC §3.6): the four rings showing where the day will land, the quick actions, then the
+// day's slots, for today or any day from 7 days ago on. Today and later days take changes:
+// tapping a planned slot opens its actions, an open flex slot's Log adds to it, and tapping a
+// filled flex slot lists what's in it. A locked past day lists its entries instead, each with
+// remove, plus Add. An off-plan day has every slot as flex, under a line with "Back on plan"
+// (SPEC §3.4).
 
 import { loadBundledFoods } from '../bundled-foods.js';
 import { addDays, dayTotal, flexGap, profileTargets } from '../calc.js';
@@ -32,9 +33,11 @@ import { confirmSheet } from '../ui/sheet.js';
 import { addEntrySheet } from './add-entry-sheet.js';
 import { chooseSlotSheet } from './choose-slot-sheet.js';
 import { offPlanLine, offPlanSheet } from './off-plan.js';
+import { quickActions } from './quick-actions.js';
 import { filledFlexSheet, slotActionsSheet } from './slot-actions-sheet.js';
 import { swapSheet } from './swap-sheet.js';
 import { filledFlexRow, openFlexRow, plannedRow } from './today-rows.js';
+import { logWeighInSheet } from './weigh-ins.js';
 
 function note(text) {
   const element = document.createElement('p');
@@ -65,6 +68,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   container.replaceChildren(screen);
 
   const days = createDays(store);
+  const weightLog = createWeightLog(store);
   const today = () => localDate(new Date());
   const error = formError();
   let date = today();
@@ -74,6 +78,9 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   let doc;
   let foods;
   let getFood;
+  // The weight log, oldest first. Its latest weigh-in is the profile's weight, so it sets the
+  // targets (SPEC §3.1).
+  let weighIns;
   let targets;
   let dayRings;
   let writes = Promise.resolve();
@@ -85,11 +92,17 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   let removeButtons = [];
   let entryRowsById = new Map();
   // A locked day's Add (SPEC §3.6), kept across rebuilds so focus can go back to it.
-  const addToDay = secondaryButton('Add', { block: true, onClick: () => addToLocked() });
-  // Going off plan and back (SPEC §3.4), kept across rebuilds so focus can move from one to the
-  // other.
-  const goOffPlanButton = secondaryButton('Go off plan', { block: true, onClick: () => goOffPlan() });
+  const addToDay = secondaryButton('Add', { block: true, onClick: () => addToChosenSlot(addToDay) });
+  // "Back on plan" (SPEC §3.4), kept across rebuilds so focus can move to it from Off plan.
   const backOnPlanButton = secondaryButton('Back on plan', { onClick: () => backOnPlan() });
+  // Between the rings and the slots, built once like the rings, so a rebuilt slot list leaves
+  // focus on them.
+  const actions = quickActions({
+    onAddFood: () => addToChosenSlot(actions.addFood, 'food'),
+    onQuickNumbers: () => addToChosenSlot(actions.quickNumbers, 'quick'),
+    onWeighIn: () => weighIn(),
+    onOffPlan: () => goOffPlan(),
+  });
   // The rings stay in place across dates, so their arcs move to the new day's totals.
   const slotsArea = document.createElement('div');
   slotsArea.className = 'today__slots';
@@ -142,22 +155,36 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   }
 
   // Shown in the slot straight away, with a hop of its tile (DESIGN §14), then saved; on a locked
-  // day, the new entry's own row hops. slot: { id, name }. Recent is read once this screen's own
-  // writes are in, so it has them.
-  async function add(slot) {
+  // day, the new entry's own row hops. slot: { id, name }. kind: the add sheet's segment to open
+  // on, if not its usual one. Recent is read once this screen's own writes are in, so it has them.
+  async function add(slot, kind) {
     await writes;
     const recent = await days.recent(today());
-    const entry = await addEntrySheet({ slot, meals: doc.meals ?? [], foods, getFood, store, recent, today: today() });
+    const entry = await addEntrySheet({ slot, meals: doc.meals ?? [], foods, getFood, store, recent, today: today(), kind });
     if (!entry) return;
     change((d) => addEntry(d, entry));
     hopTile(day.locked ? entryRowsById.get(entry.id) : slotRows.get(slot.id));
   }
 
-  // A locked day lists entries, not slots, so its Add asks for the slot first.
-  async function addToLocked() {
+  // Asks for the slot first: a locked day lists entries, not slots, and Add food and Quick
+  // numbers aren't in a slot. Focus goes back to the button that asked.
+  async function addToChosenSlot(button, kind) {
     const slot = await chooseSlotSheet({ slots: doc.slots ?? [] });
-    if (slot) await add(slot);
-    addToDay.focus();
+    if (slot) await add(slot, kind);
+    button.focus();
+  }
+
+  function updateTargets() {
+    targets = profileTargets(doc.profile ?? {}, currentWeight(weighIns), doc.overrides ?? {});
+  }
+
+  // The new weigh-in can move the targets, so the rings and open flex slots move with them.
+  async function weighIn() {
+    const saved = await logWeighInSheet({ weightLog, weighIns, units: doc.settings?.units ?? 'metric' });
+    if (!saved || !screen.isConnected) return;
+    weighIns = saved;
+    updateTargets();
+    show();
   }
 
   // Asks first: removing takes the entry out of the day for good (CLAUDE.md, storage). Resolves
@@ -217,12 +244,13 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   }
 
   // Clears off plan from today on, this day included; an earlier day stays off plan (SPEC §3.4).
+  // Focus goes to Off plan, which takes it back.
   function backOnPlan() {
     const now = today();
     day = { ...day, offPlan: false };
     offPlanEnd = null;
     show();
-    (goOffPlanButton.isConnected ? goOffPlanButton : slotsArea.querySelector('button'))?.focus();
+    (actions.offPlan.disabled ? slotsArea.querySelector('button') : actions.offPlan)?.focus();
     queueWrite('back on plan', () => days.backOnPlan(now));
   }
 
@@ -275,8 +303,15 @@ export function render(container, { store, dateSwitcher, lockIn }) {
       dayRings.show({ totals, targets });
     } else {
       dayRings = rings({ totals, targets });
-      screen.replaceChildren(dayRings.element, slotsArea, error.element);
+      screen.replaceChildren(dayRings.element, actions.element, slotsArea, error.element);
     }
+    // Only a locked day, or today and later, take entries (SPEC §3.6). Off plan can start on any
+    // day from today up to 30 days ahead that isn't already off plan (SPEC §3.4).
+    const now = today();
+    actions.show({
+      canAdd: day.locked || date >= now,
+      canGoOffPlan: date >= now && date <= lastOffPlanDate(now) && !day.offPlan,
+    });
 
     slotRows = new Map();
     slotButtons = new Map();
@@ -298,9 +333,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
         }),
       );
     } else {
-      // Off plan can start on any day from today up to 30 days ahead (SPEC §3.4).
-      const canGoOffPlan = date >= today() && date <= lastOffPlanDate(today());
-      slotsArea.replaceChildren(rowList(slotList(plans)), ...(canGoOffPlan ? [goOffPlanButton] : []));
+      slotsArea.replaceChildren(rowList(slotList(plans)));
     }
   }
 
@@ -334,13 +367,14 @@ export function render(container, { store, dateSwitcher, lockIn }) {
 
   // Meal totals and the add sheet's search need every food, bundled ones included. Targets need
   // the latest weigh-in.
-  Promise.all([loadBundledFoods(), store.load(CORE_DOC_ID), createWeightLog(store).list()]).then(
-    ([bundled, loaded, weighIns]) => {
+  Promise.all([loadBundledFoods(), store.load(CORE_DOC_ID), weightLog.list()]).then(
+    ([bundled, loaded, log]) => {
       if (!screen.isConnected) return;
       doc = loaded;
       foods = [...(doc.foods ?? []), ...bundled];
       getFood = foodLookup(foods);
-      targets = profileTargets(doc.profile ?? {}, currentWeight(weighIns), doc.overrides ?? {});
+      weighIns = log;
+      updateTargets();
       showDay();
     },
     (err) => {

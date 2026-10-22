@@ -110,7 +110,7 @@ export function renderHeader(header, route, { onBack, syncStatus }) {
   if (!isPushed(route)) start.insertAdjacentHTML('afterbegin', LOGO_MARK);
 
   if (syncStatus) end.append(syncStatus);
-  if (!isPushed(route)) end.append(iconLink('sliders-horizontal', 'Settings', hashFor('settings')));
+  if (!isPushed(route)) end.append(iconLink('settings', 'Settings', hashFor('settings')));
 
   header.dataset.layout = route === 'today' ? 'today' : isPushed(route) ? 'pushed' : 'tab';
   header.replaceChildren(start, end);

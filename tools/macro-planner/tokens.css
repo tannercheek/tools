@@ -110,6 +110,7 @@
   --tap-min:        44px; /* minimum hit target, both axes */
   --control-h:      48px; /* inputs, primary buttons */
   --control-h-sm:   44px; /* secondary buttons, icon buttons, toggles */
+  --control-h-compact: 56px; /* compact buttons: an icon over an xs label, like a tab item */
   --icon-size:      24px;
   --icon-size-sm:   20px; /* quiet hints, e.g. a row's trailing action icon */
   --icon-stroke:    2;    /* SVG stroke-width, matches --border-width */

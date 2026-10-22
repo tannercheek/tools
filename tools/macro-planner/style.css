@@ -455,11 +455,18 @@ html:has(.tabbar:not([hidden])) {
 
 /* ---------- Today (SPEC §3.6) ---------- */
 
-/* The rings, then the day's slots. */
+/* The rings, the quick actions, then the day's slots. */
 .today {
   display: flex;
   flex-direction: column;
   gap: var(--section-gap);
+}
+
+/* Quick actions (DESIGN §8): four equal compact buttons on one line, about 76px each at 360px. */
+.today__actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 
 /* A locked day's entries, then its Add. */
@@ -467,6 +474,13 @@ html:has(.tabbar:not([hidden])) {
   display: flex;
   flex-direction: column;
   gap: var(--stack-gap);
+}
+
+/* Slot actions sheet (DESIGN §8): Swap, Skip and Add as three equal buttons on one line. */
+.slot-actions__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--inline-gap);
 }
 
 /* ---------- Plan (SPEC §3.4) ---------- */

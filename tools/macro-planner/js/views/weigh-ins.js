@@ -38,9 +38,10 @@ function saveFailed(err) {
 }
 
 // A weight and its date, which starts on today and can be set to an earlier day (SPEC §3.1).
-// weighIns: the log, oldest first, to spot a date that already has one. Resolves to the log,
-// oldest first, once the weigh-in is saved, or null if the sheet closes without one.
-async function logWeighInSheet({ weightLog, weighIns, units }) {
+// Opened here and by Today's Weigh in. weighIns: the log, oldest first, to spot a date that
+// already has one. Resolves to the log, oldest first, once the weigh-in is saved, or null if the
+// sheet closes without one.
+export async function logWeighInSheet({ weightLog, weighIns, units }) {
   const today = localDate(new Date());
   let saved = null;
   let saving = false;

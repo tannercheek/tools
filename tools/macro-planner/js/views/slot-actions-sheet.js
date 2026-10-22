@@ -1,6 +1,6 @@
 // A slot's sheets on Today (DESIGN §8): the slot actions sheet, what a planned slot changes for
 // the day (SPEC §3.5), and the sheet of what's in a filled flex slot. Each lists what's been
-// added to the slot, each with remove, and has Add to this slot.
+// added to the slot, each with remove, and has a way to add to the slot.
 
 import { parseAmount } from '../custom-foods.js';
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
@@ -51,12 +51,13 @@ function customPortionForm({ portion, onSet }) {
 }
 
 // plan: the slot as slots.js's daySlots plans it, with a meal. canSwap: whether there's another
-// saved meal to swap to. Swap, Add to this slot and an entry's remove close the sheet for the
-// caller to open the next sheet. Skip and As planned apply and close straight away, since each
-// undoes the other (DESIGN §8). A preset portion applies as it's picked, through
-// onPortion(portion), and the sheet stays open, since arrow keys move through the presets one by
-// one; Custom's "Set portion" applies and closes. Resolves to { action } for the caller to act
-// on, action being 'swap', 'skip', 'as-planned', 'add' or 'remove' (with the entry), or null.
+// saved meal to swap to. Swap, Skip and Add sit in one row at the top, short since the title
+// names the slot (DESIGN §8). Swap, Add and an entry's remove close the sheet for the caller to
+// open the next sheet. Skip and As planned apply and close straight away, since each undoes the
+// other. A preset portion applies as it's picked, through onPortion(portion), and the sheet
+// stays open, since arrow keys move through the presets one by one; Custom's "Set portion"
+// applies and closes. Resolves to { action } for the caller to act on, action being 'swap',
+// 'skip', 'as-planned', 'add' or 'remove' (with the entry), or null.
 export async function slotActionsSheet({ plan, canSwap, onPortion }) {
   let picked = null;
   let sheet;
@@ -66,14 +67,17 @@ export async function slotActionsSheet({ plan, canSwap, onPortion }) {
   };
 
   let { skipped, portion } = plan;
-  const swap = secondaryButton('Swap', { block: true, onClick: () => choose('swap') });
-  swap.hidden = !canSwap;
+  const swap = secondaryButton('Swap', { block: true, disabled: !canSwap, onClick: () => choose('swap') });
   const skip = secondaryButton('Skip', { block: true, onClick: () => choose('skip') });
-  const add = secondaryButton('Add to this slot', { block: true, onClick: () => choose('add') });
+  const add = secondaryButton('Add', { block: true, onClick: () => choose('add') });
+  const row = document.createElement('div');
+  row.className = 'slot-actions__row';
+  row.append(swap, skip, add);
   const asPlanned = secondaryButton('As planned', { block: true, onClick: () => choose('as-planned') });
-  // Skip only while there's something to skip; As planned only while there's a change to undo.
+  // Skip is disabled rather than hidden on a skipped slot, so the row keeps its three places. As
+  // planned only shows while there's a change to undo.
   function showActions() {
-    skip.hidden = skipped;
+    skip.disabled = skipped;
     asPlanned.hidden = !(plan.swapped || skipped || portion !== 1);
   }
 
@@ -112,7 +116,7 @@ export async function slotActionsSheet({ plan, canSwap, onPortion }) {
   const entries = plan.entries.length > 0 ? [entryList(plan.entries, (entry) => choose('remove', entry))] : [];
   sheet = openSheet({
     title: `${plan.name} · ${plan.meal.name}`,
-    content: [swap, skip, presets.element, custom.form, ...entries, add, asPlanned],
+    content: [row, presets.element, custom.form, ...entries, asPlanned],
   });
   await sheet.closed;
   return picked;
