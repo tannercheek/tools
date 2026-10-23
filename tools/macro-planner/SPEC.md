@@ -155,7 +155,7 @@ A meal is a named list of foods with quantities.
 
 - **Slots:** 3–6, user-named (e.g. Breakfast, Lunch, Pre-workout, Dinner). Set in Settings.
 - **Template:** each slot holds either a meal or flex, optionally with a pinned budget. The same template applies every day.
-- **Swap:** a planned slot's actions let you swap its meal for another **for that day only**. A "make this the default" option updates the template.
+- **Swap:** a planned slot's actions let you swap its meal **for that day only**: for another saved meal, a food or quick numbers (§3.5). For a meal, a "make this the default" option updates the template. A food or quick numbers can't be the default, since the template plans meals.
 - **Flex slot:** a slot with no fixed meal. While it's **open**, with nothing added yet, it displays the **remaining** calories and macros for the day: the targets minus the rest of the day (§3.5), meaning the planned meals after swaps, skips and portions, the pinned budgets of other open flex slots, and everything added to other slots. This is the gap to fill. Optionally the user can pin a budget instead: four numbers (kcal, protein, fat, carbs), entered like quick numbers. It's stored on the template slot as `budget: { kcal, protein, fat, carbs }`. A flex slot is filled by adding a meal, foods, quick numbers or a Recent entry to it. **Once filled, it's done:** it shows the total of what's in it, like a planned meal, instead of the gap, and its pinned budget no longer counts. Removing everything from it makes it open again.
 - **More than one flex slot:** what's left is never split between them. Each open flex slot shows the full remaining, because you might fill it all with the first one or skip one. Once one is filled, the others show what's still left.
 - **Open flex slots are normal.** A flex slot with nothing in it is just open, today or on a past day. It isn't shown as missed or incomplete. With no targets yet (§3.1), it shows as open, with no remaining. An open flex slot counts as nothing in the day's total, unless it has a pinned budget, which counts like a planned meal.
@@ -166,7 +166,11 @@ A meal is a named list of foods with quantities.
 
 The plan counts as eaten. A day is the template plus what you change:
 
-- **Swap** a planned slot's meal for that day (§3.4).
+- **Swap** a planned slot's meal for that day (§3.4), for another saved meal, a food or quick numbers.
+  - A food is searched and given an amount, and quick numbers are entered, as in the add sheet. The slot eats that in place of its meal, so it counts in the day's total and the meal doesn't.
+  - It's held as a snapshot entry in the slot's change, so editing or deleting the food later never changes it.
+  - It has no portion and no ingredients to edit: to change the amount, swap again. Swap, Skip and As planned replace it, like any swap.
+  - The slot then shows like a filled flex slot (§3.6): what it holds, with anything added to it, and their total.
 - **Skip** a planned slot: it counts as nothing that day.
 - **Portion:** 0.5×, 1×, 1.5× or custom, on a planned slot's meal.
 - **Ingredients:** open a planned slot's meal, or a meal added to a slot, and change it for that day only: an amount (3 eggs, not 2), a food swapped for another (a different bread), a food removed, or one added.
@@ -187,8 +191,10 @@ The plan counts as eaten. A day is the template plus what you change:
 ```js
 // day in macro-planner-days
 {
-  changes: { "<slotId>": { mealId, portion, ingredients } }, // only slots that differ from the template.
+  changes: { "<slotId>": { mealId, portion, ingredients, entry } }, // only slots that differ from the template.
                    // mealId: a swap; null: skipped; absent: the template's meal
+                   // entry: a swap to a food or quick numbers, an entry snapshot eaten in place of
+                   // any meal, so it comes without mealId, portion or ingredients
                    // ingredients: { mealId, items: [ingredient] }, the day's version of the meal
                    // mealId names; ignored while the slot shows any other meal
   entries: [],     // added foods, quick numbers and Recent entries; after lock-in, the whole day
@@ -209,7 +215,7 @@ The plan counts as eaten. A day is the template plus what you change:
 
 **Lock-in:** once a day has passed, its plan is written into `entries` as snapshot entries and `locked` is set:
 
-- Each planned meal (after swaps, skips, portions and ingredient changes) becomes a `meal` entry, under the meal's name and emoji. Each open flex slot with a pinned budget becomes a `quick` entry labelled with the slot's name. Both are marked `planned: true`, so Recent can leave them out. `changes` is then ignored.
+- Each planned meal (after swaps, skips, portions and ingredient changes) becomes a `meal` entry, under the meal's name and emoji. Each open flex slot with a pinned budget becomes a `quick` entry labelled with the slot's name. Both are marked `planned: true`, so Recent can leave them out. A slot swapped to a food or quick numbers writes its entry as it is, in the slot's place and without `planned`: it's something you chose rather than the plan, so Recent lists it like anything added. `changes` is then ignored.
 - It runs on app load and when the date changes while the app is open, for every past day in the window that isn't locked, from the core doc's `startedOn` date on. Days you never opened count as on plan. Days before you started using the app don't count.
 - Any edit to a meal or the template happens in a session that has already locked every past day, so it can only affect today and later.
 - A locked day is a list of entries. Correct it by removing an entry and adding what you actually ate.
@@ -226,7 +232,7 @@ The same goes for slots: an entry also stores its slot's name (`slotName`) when 
   - **Weigh in** logs a weigh-in, as on Stats. The targets move with it (§3.1), and the rings straight away.
   - **Off plan** opens "Off plan until [date]" (§3.4) on a day it can start: today up to 30 days ahead, and not already off plan.
   - A button that doesn't apply to the day shown is disabled, not hidden.
-- Slots listed in order. Each shows its meal (planned, swapped, edited or skipped, with any portion) and its totals, or for a flex slot the remaining while it's open and the total of what's in it once filled, with anything added to it listed under it. Tapping a planned slot opens its actions: Swap, Skip and Add in one row, then Portion, Edit ingredients, its added entries with remove, and As planned. An open flex slot's Log opens the add sheet. Tapping a filled flex slot lists what's in it, each with remove, plus Add to this slot. In either list, a meal added with its ingredients opens them instead (§3.5), with its remove inside.
+- Slots listed in order. Each shows its meal (planned, swapped, edited or skipped, with any portion) and its totals, or for a flex slot the remaining while it's open and the total of what's in it once filled, with anything added to it listed under it. A slot swapped to a food or quick numbers shows like a filled flex slot, marked swapped: what it holds, with anything added to it listed under it, and their total. A planned slot with an ingredient change (§3.5) lists its ingredients under it first, each with its amount at the slot's portion, so the change shows without opening the slot. An added meal whose ingredients have changed since it was added lists them too: under the slot, when it's all a filled flex slot holds, or indented under its own line, when it's one of the things listed under a slot. Tapping a planned slot opens its actions: Swap, Skip and Edit (its ingredients) in one row, since they act on the planned meal, then Portion, Add to this slot, its added entries with remove, and As planned. On a slot swapped to a food or quick numbers, Edit is disabled and Portion doesn't show, since neither applies. An open flex slot's Log opens the add sheet. Tapping a filled flex slot lists what's in it, each with remove, plus Add to this slot. In either list, a meal added with its ingredients opens them instead (§3.5), with its remove inside.
 - On a locked past day, the slots list that day's entries instead, each with remove, plus Add.
 - Date switcher: previous/next day, back to today. It goes back to 7 days ago (the oldest kept day, §4.3) and forward without a limit, for planning swaps or off-plan days ahead.
 - On an off-plan day, a short "Off plan" line sits above the slots, with "Back on plan".

@@ -150,9 +150,10 @@ const DINNER = { id: 'dinner-id', name: 'Dinner' };
 
 test('a meal entry snapshots the meal’s name, emoji and totals, under the slot’s name', () => {
   const entry = mealEntry(DINNER, RICE_BEEF, getFood);
-  const { id, kcal, protein, fat, carbs, ...rest } = entry;
+  const { id, kcal, protein, fat, carbs, ingredients, ...rest } = entry;
   assert.match(id, /^[0-9a-f-]{36}$/);
   assert.deepEqual(rest, { slotId: 'dinner-id', slotName: 'Dinner', label: 'Rice & beef', emoji: '🍚', source: 'meal' });
+  assert.deepEqual(ingredients.map((item) => [item.foodId, item.qty]), [['rice', 200], ['beef', 150]]);
   assert.ok(Math.abs(kcal - 635) < 1e-9 && Math.abs(protein - 44) < 1e-9);
   assert.ok(Math.abs(fat - 23.1) < 1e-9 && Math.abs(carbs - 56) < 1e-9);
 });

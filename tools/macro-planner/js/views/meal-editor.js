@@ -24,12 +24,13 @@ import {
   updateMeal,
 } from '../saved-meals.js';
 import { CORE_DOC_ID } from '../store.js';
-import { secondaryButton } from '../ui/buttons.js';
+import { iconButton, secondaryButton } from '../ui/buttons.js';
 import { newTagPill, tagGroup, tagPill } from '../ui/controls.js';
 import { emojiField } from '../ui/emoji-picker.js';
 import { formError, numberField, textField } from '../ui/inputs.js';
-import { ingredientRow, numbersLine, rowList } from '../ui/row.js';
+import { ingredientRow, rowList } from '../ui/row.js';
 import { confirmSheet } from '../ui/sheet.js';
+import { totalsCard } from '../ui/totals-card.js';
 import { addFoodSheet } from './add-food-sheet.js';
 import { newTagSheet } from './new-tag-sheet.js';
 
@@ -45,31 +46,6 @@ function note(text) {
   element.className = 'meals__note';
   element.textContent = text;
   return element;
-}
-
-// What the meal adds up to, in a card that stays in view above its foods.
-// show(totals) updates it, e.g. with an amount that's still being typed.
-function totalsCard() {
-  const card = document.createElement('div');
-  card.className = 'meal-totals';
-  const label = document.createElement('span');
-  label.className = 'row__eyebrow';
-  label.textContent = 'Total';
-  let line = document.createElement('span');
-  card.append(label, line);
-  // The strip is what sticks: it fills the card's rounded corners with the page colour, so
-  // rows scrolling under it don't show there.
-  const strip = document.createElement('div');
-  strip.className = 'meal-totals-strip';
-  strip.append(card);
-  return {
-    element: strip,
-    show(totals) {
-      const next = numbersLine(totals);
-      line.replaceWith(next);
-      line = next;
-    },
-  };
 }
 
 // route: 'meal/<id>'. A meal that isn't there, deleted here or on another device, goes back.
@@ -198,7 +174,7 @@ export function render(container, { route, replaceRoute, goBack, store }) {
         title: food.name,
         numbers: foodTotals(food, qty),
         quantity,
-        onRemove: remove,
+        trailing: iconButton('x', `Remove ${food.name}`, { onClick: remove }),
       });
       const savedQty = () => meal.items.find((item) => item.foodId === foodId).qty;
 
@@ -241,7 +217,7 @@ export function render(container, { route, replaceRoute, goBack, store }) {
       const picked = await addFoodSheet({ foods, store });
       useFoods((await store.load(CORE_DOC_ID)).foods ?? []);
       if (!picked) return;
-      edit((m) => addItem(m, picked.foodId, picked.qty));
+      edit((m) => addItem(m, picked.food.id, picked.qty));
       showList();
     }
 

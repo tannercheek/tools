@@ -2,7 +2,8 @@
 // numbers and a flex slot's pinned budget, which are entered the same way (SPEC §3.4).
 
 import { readNumbers } from '../custom-foods.js';
-import { numberField } from '../ui/inputs.js';
+import { primaryButton } from '../ui/buttons.js';
+import { numberField, textField } from '../ui/inputs.js';
 
 // Stored numbers go back in as they are, at full precision.
 function asText(value) {
@@ -37,4 +38,26 @@ export function numbersFields(values = {}) {
       return numbers;
     },
   };
+}
+
+// Quick numbers (SPEC §3.5): kcal and macros, with an optional label, for the add and swap
+// sheets. submitLabel: the primary button, "Log numbers" or "Swap numbers". onSubmit(numbers,
+// label) runs once the numbers read.
+export function quickNumbersForm({ submitLabel, onSubmit }) {
+  const label = textField({ label: 'Label (optional)' });
+  const numbers = numbersFields();
+
+  const form = document.createElement('form');
+  form.className = 'quick-form';
+  form.noValidate = true;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const values = numbers.read();
+    if (values) onSubmit(values, label.input.value);
+  });
+
+  const submit = primaryButton(submitLabel, { block: true });
+  submit.type = 'submit';
+  form.append(label.element, numbers.element, submit);
+  return form;
 }

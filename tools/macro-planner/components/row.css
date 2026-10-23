@@ -220,18 +220,35 @@
 .macro-dot--fat { background: var(--macro-fat); }
 .macro-dot--carbs { background: var(--macro-carbs); }
 
-/* What's been added to a slot, under its numbers (DESIGN §8): plain lines of emoji, label and
-   kcal. A long label truncates, so the kcal always shows. */
+/* Plain lines under a row's numbers (DESIGN §8): what's been added to a slot, as emoji, label and
+   kcal, or an edited meal's ingredients, with an amount in place of kcal. A long label truncates,
+   so the kcal or amount always shows. */
 .row__extras {
   display: flex;
   flex-direction: column;
   padding-top: var(--space-1);
 }
 
-.row__extra {
+/* An edited meal's ingredients, then what's been added beside it below a divider, so the two read
+   as two lists. The gap above the divider matches the padding below it. */
+.row__lists {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row__extras--divided {
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+/* A line is its emoji, then its label and kcal or amount. A grid, so an edited meal added to the
+   slot can list its ingredients under its line in the label's column, lined up with its label
+   rather than its emoji, whatever width the emoji renders at (DESIGN §8 edited extra). */
+.row__extra {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-2);
+  column-gap: var(--space-2);
   min-width: 0;
   font-size: var(--font-size-sm);
   line-height: var(--line-sm);
@@ -240,8 +257,21 @@
   font-variant-numeric: var(--numeric);
 }
 
-.row__extra-emoji,
-.row__extra-kcal {
+.row__extra-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Straight under the line it belongs to, with no gap, so it reads as that line's list. */
+.row__extras--nested {
+  grid-column: 2;
+  padding-top: 0;
+}
+
+.row__extra-kcal,
+.row__extra-amount {
   flex: none;
 }
 

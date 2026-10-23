@@ -1,7 +1,6 @@
 // List rows (DESIGN §8): emoji tile → text stack → one trailing control.
 
 import { icon } from '../icons.js';
-import { iconButton } from './buttons.js';
 
 const integer = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -69,30 +68,59 @@ function iconTile(iconName) {
   return tile;
 }
 
-// What's been added to a slot, under its numbers (DESIGN §8): a plain line each of emoji, label
-// and kcal. entries: [{ emoji, label, kcal }].
-function extrasLines(entries) {
+// Plain lines under a row's numbers (DESIGN §8): a line each of emoji, label and kcal, like what's
+// been added to a slot, or with an amount in place of kcal, like an edited meal's ingredients.
+// items: [{ emoji, label, kcal, ingredients }] or [{ emoji, label, amount }], amount as text
+// ("3 egg"). ingredients, if any: lines of the second kind, indented under that line's label,
+// like an edited meal that's one of the things added to a slot.
+function extrasLines(items) {
   const lines = document.createElement('span');
   lines.className = 'row__extras';
-  for (const { emoji, label, kcal } of entries) {
+  for (const { emoji, label, kcal, amount, ingredients = [] } of items) {
     const line = document.createElement('span');
     line.className = 'row__extra';
     const emojiText = textLine('row__extra-emoji', emoji);
     emojiText.setAttribute('aria-hidden', 'true');
-    line.append(emojiText, textLine('row__extra-label', label), textLine('row__extra-kcal', `${integer.format(kcal)} kcal`));
+    // The label and what ends the line go together, so lines under it can share their column.
+    const main = document.createElement('span');
+    main.className = 'row__extra-main';
+    const end = amount === undefined ? textLine('row__extra-kcal', `${integer.format(kcal)} kcal`) : textLine('row__extra-amount', amount);
+    main.append(textLine('row__extra-label', label), end);
+    line.append(emojiText, main);
+    if (ingredients.length > 0) {
+      const nested = extrasLines(ingredients);
+      nested.classList.add('row__extras--nested');
+      line.append(nested);
+    }
     lines.append(line);
   }
   return lines;
 }
 
+// An edited meal's ingredients, then what's been added beside it below a divider, so the two read
+// as two lists (DESIGN §8). Either can be empty.
+function linesUnder(ingredients, extras) {
+  if (ingredients.length === 0) return extrasLines(extras);
+  if (extras.length === 0) return extrasLines(ingredients);
+  const lists = document.createElement('span');
+  lists.className = 'row__lists';
+  const below = extrasLines(extras);
+  below.classList.add('row__extras--divided');
+  lists.append(extrasLines(ingredients), below);
+  return lists;
+}
+
 // numbers: { kcal, protein, fat, carbs }, a word in their place (a skipped slot's "Skipped"), or
-// omitted. extras: entries added to a slot, listed under the numbers, or omitted. trailing: one
-// control element or omitted. onClick or href: makes the whole row one button or link; its
-// trailing can then only be a rowActionIcon. placeholderIcon, in place of emoji: the dashed
-// placeholder row with that icon in its tile, like Plan's empty slot. With neither, the row has
-// no tile, like a weigh-in, since emoji only identify foods and meals. muted: the title and
-// numbers in secondary text, like a skipped slot (DESIGN §8).
-export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, extras = [], trailing, onClick, href, muted = false }) {
+// omitted. ingredients: an edited meal's ingredients as { emoji, label, amount }, listed under
+// the numbers, or omitted. extras: entries added to a slot as { emoji, label, kcal, ingredients },
+// listed under the numbers, below the ingredients if there are any, or omitted; an extra's own
+// ingredients, shaped like the row's, are indented under its line. trailing: one control element
+// or omitted. onClick or href: makes the whole row one button or link; its trailing can then only
+// be a rowActionIcon. placeholderIcon, in place of emoji: the dashed placeholder row with that
+// icon in its tile, like Plan's empty slot. With neither, the row has no tile, like a weigh-in,
+// since emoji only identify foods and meals. muted: the title and numbers in secondary text, like
+// a skipped slot (DESIGN §8).
+export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, ingredients = [], extras = [], trailing, onClick, href, muted = false }) {
   const row = document.createElement(href ? 'a' : onClick ? 'button' : 'li');
   row.className = placeholderIcon ? 'row row--placeholder' : 'row';
   if (muted) row.classList.add('row--muted');
@@ -103,7 +131,7 @@ export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, extra
   text.append(textLine('row__title', title));
   if (typeof numbers === 'string') text.append(textLine('row__numbers', numbers));
   else if (numbers) text.append(numbersLine(numbers));
-  if (extras.length > 0) text.append(extrasLines(extras));
+  if (ingredients.length > 0 || extras.length > 0) text.append(linesUnder(ingredients, extras));
 
   if (placeholderIcon) row.append(iconTile(placeholderIcon));
   else if (emoji) row.append(emojiTile(emoji));
@@ -120,10 +148,11 @@ export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, extra
   return item;
 }
 
-// Ingredient row (meal editor, DESIGN §8): a quantity field, then a remove button.
-// quantity: a numberField with no label of its own; the food's name is its visible label, so
-// tapping the name focuses it. setNumbers(numbers) shows new totals, e.g. while typing.
-export function ingredientRow({ emoji, title, numbers, quantity, onRemove }) {
+// Ingredient row (DESIGN §8): a quantity field, then one trailing control: the meal editor's
+// remove button, or the Ingredients sheet's swap button. quantity: a numberField with no label of
+// its own; the food's name is its visible label, so tapping the name focuses it.
+// setNumbers(numbers) shows new totals, e.g. while typing.
+export function ingredientRow({ emoji, title, numbers, quantity, trailing }) {
   const row = document.createElement('li');
   row.className = 'row row--ingredient';
 
@@ -136,12 +165,12 @@ export function ingredientRow({ emoji, title, numbers, quantity, onRemove }) {
   let line = numbersLine(numbers);
   text.append(label, line);
 
-  // The field sits under the name, with the remove button at the end of the row. The field's
+  // The field sits under the name, with the trailing control at the end of the row. The field's
   // error message moves out under the field, so the field's wrapper adds no layout of its own.
   const body = document.createElement('div');
   body.className = 'row__body';
   body.append(text, quantity.element, quantity.error);
-  row.append(emojiTile(emoji), body, iconButton('x', `Remove ${title}`, { onClick: onRemove }));
+  row.append(emojiTile(emoji), body, trailing);
   return {
     element: row,
     setNumbers(next) {

@@ -476,11 +476,17 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--stack-gap);
 }
 
-/* Slot actions sheet (DESIGN §8): Swap, Skip and Add as three equal buttons on one line. */
+/* Slot actions sheet (DESIGN §8): Swap, Skip and Edit as three equal buttons on one line. */
 .slot-actions__row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--inline-gap);
+}
+
+/* Ingredients sheet (DESIGN §8): the only ingredient rows in a sheet. A portion makes amounts
+   like 262.5 g, which the meal editor's field has no room for. */
+.sheet__panel .row--ingredient .input {
+  width: var(--qty-input-w-lg);
 }
 
 /* ---------- Plan (SPEC §3.4) ---------- */
@@ -535,29 +541,7 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--stack-gap);
 }
 
-/* Holds the totals card under the header while its foods scroll, until the end of the list.
-   Its page-colour fill shows in the card's rounded corners, hiding the rows passing under. */
-.meal-totals-strip {
-  position: sticky;
-  top: var(--header-h);
-  background: var(--color-bg);
-}
-
-/* Moving focus back up the foods stops below the sticky totals card as well as the header. The
-   card is its border, padding, the "Total" eyebrow and one numbers line, then the gap to the list. */
-.meal-editor .row--ingredient :is(input, button) {
-  scroll-margin-top: calc(2 * var(--border-width) + 2 * var(--card-pad) + var(--line-xs) + var(--line-sm) + var(--stack-gap));
-}
-
-/* One card, one question: what the meal adds up to (DESIGN §1). */
-.meal-totals {
-  padding: var(--card-pad);
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-/* ---------- Add food sheet (meal editor) ---------- */
+/* ---------- Add food sheet (meal editor, Ingredients sheet) ---------- */
 
 /* Full height, so the search field stays put while the results change under it. */
 .sheet__panel:has(> .add-food) {
@@ -571,15 +555,18 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--stack-gap);
 }
 
-/* ---------- Add sheet (Today: a flex slot's Log) ---------- */
+/* ---------- Add and swap sheets (Today: a flex slot's Log, a planned slot's Swap) ---------- */
 
 /* Full height like the add food sheet, so switching between meal, food and numbers doesn't
    resize the sheet. */
-.sheet__panel:has(> .add-entry) {
+.sheet__panel:has(> .add-entry),
+.sheet__panel:has(> .swap) {
   height: calc(100% - var(--header-h));
 }
 
-.add-entry {
+.add-entry,
+.swap,
+.swap__meal {
   display: flex;
   flex-direction: column;
   gap: var(--stack-gap);

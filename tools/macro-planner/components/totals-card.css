@@ -1,0 +1,51 @@
+/* Totals card for js/ui/totals-card.js (DESIGN §8). Every value comes from tokens.css. */
+
+/* Holds the card under the header while its foods scroll, until the end of the list.
+   Its page-colour fill shows in the card's rounded corners, hiding the rows passing under. */
+.totals-strip {
+  position: sticky;
+  top: var(--header-h);
+  background: var(--color-bg);
+}
+
+/* Moving focus back up the foods stops below the sticky card as well as the header. The card is
+   its border, padding, the "Total" eyebrow and one numbers line, then the gap to the list. */
+.totals-strip ~ .row-list :is(input, button) {
+  scroll-margin-top: calc(2 * var(--border-width) + 2 * var(--card-pad) + var(--line-xs) + var(--line-sm) + var(--stack-gap));
+}
+
+/* One card, one question: what the meal adds up to (DESIGN §1). */
+.totals-card {
+  padding: var(--card-pad);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* ---------- In a sheet, like the Ingredients sheet ---------- */
+
+/* The sheet scrolls on its own, so the card sticks to the sheet's top edge instead of the
+   header. The sheet's top padding moves onto its title, so there's no band above the stuck card
+   for rows to show through. */
+.sheet__panel:has(> .totals-strip) {
+  padding-top: 0;
+}
+
+.sheet__panel:has(> .totals-strip) > .sheet__title {
+  padding-top: var(--card-pad-lg);
+}
+
+/* The strip reaches up over the gap above it in the sheet's colour, so the stuck card keeps that
+   gap from the edge with nothing showing in it. The negative margin only cancels the reach: it
+   doesn't space anything, so the card still sits a gap below the title. */
+.sheet__panel > .totals-strip {
+  top: 0;
+  margin-top: calc(-1 * var(--stack-gap));
+  padding-top: var(--stack-gap);
+  background: var(--color-surface);
+}
+
+/* The strip here is the reach, then the card, then the gap to the list. */
+.sheet__panel > .totals-strip ~ .row-list :is(input, button) {
+  scroll-margin-top: calc(2 * var(--border-width) + 2 * var(--card-pad) + var(--line-xs) + var(--line-sm) + 2 * var(--stack-gap));
+}

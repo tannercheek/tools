@@ -6,16 +6,15 @@
 import { addDays } from '../calc.js';
 import { foodEntry, mealEntry, quickEntry, repeatEntry } from '../data.js';
 import { hashFor, mealRoute } from '../routes.js';
-import { iconButton, primaryButton } from '../ui/buttons.js';
-import { segmentedControl } from '../ui/controls.js';
+import { iconButton } from '../ui/buttons.js';
+import { segmentedPanes } from '../ui/controls.js';
 import { emptyState } from '../ui/empty-state.js';
-import { textField } from '../ui/inputs.js';
 import { listRow, rowList } from '../ui/row.js';
 import { openSheet } from '../ui/sheet.js';
 import { foodPicker } from './add-food-sheet.js';
 import { mealPicker } from './meal-picker.js';
 import { newMealSheet } from './new-meal-sheet.js';
-import { numbersFields } from './numbers-fields.js';
+import { quickNumbersForm } from './numbers-fields.js';
 
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
 
@@ -40,26 +39,6 @@ function recentPane(recent, today, onAdd) {
       return listRow({ emoji: entry.emoji, eyebrow: whenEaten(date, today), title: entry.label, numbers: entry, trailing: add });
     }),
   );
-}
-
-// Quick numbers: kcal and macros, with an optional label. done(numbers, label) on submit.
-function quickNumbersForm(done) {
-  const label = textField({ label: 'Label (optional)' });
-  const numbers = numbersFields();
-
-  const form = document.createElement('form');
-  form.className = 'quick-form';
-  form.noValidate = true;
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const values = numbers.read();
-    if (values) done(values, label.input.value);
-  });
-
-  const submit = primaryButton('Log numbers', { block: true });
-  submit.type = 'submit';
-  form.append(label.element, numbers.element, submit);
-  return form;
 }
 
 // slot: { id, name }, the slot the entry goes in. meals: the saved meals. foods: bundled and
@@ -97,21 +76,12 @@ export async function addEntrySheet({ slot, meals, foods, getFood, store, recent
     food: () =>
       foodPicker({ foods, store, submitLabel: 'Log food', onAdd: (food, qty) => done(foodEntry(slot, food, qty)) })
         .element,
-    quick: () => quickNumbersForm((numbers, label) => done(quickEntry(slot, numbers, label))),
+    quick: () =>
+      quickNumbersForm({ submitLabel: 'Log numbers', onSubmit: (numbers, label) => done(quickEntry(slot, numbers, label)) }),
   };
 
-  // Each pane is built when first shown and kept, so switching back finds it as it was left.
-  const built = new Map();
-  const pane = document.createElement('div');
-  pane.className = 'add-entry__pane';
-  function show(kind) {
-    if (!built.has(kind)) built.set(kind, panes[kind]());
-    pane.replaceChildren(built.get(kind));
-  }
-
   // Recent first, unless asked for another, so adding one again stays one tap.
-  const first = kind ?? (recent.length > 0 ? 'recent' : 'meal');
-  const kinds = segmentedControl({
+  const kinds = segmentedPanes({
     label: 'What to log',
     options: [
       { value: 'recent', label: 'Recent' },
@@ -119,14 +89,13 @@ export async function addEntrySheet({ slot, meals, foods, getFood, store, recent
       { value: 'food', label: 'Food' },
       { value: 'quick', label: 'Quick' },
     ],
-    value: first,
-    onChange: show,
+    value: kind ?? (recent.length > 0 ? 'recent' : 'meal'),
+    panes,
   });
-  show(first);
 
   const body = document.createElement('div');
   body.className = 'add-entry';
-  body.append(kinds.element, pane);
+  body.append(kinds.control, kinds.pane);
   sheet = openSheet({ title: `${slot.name} · Log`, content: body });
   await sheet.closed;
 

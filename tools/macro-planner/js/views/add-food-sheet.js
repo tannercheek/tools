@@ -29,11 +29,13 @@ function noMatch(query, onAdd) {
 }
 
 // Search, pick a food, then enter its amount, one step at a time in the same element. Used by
-// the meal editor's add food sheet and the add sheet on Today. foods: bundled and custom foods
-// together; archived ones are left out of the search. store: the app's store, for a custom food
-// made from "No match". submitLabel: the amount step's primary button. onAdd(food, qty) runs
+// the add food sheet, the add sheet on Today and the Ingredients sheet's swap sheet. foods:
+// bundled and custom foods together; archived ones are left out of the search. store: the app's
+// store, for a custom food made from "No match". submitLabel: the amount step's primary button.
+// startAmount: { qty, unit }, where the amount starts for a food counted in that unit, like the
+// amount of the food being swapped; any other food starts at one serving. onAdd(food, qty) runs
 // when it's submitted. Returns { element, searchInput }.
-export function foodPicker({ foods, store, submitLabel, onAdd }) {
+export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   let choices = foods;
 
   const body = document.createElement('div');
@@ -82,10 +84,13 @@ export function foodPicker({ foods, store, submitLabel, onAdd }) {
     focusTarget.focus();
   }
 
-  // Step 2: the amount, starting at one serving. pickedWith: where "Back to search" puts
-  // focus: the add button that chose the food, or the search field for a new custom food.
+  // Step 2: the amount, starting at one serving, or at startAmount in the same unit, however
+  // it's capitalised. pickedWith: where "Back to search" puts focus: the add button that chose
+  // the food, or the search field for a new custom food.
   function showAmount(food, pickedWith) {
-    const amount = numberField({ label: 'Amount', unit: food.serving.unit, value: String(food.serving.qty) });
+    const sameUnit = startAmount?.unit.toLowerCase() === food.serving.unit.toLowerCase();
+    const start = sameUnit ? startAmount.qty : food.serving.qty;
+    const amount = numberField({ label: 'Amount', unit: food.serving.unit, value: String(start) });
     amount.input.addEventListener('input', () => amount.setError(null));
 
     const form = document.createElement('form');
@@ -118,8 +123,9 @@ export function foodPicker({ foods, store, submitLabel, onAdd }) {
   return { element: body, searchInput: search.input };
 }
 
-// For the meal editor. Resolves to { foodId, qty } for the food to add, or null if the sheet
-// closes without one.
+// For the meal editor and the Ingredients sheet. Resolves to { food, qty } for the food to add,
+// or null if the sheet closes without one. The food itself comes back, since it may be a custom
+// food made in the sheet, which the caller's own list doesn't have yet.
 export async function addFoodSheet({ foods, store }) {
   let added = null;
   let sheet;
@@ -128,7 +134,7 @@ export async function addFoodSheet({ foods, store }) {
     store,
     submitLabel: 'Add to meal',
     onAdd: (food, qty) => {
-      added = { foodId: food.id, qty };
+      added = { food, qty };
       sheet.close();
     },
   });

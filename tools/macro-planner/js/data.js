@@ -1,7 +1,8 @@
 // Doc shapes, defaults, and the day and weigh-in helpers. Pure: the store is passed in,
 // so this never touches window and runs in Node.
 
-import { addDays, foodTotals, lastSevenDates, mealTotals, roundTotals } from './calc.js';
+import { addDays, foodTotals, ingredientsTotals, lastSevenDates, roundTotals } from './calc.js';
+import { mealIngredients } from './ingredients.js';
 import { CORE_DOC_ID } from './store.js';
 
 export const DAYS_DOC_ID = 'macro-planner-days';
@@ -121,9 +122,13 @@ export function createEntry(slot, { label, emoji, source }, { kcal, protein, fat
   return { id: crypto.randomUUID(), slotId: slot.id, slotName: slot.name, label, emoji, kcal, protein, fat, carbs, source };
 }
 
-// A saved meal, at one portion. getFood: saved-meals.js's foodLookup over every food it uses.
+// A saved meal, at one portion, with its ingredients (SPEC §3.5), so it can be changed for the day
+// like a planned meal. Its numbers are their total. getFood: saved-meals.js's foodLookup over
+// every food it uses.
 export function mealEntry(slot, meal, getFood) {
-  return createEntry(slot, { label: meal.name, emoji: meal.emoji, source: 'meal' }, mealTotals(meal, getFood));
+  const ingredients = mealIngredients(meal, getFood);
+  const entry = createEntry(slot, { label: meal.name, emoji: meal.emoji, source: 'meal' }, ingredientsTotals(ingredients));
+  return { ...entry, ingredients };
 }
 
 // qty is in the food's serving unit.
@@ -138,8 +143,11 @@ export function quickEntry(slot, numbers, label = '') {
 }
 
 // A Recent entry added again: its label, emoji, numbers and source, as a new entry in this slot.
-export function repeatEntry(slot, { label, emoji, source, kcal, protein, fat, carbs }) {
-  return createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs });
+// An added meal's ingredients come too, as they are, but not the list it was first added with:
+// this is a new add, so the meal as added is the meal as it is now.
+export function repeatEntry(slot, { label, emoji, source, kcal, protein, fat, carbs, ingredients }) {
+  const entry = createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs });
+  return ingredients ? { ...entry, ingredients } : entry;
 }
 
 // The add sheet's Recent (SPEC §3.5): what was added in the 7 days before today, each as
@@ -172,6 +180,33 @@ export function addEntry(day, entry) {
 // Removing is how a locked day is corrected (SPEC §3.5).
 export function removeEntry(day, entryId) {
   return { ...day, entries: (day.entries ?? []).filter((entry) => entry.id !== entryId) };
+}
+
+// edit takes the entry and returns the changed one. An entry that isn't in the day, say one removed
+// on another device, leaves it as it was.
+function withEntry(day, entryId, edit) {
+  return { ...day, entries: (day.entries ?? []).map((entry) => (entry.id === entryId ? edit(entry) : entry)) };
+}
+
+// An added meal changed for the day (SPEC §3.5): items, ingredients.js's list, become its
+// ingredients and its numbers their total. The list as added is kept the first time, as
+// originalIngredients, for reset. Only a meal added with its ingredients has a list to change, and
+// it keeps at least one: removing the entry is for eating none of it.
+export function setEntryIngredients(day, entryId, items) {
+  if (!items?.length) throw new RangeError('A meal keeps at least one ingredient');
+  return withEntry(day, entryId, (entry) => {
+    if (!entry.ingredients) throw new RangeError(`No ingredients to change: ${entry.label}`);
+    const originalIngredients = entry.originalIngredients ?? entry.ingredients;
+    return { ...entry, ...ingredientsTotals(items), ingredients: items, originalIngredients };
+  });
+}
+
+// Reset to original meal, for an added meal: the ingredients and numbers as added. The kept list
+// goes with it, so an entry counts as edited only while it has one.
+export function resetEntryIngredients(day, entryId) {
+  return withEntry(day, entryId, ({ originalIngredients, ...entry }) =>
+    originalIngredients ? { ...entry, ...ingredientsTotals(originalIngredients), ingredients: originalIngredients } : entry,
+  );
 }
 
 // --- Off plan (SPEC §3.4) ---

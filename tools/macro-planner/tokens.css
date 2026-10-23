@@ -120,6 +120,7 @@
   --emoji-size-sm:  22px;
   --dot-size:       8px;  /* macro dot beside P / F / C */
   --qty-input-w:    4ch;  /* quantity in an ingredient row: room for "1000" or "12.5" */
+  --qty-input-w-lg: 5ch;  /* quantity in the Ingredients sheet: room for an amount at a portion, like "262.5" */
   --switch-w:       52px; /* settings switch track */
   --switch-h:       32px;
   --header-h:       64px;

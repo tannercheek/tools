@@ -224,7 +224,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   At 360px each button gets about 76px, too narrow for a secondary button's padding and `md` label, so the row uses a compact button: an icon over an `xs` label, like a tab bar item (DESIGN §11). Add it to DESIGN §9, with any new value as a token in `tokens.css`. Add the row to SPEC §3.6 and DESIGN §8.
   _Done when:_ the row fits on one line at 360px and 390px with no truncated labels and tap targets of at least 44px, in light and dark; "Go off plan" no longer shows under the slots; an entry added through Add food or Quick numbers lands in the chosen slot and counts in the rings, on today and on a locked past day; a weigh-in from Today shows on Stats and moves the targets; going off plan from the row, then back on plan, works as in 5.10; SPEC §3.6, DESIGN §8 and DESIGN §9 describe the row.
 
-- [ ] **8.4 Ingredient changes**
+- [x] **8.4 Ingredient changes**
       The pure logic for SPEC §3.5's ingredient changes, with no UI.
   - A new `js/ingredients.js`:
     - an ingredient snapshot from a food and an amount, and a meal's ingredients
@@ -251,7 +251,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - deleting or editing a food afterwards leaving the day's total as it was
   - an off-plan day ignoring it
 
-- [ ] **8.5 Ingredients sheet**
+- [x] **8.5 Ingredients sheet**
       In a planned slot's actions sheet, "Edit ingredients" goes after Portion and is hidden while the slot is skipped.
   - It opens the Ingredients sheet, titled with the meal ("Breakfast sandwich · Ingredients"). In order:
     - the meal editor's sticky totals card
@@ -277,20 +277,86 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - the sheet works at 360px and 390px in light and dark
   - DESIGN §8 and §12 describe it
 
-- [ ] **8.6 Ingredients of added meals**
+- [x] **8.6 Edit in the slot actions row**
+      In the slot actions sheet, Swap, Skip and Edit share the top row, since all three act on the planned meal. "Edit" opens the Ingredients sheet, as "Edit ingredients" did, and is disabled rather than hidden on a skipped slot, so the row keeps its three places. Add moves to where Edit ingredients was, after Portion, as a full-width "Add to this slot", since it acts on the slot rather than the meal. Update SPEC §3.6 and DESIGN §8 to match.
+      _Done when:_ the three buttons share one line at 360px and 390px with no truncated labels, in light and dark; Edit opens the Ingredients sheet and shows disabled on a skipped slot; Add to this slot opens the add sheet; SPEC §3.6 and DESIGN §8 describe the new order.
+
+- [x] **8.7 Swap to a food or quick numbers**
+      The pure logic for SPEC §3.5's swap to a food or quick numbers, with no UI. The swapped-in thing is an entry snapshot from data.js's `foodEntry` or `quickEntry`, kept in the slot's change.
+  - In `slots.js`:
+    - A new `swapSlotToEntry(day, slotId, entry)` sets the change to `{ entry }`, dropping any meal swap, portion and ingredients.
+    - `swapSlot`, `skipSlot` and `clearSlotChange` drop it.
+    - `daySlots` gives the plan `swapEntry`, with `swapped: true`, no ingredients and a portion of 1, applied only on a slot the template still plans a meal in.
+  - In `calc.js`: `slotTotals` uses a plan's `swapEntry` when it has one, so `dayTotal` and `flexGap` follow.
+  - In `lock-in.js`: a slot with a `swapEntry` writes it as it is, in the slot's place among the planned entries, without `planned`.
+
+  _Done when:_ tests cover:
+  - a swap to a food and to quick numbers counting in `dayTotal` and `flexGap` in place of the meal
+  - a swap to a food on an edited slot at 1.5× dropping both
+  - a swap back to a meal, Skip and As planned each dropping it
+  - a change left on a slot that's since turned flex being ignored
+  - `lockDay` writing it in slot order without `planned`, and `recentEntries` then listing it
+  - editing or deleting the food afterwards leaving the day's total as it was
+  - an off-plan day ignoring it
+
+- [x] **8.8 Swap sheet: Meal · Food · Quick**
+      The swap sheet gains a Meal · Food · Quick segmented control (DESIGN §8 swap sheet), using 8.7.
+  - Food and Quick reuse the add sheet's food picker and quick numbers form, ending in "Swap food" and "Swap numbers". "Make this the default" shows on Meal only. The sheet opens on Meal, or on Food when there's no other saved meal.
+  - Swap is no longer disabled when there's no other saved meal, so `canSwap` goes.
+  - On a slot swapped to a food or quick numbers, the slot actions sheet is titled with what was swapped in, Edit is disabled and Portion doesn't show.
+  - Today's row for that slot is the filled flex row with "SWAPPED" in place of "FLEX" (DESIGN §8 swapped-in food or quick numbers). Reuse the filled flex row rather than copy it.
+
+  _Done when:_
+  - swapping lunch for a banana shows "🍌 Banana" under "Lunch · Swapped", and the rings and an open flex slot's "to fill" move by the difference
+  - adding a yogurt to it then shows 🍽️ "2 items", the banana first, with their total
+  - swapping for quick numbers labelled "Burrito place" shows that label with 🍽️, and with no label shows the slot's name
+  - As planned, Skip and a swap back to a meal each bring back the meal's row, and the yogurt stays as an extra
+  - on the swapped slot, Edit shows disabled and Portion is gone; Make this the default shows on Meal only
+  - with one saved meal, Swap opens on Food
+  - the next day, the banana is in that day's locked entries and in Recent
+  - the sheet and row work at 360px and 390px in light and dark
+
+- [x] **8.9 Ingredients of added meals**
       A meal added to a slot keeps its ingredients: `mealEntry` saves them, and `repeatEntry` carries them over from Recent.
   - New in `data.js`:
     - `setEntryIngredients`: the entry's numbers become the ingredients' total, and the list as added is kept the first time.
-    - `resetEntryIngredients`: back to the list and numbers as added.
+    - `resetEntryIngredients`: back to the list and numbers as added. The kept list goes with it, so an entry counts as edited only while it has one (8.10).
+    - A Recent entry added again carries its ingredients as they are, but not the kept list: it's a new add, so that's the meal as added.
   - In the slot actions sheet and the filled flex sheet, a meal entry with ingredients is a row with a chevron. It opens the 8.5 sheet, which then ends in "Remove from slot" (confirm sheet).
   - Food and quick entries, and meals added before this step, keep their remove button. Locked days are unchanged.
   - Update DESIGN §8's entry rows.
 
   _Done when:_
-  - tests cover an added meal's ingredients adding up to its numbers, an edit changing its numbers and keeping the original list once, reset giving back the numbers exactly as added, and a Recent entry added again keeping its edited ingredients
+  - tests cover an added meal's ingredients adding up to its numbers, an edit changing its numbers and keeping the original list once, reset giving back the numbers exactly as added and dropping the kept list, and a Recent entry added again keeping its edited ingredients without a kept list
   - a meal added to a flex slot opens, takes an edit that shows in its numbers and the rings, and resets
   - "Remove from slot" in the sheet takes the entry out after the confirm sheet
   - an entry added before this step still shows its remove button
+
+- [x] **8.10 Ingredients on the slot row**
+      On Today, a planned slot with an ingredient change lists its ingredients under its numbers line, so the change shows without opening the slot (SPEC §3.6, DESIGN §8 edited meal slot). Today only: nothing new is stored, and locked days, which list entries, are unchanged.
+  - Every ingredient, in the sheet's order: emoji, name, then the amount and unit at the slot's portion, matching the Ingredients sheet. No kcal per line.
+  - Only edited slots. A slot without an ingredient change looks as it does now.
+  - Ingredients first, then any extras added to the slot below a divider.
+  - A filled flex slot whose one entry is an edited added meal (it has `originalIngredients`, 8.9) lists that meal's ingredients the same way. An edited added meal that's one line among others stays one line until 8.11.
+  - Reuse rather than copy: the row's extras lines in `js/ui/row.js` take an amount in place of kcal, and the amount uses the Ingredients sheet's formatting.
+
+  _Done when:_
+  - an edited breakfast lists each food with its amount, matching the Ingredients sheet, also at 1.5×
+  - a slot with no ingredient change looks as before
+  - with an edit and an added food, the ingredients come first and the added food sits below the divider
+  - a meal added to an empty flex slot shows no ingredient lines until it's edited, then lists them, and Reset takes them away
+  - a long food name truncates while its amount stays whole, at 360px and 390px in light and dark
+  - Reset, As planned, Swap and Skip take the lines away
+
+- [x] **8.11 Ingredients of added meals on the slot row**
+      An edited added meal that's one of the lines under a slot lists its ingredients indented under its own line (SPEC §3.6, DESIGN §8 edited extra): an extra beside a planned meal, or one of the items in a filled flex slot or a slot swapped to a food or quick numbers (8.8). Same lines as 8.10, indented to line up with the meal line's label. Other extras stay one line. Today only, like 8.10. Add the indent to `tokens.css` if no token fits, and call it out.
+
+  _Done when:_
+  - an edited meal added beside an edited planned meal shows the planned meal's ingredients, the divider, then the added meal's line with its own ingredients indented under it
+  - in a filled flex slot with several items, only the edited meal gets indented lines, and the slot's total doesn't change
+  - in a slot swapped to a food, an edited meal added to it gets indented lines under its own line, and the food doesn't
+  - Reset on the added meal takes its lines away
+  - indented names truncate while their amounts stay whole, at 360px and 390px in light and dark
 
 ## Phase 9 — After a week of use
 

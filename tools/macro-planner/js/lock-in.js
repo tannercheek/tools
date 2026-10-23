@@ -21,22 +21,29 @@ function plannedEntry(plan, getFood) {
   return quickEntry(plan, plan.budget);
 }
 
+// What a slot writes into the locked day. The plan is marked planned: true, so the add sheet's
+// Recent can leave it out. A food or quick numbers swapped in is written as it is, unmarked: it
+// was chosen, not planned, so Recent lists it like anything added.
+function lockedEntry(plan, getFood) {
+  if (plan.swapEntry) return plan.swapEntry;
+  const planned = plannedEntry(plan, getFood);
+  return planned && { ...planned, planned: true };
+}
+
 // The day with its plan written into its entries and locked: { slots, template } is the core
 // doc's (the doc itself will do), meals its saved meals, and foods every food they use, bundled,
-// custom and archived. The planned entries come first in slot order, then what was added. Each
-// planned one is marked planned: true, so the add sheet's Recent can leave the plan out. An
+// custom and archived. The slots' entries come first in slot order, then what was added. An
 // off-plan day has no plan, so it keeps its entries as they are. Changes are dropped, since a
 // locked day is its entries alone. A day already locked comes back as it was.
 export function lockDay(day, { slots, template }, meals, foods) {
   if (day.locked) return day;
   const getFood = foodLookup(foods);
-  const planned = day.offPlan
+  const fromSlots = day.offPlan
     ? []
     : daySlots({ slots, template, meals }, day)
-        .map((plan) => plannedEntry(plan, getFood))
-        .filter(Boolean)
-        .map((entry) => ({ ...entry, planned: true }));
-  return { ...day, changes: {}, entries: [...planned, ...(day.entries ?? [])], locked: true };
+        .map((plan) => lockedEntry(plan, getFood))
+        .filter(Boolean);
+  return { ...day, changes: {}, entries: [...fromSlots, ...(day.entries ?? [])], locked: true };
 }
 
 // The days doc with every past day in the window (SPEC §4.3) locked, from the core doc's

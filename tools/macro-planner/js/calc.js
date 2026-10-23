@@ -158,17 +158,29 @@ export function entriesTotals(entries = []) {
   return sumTotals(entries);
 }
 
-// What one slot adds to the day (SPEC §3.5): its meal at its portion, or an open flex slot's
-// pinned budget. A skipped slot, an open flex slot with no budget and a filled flex slot add
-// nothing of their own; what's added to a slot counts in dayTotal. plan: one of slots.js's daySlots.
+// A day's version of a meal (ingredients.js). Like entries, each ingredient carries its own
+// snapshot numbers, so they add up with no food lookup.
+export function ingredientsTotals(ingredients) {
+  return sumTotals(ingredients);
+}
+
+// What one slot adds to the day (SPEC §3.5): its meal, or the day's ingredients for it, at its
+// portion, a food or quick numbers swapped in, or an open flex slot's pinned budget. A skipped
+// slot, an open flex slot with no budget and a filled flex slot add nothing of their own; what's
+// added to a slot counts in dayTotal. plan: one of slots.js's daySlots.
 export function slotTotals(plan, getFood) {
   if (plan.skipped) return sumTotals([]);
-  if (plan.meal) return scaleTotals(mealTotals(plan.meal, getFood), plan.portion);
+  if (plan.swapEntry) return entriesTotals([plan.swapEntry]);
+  if (plan.meal) {
+    const meal = plan.ingredients ? ingredientsTotals(plan.ingredients) : mealTotals(plan.meal, getFood);
+    return scaleTotals(meal, plan.portion);
+  }
   const open = plan.entries.length === 0;
   return open && plan.budget ? sumTotals([plan.budget]) : sumTotals([]);
 }
 
-// The day's total (SPEC §3.5): the planned meals after swaps, skips and portions, the pinned
+// The day's total (SPEC §3.5): the planned meals after swaps, skips, portions and ingredient
+// changes, the pinned
 // budgets of open flex slots, and every added entry, including any whose slot is gone. Off plan,
 // the plan is ignored; locked, it's already written into the entries. Either way only the
 // entries count. plans: slots.js's daySlots for the same day.
