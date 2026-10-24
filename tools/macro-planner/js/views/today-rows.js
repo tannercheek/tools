@@ -1,6 +1,6 @@
-// Today's slot rows (DESIGN §8): a planned meal, an open flex slot and a filled one, which a slot
-// swapped to a food or quick numbers shows as too, each with the slot's name and any change in
-// its eyebrow.
+// Today's slot rows (DESIGN §8): a planned meal, an open flex slot and a filled one, each with the
+// slot's name and any change in its eyebrow. A slot swapped to a food or quick numbers, and a
+// planned slot with anything added, show like a filled one.
 
 import { entriesTotals, slotTotals } from '../calc.js';
 import { DEFAULT_EMOJI } from '../data.js';
@@ -29,16 +29,41 @@ function ingredientLines(items) {
   return items.map(({ emoji, name, qty, unit }) => ({ emoji, label: name, amount: `${amountText(qty)} ${unit}` }));
 }
 
-// What's been added to a slot, a line each under its row. An added meal changed since it was
-// added (it has originalIngredients) lists its ingredients indented under its own line, as they
-// are in its Ingredients sheet (SPEC §3.6, DESIGN §8 edited extra). The rest stay one line.
-function extraLines(entries) {
-  return entries.map(({ emoji, label, kcal, ingredients, originalIngredients }) => ({
-    emoji,
-    label,
-    kcal,
-    ingredients: originalIngredients ? ingredientLines(ingredients) : [],
-  }));
+// Something added to a slot, as one of the things the slot holds: { emoji, label, kcal, protein,
+// fat, carbs, ingredients }, its line under the row and its share of the slot's total. An added
+// meal changed since it was added (it has originalIngredients) lists its ingredients as they are
+// in its Ingredients sheet (SPEC §3.6, DESIGN §8 edited extra). The rest stay one line.
+function entryItem({ emoji, label, kcal, protein, fat, carbs, ingredients, originalIngredients }) {
+  return { emoji, label, kcal, protein, fat, carbs, ingredients: originalIngredients ? ingredientLines(ingredients) : [] };
+}
+
+// The slot's planned meal as one of the things it holds, like entryItem, at the slot's portion.
+// An edited one lists its ingredients at that portion, as its Ingredients sheet opens with them.
+function mealItem(plan, getFood) {
+  return {
+    emoji: plan.meal.emoji,
+    label: plan.meal.name,
+    ...slotTotals(plan, getFood),
+    ingredients: plan.edited ? ingredientLines(slotIngredients(plan, getFood)) : [],
+  };
+}
+
+// What a slot holds (SPEC §3.6, DESIGN §8): one thing as itself, an edited meal's ingredients
+// under the row; several as 🍽️ "N items" with the whole slot's total, then a line each in order,
+// an edited meal's ingredients indented under its own line. onClick: opens the slot's sheet, on a
+// day that takes changes.
+function itemsRow(plan, items, onClick) {
+  const [first, ...more] = items;
+  const several = more.length > 0;
+  return listRow({
+    emoji: several ? DEFAULT_EMOJI : first.emoji,
+    eyebrow: eyebrow(plan),
+    title: several ? `${items.length} items` : first.label,
+    numbers: entriesTotals(items),
+    lines: several ? items : first.ingredients,
+    trailing: onClick ? rowActionIcon('chevron-right') : undefined,
+    onClick,
+  });
 }
 
 // An open flex slot (DESIGN §8): dashed, with its pinned budget, or else the gap to fill, the
@@ -59,42 +84,30 @@ export function openFlexRow(plan, gap, log) {
 }
 
 // A flex slot with something in it is done, so it shows what's in it, like a planned meal
-// (DESIGN §8): one entry as itself, several as a count with each listed under it. An added meal
-// changed since it was added lists its ingredients, as they are in its Ingredients sheet: under
-// the row when it's the one entry, or else under its own line. A slot swapped to a food or quick
-// numbers shows the same way, marked swapped, with what was swapped in first, then what's been
-// added to it, as one list (SPEC §3.6). onClick: opens what's in it, or the swapped slot's
-// actions, on a day that takes changes.
+// (DESIGN §8). A slot swapped to a food or quick numbers shows the same way, marked swapped, with
+// what was swapped in first, then what's been added to it, as one list (SPEC §3.6). onClick:
+// opens what's in it, or the swapped slot's actions, on a day that takes changes.
 export function filledFlexRow(plan, onClick) {
-  const items = plan.swapEntry ? [plan.swapEntry, ...plan.entries] : plan.entries;
-  const [first, ...more] = items;
-  const edited = more.length === 0 && Boolean(first.originalIngredients);
-  return listRow({
-    emoji: more.length > 0 ? DEFAULT_EMOJI : first.emoji,
-    eyebrow: eyebrow(plan),
-    title: more.length > 0 ? `${items.length} items` : first.label,
-    numbers: entriesTotals(items),
-    ingredients: edited ? ingredientLines(first.ingredients) : [],
-    extras: more.length > 0 ? extraLines(items) : [],
-    trailing: onClick ? rowActionIcon('chevron-right') : undefined,
-    onClick,
-  });
+  const entries = plan.swapEntry ? [plan.swapEntry, ...plan.entries] : plan.entries;
+  return itemsRow(plan, entries.map(entryItem), onClick);
 }
 
-// A planned meal with what it adds to the day, and anything added alongside it listed under it.
-// An edited one lists its ingredients first, at the slot's portion, as its Ingredients sheet
-// opens with them, so the change shows without opening it; an edited meal added beside it lists
-// its own under its line. A skipped one keeps its meal, quietened, with "Skipped" for numbers.
-// onClick: opens the slot's actions, on a day that takes changes.
+// A planned meal on its own shows the meal and what it adds to the day, an edited one with its
+// ingredients under it, so the change shows without opening it. Once anything is added, it's
+// "N items", the meal first. A skipped meal isn't one of the items (SPEC §3.6): on its own it
+// stays, quietened, with "Skipped" for numbers; once anything is added, the row shows that
+// instead, not quietened, still marked skipped. onClick: opens the slot's actions, on a day that
+// takes changes.
 export function plannedRow(plan, getFood, onClick) {
+  const added = plan.entries.map(entryItem);
+  if (!plan.skipped) return itemsRow(plan, [mealItem(plan, getFood), ...added], onClick);
+  if (added.length > 0) return itemsRow(plan, added, onClick);
   return listRow({
     emoji: plan.meal.emoji,
     eyebrow: eyebrow(plan),
     title: plan.meal.name,
-    numbers: plan.skipped ? 'Skipped' : slotTotals(plan, getFood),
-    ingredients: plan.edited ? ingredientLines(slotIngredients(plan, getFood)) : [],
-    extras: extraLines(plan.entries),
-    muted: plan.skipped,
+    numbers: 'Skipped',
+    muted: true,
     trailing: onClick ? rowActionIcon('chevron-right') : undefined,
     onClick,
   });

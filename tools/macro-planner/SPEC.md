@@ -73,15 +73,21 @@ Activity multipliers: sedentary 1.2 · light 1.375 · moderate 1.55 · very acti
 
 Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0.5, 0.75 kg/week (0.5, 1, 1.5 lb/week). The rate is stored in kg; an imperial option is converted from lb, so 1 lb/week gives ≈ 499 kcal/day, not 500. Negative for lose, positive for gain, zero for maintain.
 
-**Macro defaults:**
-- Protein: 1.8 g/kg bodyweight (≈ 0.8 g/lb)
-- Fat: 25% of calories (9 kcal/g)
-- Carbs: remaining calories (4 kcal/g)
+**Macro split:** by bodyweight (the default) or by percent, chosen in Settings.
+- **By bodyweight:**
+  - Protein: 1.8 g/kg bodyweight (≈ 0.8 g/lb)
+  - Fat: 25% of calories (9 kcal/g)
+  - Carbs: remaining calories (4 kcal/g)
+- **By percent:** whole-number percents of the calorie target for protein, fat and carbs, adding up to 100. Each macro's grams are its share of the calories at 4, 9 and 4 kcal/g: 30% protein of 2,600 kcal is 195 g.
+  - Switching to percent starts from the percents saved last time, else the current targets as percents (rounded, carbs taking up the rounding, so the targets barely move), else 30 / 25 / 45 with no targets yet.
+  - While the three don't add up to 100, the targets keep the last split that did.
+  - The percents are kept when switching back to bodyweight, for next time.
+- Stored in the core doc as `macroSplit: { by: "bodyweight" | "percent", percent: { protein, fat, carbs } }`. A doc without it is by bodyweight, so existing data needs no migration.
 
 **Rules:**
-- Every target (calories, protein, fat, carbs) can be manually overridden. An override sticks until reset.
+- Every target (calories, protein, fat, carbs) can be manually overridden. An override sticks until reset. By percent, an override replaces that one target and the others keep their percents; nothing is rebalanced. Overriding calories moves every macro worked out from it: fat and carbs by bodyweight, all three by percent.
 - Warn, but don't block, if the calorie target falls below BMR.
-- If carbs would go negative, clamp to 0 and warn.
+- By bodyweight, if carbs would go negative, clamp to 0 and warn. By percent they can't.
 - Imperial/metric toggle. Store everything in metric internally; convert for display only.
 - **Weight comes from the weight log.** The profile's weight is the latest weigh-in. Adding one recalculates the targets straight away. Until the first weigh-in, there's no weight.
 - **Targets need a complete profile:** sex, age, height, weight, activity level and goal, plus a rate unless the goal is maintain. Until then there are no targets, calculated or overridden. The rings show the no-targets state (DESIGN §13), open flex slots show no remaining (§3.4), and Plan totals show the template's totals only.
@@ -103,7 +109,7 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 
 ### 3.2 Foods
 
-**Bundled database:** `data/foods.json`, generic whole foods curated from USDA FoodData Central (Foundation + SR Legacy, public domain). Loaded once and searched in memory. It starts with ~50 foods. It grows after a week of real use, adding what you actually missed (PLAN Phase 9), aiming at the priorities below rather than a target count.
+**Bundled database:** `data/foods.json`, generic whole foods curated from USDA FoodData Central (Foundation + SR Legacy, public domain). Loaded once and searched in memory. It starts with ~50 foods. It grows once foods have portions, adding what you're missing (PLAN Phase 13), aiming at the priorities below rather than a target count.
 
 **Coverage priorities:** eggs (S/M/L as separate entries), meats and fish (raw and cooked), rice/oats/pasta/potatoes (dry and cooked), bread, dairy, tofu, legumes, common fruit and vegetables, oils, nut butters, protein powder (generic whey).
 
@@ -111,24 +117,31 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 
 ```js
 {
-  id: "usda-171287-large",   // "usda-<fdcId>", plus "-<variant>" if needed (below); or "custom-<uuid>"
-  name: "Egg, large",
-  serving: { qty: 1, unit: "egg" },   // or { qty: 100, unit: "g" }
-  emoji: "🥚",
-  kcal: 72, protein: 6.3, fat: 4.8, carbs: 0.4,
+  id: "usda-168878",         // "usda-<fdcId>", plus "-<variant>" if needed (below); or "custom-<uuid>"
+  name: "Rice, white, cooked",
+  serving: { qty: 100, unit: "g" },   // or { qty: 1, unit: "egg" }; the unit amounts are counted in
+  emoji: "🍚",
+  kcal: 130, protein: 2.7, fat: 0.3, carbs: 28.2,   // for the serving
+  grams: 100,                         // the serving's weight; bundled foods only
+  portions: [{ unit: "cup", grams: 158 }],   // other units, 1 of each; bundled foods only
   custom: false,
   archived: false
 }
 ```
 
-- Each food has **one** serving definition. Quantities are expressed in that unit. Egg sizes, raw vs cooked, and so on are separate entries rather than conversions.
+- Each food has **one serving**: the unit its amounts are counted in, and what its numbers are for. It never changes once set, like the id, so meals, ingredients and entries keep their meaning.
+- **Portions:** a bundled food also records its serving's weight in grams and a few household portions from USDA ("cup", "medium", "tbsp"), each with its weight.
+  - An amount can be entered in the serving's unit, in grams, or in any portion. It's converted through grams, so 1 cup of cooked rice counts as 158 g.
+  - The first portion is the food's default: search results and the Foods list show the food at 1 of it, with its numbers, and the amount field starts there. A food with no portions shows and starts at one serving.
+  - Portions are picked per food in `scripts/food-list.json`, only where a household measure is how you'd measure it. Meat and fish may have only grams.
+- Egg sizes, raw vs cooked, and so on are still separate entries, since their numbers differ.
 - **Bundled ids:** `usda-<fdcId>`. When one USDA food gives several entries, each gets a variant suffix: egg sizes are one USDA food with three portions, so they're `usda-171287-small`, `-medium` and `-large`. Ids never change once set, because meals refer to foods by id.
 - Name labels must be unambiguous about state: "Rice, white, cooked" vs "Rice, white, dry".
 - **Emoji:** every food has an `emoji` field holding a single Unicode emoji character (never an image path). Bundled foods get an exact emoji where one exists (🥚, 🍌, 🍚), otherwise their category default: meat 🥩, poultry 🍗, fish 🐟, grains 🌾, legumes 🫘, dairy 🥛, vegetables 🥦, fruit 🍎, nuts/seeds 🥜, oils/fats 🫒, supplements 🥤. See §5.1 for how emoji render.
 
-**Custom foods:** emoji, name, serving qty, serving unit, kcal, protein, fat, carbs. That's the whole form. Emoji defaults to 🍽️ and is changed with the emoji picker (§5.1).
+**Custom foods:** emoji, name, serving qty, serving unit, kcal, protein, fat, carbs. That's the whole form. Emoji defaults to 🍽️ and is changed with the emoji picker (§5.1). A custom food has one unit, its serving's, with no grams or portions.
 
-- Edit and delete custom foods. Bundled foods are read-only (but can be duplicated into a custom food to adjust).
+- Edit and delete custom foods. Bundled foods are read-only (but can be duplicated into a custom food to adjust). A duplicate keeps the serving and numbers, but not the portions.
 - Deleting a food that's used in a meal **archives** it: hidden from search, still resolvable inside existing meals.
 - Search matches across bundled and custom foods. Custom foods rank first.
 - **Foods list:** the Foods segment of the Meals tab (§5). It lists every food that isn't archived, with search, an "Add custom food" button, and a "Custom foods only" switch that hides bundled foods. The switch isn't saved, so it starts off each visit. Custom foods are edited and deleted from here, and bundled foods are duplicated from here.
@@ -138,13 +151,14 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 A meal is a named list of foods with quantities.
 
 ```js
-{ id, name: "Rice & beef", emoji: "🍚", tags: ["Dinner", "Mexican"], items: [{ foodId, qty }] }
+{ id, name: "Rice & beef", emoji: "🍚", tags: ["Dinner", "Mexican"], items: [{ foodId, qty, unit }] }
+// unit: the unit qty is in (§3.2); absent means the food's serving unit, as in meals saved before portions
 ```
 
 - Totals are computed from items, never stored.
 - Emoji defaults to 🍽️ and is changed with the emoji picker (§5.1).
 - Create, edit, duplicate, delete.
-- Adding a food to a meal: search → pick → quantity in that food's serving unit.
+- Adding a food to a meal: search → pick → amount in any unit the food has. A food that's already in the meal gets the amount added to it, converted into the unit it's in.
 - **Tags:** your own categories ("Breakfast", "Smoothies", "Mexican"), added and removed in the meal editor. `tags` is optional; a meal without it has no tags, so existing meals need no migration.
   - A tag is short text, trimmed. Matching ignores case: typing "mexican" reuses an existing "Mexican", and the first spelling is kept. A meal has each tag once.
   - The tag list is every tag your meals use, A–Z. There's no tag management: a tag no meal uses is gone, and renaming one means editing the meals that use it.
@@ -181,7 +195,8 @@ The plan counts as eaten. A day is the template plus what you change:
   - Each ingredient keeps its own name, emoji, unit, amount and numbers, so editing or deleting a food later never changes it. A change is kept with the meal it was made on, so it never carries over to a different meal that's swapped in or planned in the slot.
   - An added meal keeps its ingredients from the moment it's added. Meals added before this feature have none, so they can't be opened.
 - **As planned** undoes a slot's swap, skip, portion and ingredient changes.
-- **Add a meal or food:** pick a saved meal, or search a food and enter a quantity, then choose a slot. In a flex slot it fills the slot. In a planned slot it's an extra alongside the meal.
+- **Add a meal or food:** pick a saved meal, or search a food and enter an amount in any of its units, then choose a slot. In a flex slot it fills the slot. In a planned slot it's an extra alongside the meal.
+- **Other:** something eaten outside the slots, like an unplanned snack, is added to Other instead of a slot. It counts in the day's total and in what open flex slots show as left, like anything added, and it's never part of the plan.
 - **Add quick numbers:** kcal + macros directly, with an optional label. For restaurants and guesses. Uses 🍽️.
 - **Recent:** the add sheet lists what you added in the last 7 days, newest first, merged when label and numbers match. The planned meals and budgets that lock-in writes aren't listed: they're the plan, not something you added. One tap adds one again to the chosen slot. It covers leftovers, a repeated restaurant order and the same stand-in breakfast two days running. It reads the snapshot fields, so it works even if the food or meal has since been edited or deleted.
 - **Remove** any added entry, after a confirm sheet: on Today from the slot's sheet (§3.6), on a locked day from its list.
@@ -204,12 +219,13 @@ The plan counts as eaten. A day is the template plus what you change:
 
 // entry
 { id, slotId, slotName: "Lunch", label: "Rice & beef", emoji: "🍚", kcal, protein, fat, carbs, source: "meal" | "food" | "quick", planned: true }
+// slotId: null for Other, with slotName "Other"
 // planned: only on the entries lock-in writes from the plan; absent on anything added
 // ingredients: on an added meal, [ingredient], its numbers adding up to the entry's
 // originalIngredients: the ingredients as added, kept once they've been changed, for reset
 
-// ingredient: one food in a day's version of a meal, a snapshot; its numbers are for qty, so a
-// new amount rescales them without looking the food up
+// ingredient: one food in a day's version of a meal, a snapshot; its numbers are for qty, in unit,
+// the unit the amount was entered in (§3.2), so a new amount rescales them without looking the food up
 { foodId, name: "Bread, sourdough", emoji: "🍞", unit: "slice", qty: 2, kcal, protein, fat, carbs }
 ```
 
@@ -222,18 +238,25 @@ The plan counts as eaten. A day is the template plus what you change:
 
 **Snapshot rule:** each entry stores its own name, emoji and numbers when it's added or locked in. Editing or deleting a food or meal later **never** changes a past day.
 
-The same goes for slots: an entry also stores its slot's name (`slotName`) when it's added or locked in. A locked day lists and labels its entries by that saved name, so renaming, reordering or removing a slot later never changes a past day. On any day, an entry whose slot no longer exists stays, still counts in that day's total, and shows under its saved slot name.
+The same goes for slots: an entry also stores its slot's name (`slotName`) when it's added or locked in. A locked day lists and labels its entries by that saved name, so renaming, reordering or removing a slot later never changes a past day. On any day, an entry whose slot no longer exists stays and still counts in that day's total. A locked day lists it under its saved slot name. A day that isn't locked shows it in Other (§3.6), since it has no slot to show under.
 
 ### 3.6 Today view (home)
 
 - Four rings: calories, protein, fat, carbs. Each shows the day's total / target and what's left. The rings show where the day will land, not progress through it. With no targets yet (§3.1), they show the no-targets state (DESIGN §13).
 - **Quick actions:** a row of four buttons between the rings and the slots, each opening a sheet found elsewhere too.
-  - **Add food** and **Quick numbers** ask which slot, as a locked day's Add does, then open the add sheet (§3.5) on Food or Quick. Recent and Meal stay one tap away in it. They work on today, later days and a locked past day.
+  - **Add food** and **Quick numbers** ask which slot, or Other, as a locked day's Add does, then open the add sheet (§3.5) on Food or Quick. Recent and Meal stay one tap away in it. They work on today, later days and a locked past day.
   - **Weigh in** logs a weigh-in, as on Stats. The targets move with it (§3.1), and the rings straight away.
   - **Off plan** opens "Off plan until [date]" (§3.4) on a day it can start: today up to 30 days ahead, and not already off plan.
   - A button that doesn't apply to the day shown is disabled, not hidden.
-- Slots listed in order. Each shows its meal (planned, swapped, edited or skipped, with any portion) and its totals, or for a flex slot the remaining while it's open and the total of what's in it once filled, with anything added to it listed under it. A slot swapped to a food or quick numbers shows like a filled flex slot, marked swapped: what it holds, with anything added to it listed under it, and their total. A planned slot with an ingredient change (§3.5) lists its ingredients under it first, each with its amount at the slot's portion, so the change shows without opening the slot. An added meal whose ingredients have changed since it was added lists them too: under the slot, when it's all a filled flex slot holds, or indented under its own line, when it's one of the things listed under a slot. Tapping a planned slot opens its actions: Swap, Skip and Edit (its ingredients) in one row, since they act on the planned meal, then Portion, Add to this slot, its added entries with remove, and As planned. On a slot swapped to a food or quick numbers, Edit is disabled and Portion doesn't show, since neither applies. An open flex slot's Log opens the add sheet. Tapping a filled flex slot lists what's in it, each with remove, plus Add to this slot. In either list, a meal added with its ingredients opens them instead (§3.5), with its remove inside.
-- On a locked past day, the slots list that day's entries instead, each with remove, plus Add.
+- Slots listed in order. Each shows what it holds and the whole slot's total: one thing as itself, more than one as "N items", each listed under it.
+  - A planned slot on its own shows its meal (planned, swapped, edited or skipped, with any portion) and what it adds. Once anything is added to it, it's "N items": the meal first, at the slot's portion, then what's been added.
+  - A skipped meal adds nothing, so it isn't one of the items: the slot shows what's been added to it, still marked skipped.
+  - A flex slot shows the remaining while it's open, and what's in it once filled.
+  - A slot swapped to a food or quick numbers shows like a filled flex slot, marked swapped.
+  - A meal with an ingredient change (§3.5), planned or added, lists its ingredients with their amounts, so the change shows without opening the slot: under the slot when it's all the slot holds (a planned meal's at the slot's portion), or indented under its own line when it's one of the items.
+- Tapping a planned slot opens its actions: Swap, Skip and Edit (its ingredients) in one row, since they act on the planned meal, then Portion, Add to this slot, its added entries with remove, and As planned. On a slot swapped to a food or quick numbers, Edit is disabled and Portion doesn't show, since neither applies. An open flex slot's Log opens the add sheet. Tapping a filled flex slot lists what's in it, each with remove, plus Add to this slot. In either list, a meal added with its ingredients opens them instead (§3.5), with its remove inside.
+- **Other:** after the slots, a row for what was eaten outside them (§3.5), shown only once something's in it. It shows like a filled flex slot, marked Other. Tapping it lists what's in it, each with remove, plus Add to Other. An entry whose slot has since been removed shows here too.
+- On a locked past day, the slots list that day's entries instead, each with remove, plus Add. Other's entries come last.
 - Date switcher: previous/next day, back to today. It goes back to 7 days ago (the oldest kept day, §4.3) and forward without a limit, for planning swaps or off-plan days ahead.
 - On an off-plan day, a short "Off plan" line sits above the slots, with "Back on plan".
 
@@ -255,7 +278,7 @@ The same goes for slots: an entry also stores its slot's name (`slotName`) when 
 
 ### 3.8 Settings
 
-- Profile and targets (3.1), including overrides and "reset to calculated".
+- Profile and targets (3.1), including the macro split, overrides and "reset to calculated".
 - Units: metric / imperial.
 - Meal slots: count, names, order.
 - Export all data as JSON. Import JSON (replaces all data, after a confirm sheet).
@@ -288,7 +311,7 @@ Three fixed docs. Each one is saved whole, so days and weigh-ins are kept out of
 
 | docId | Contents |
 |---|---|
-| `macro-planner` | profile (without weight), targets, overrides, settings, slots, template, custom foods, meals, `startedOn` (first-run date) |
+| `macro-planner` | profile (without weight), targets, overrides, macro split, settings, slots, template, custom foods, meals, `startedOn` (first-run date) |
 | `macro-planner-days` | days by date: `{ "2026-10-15": { changes: {}, entries: [], offPlan: false, locked: false } }` (§3.5) |
 | `macro-planner-weight` | weigh-ins, oldest first: `{ weighIns: [{ date, kg }] }` |
 
@@ -330,7 +353,8 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 - **Bodyweight:** one decimal, in kg or lb. It's stored unrounded, so 180 lb entered shows 180.0 lb again, never 179.9.
 - **Height:** whole cm, or feet and whole inches.
 - **Goal rate:** shown as its option (0.5 / 1 / 1.5 lb per week), never as a converted value like 0.454 kg.
-- **Food quantities:** as entered (1.5 eggs, 150 g).
+- **Food quantities:** as entered, in the unit picked (1.5 eggs, 150 g, 1 cup).
+- **Macro percents:** whole numbers.
 
 ---
 
@@ -345,7 +369,11 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 6. **Stats + Settings** — weigh-ins, last 7 days' averages, weight trend, export/import.
 7. **Polish and publish** — mobile pass, design audit, dashboard check.
 8. **Post-v1 improvements** — Settings gear, compact slot actions, quick actions on Today, ingredient changes on Today.
-9. **After a week of use** — grow the food list from what you actually missed.
+9. **Today's slot rows** — the tile at the top, and "N items" for any slot holding more than one thing.
+10. **Food outside the slots** — Other, for what's eaten outside them.
+11. **Macro split by percent** — P/F/C percents as an alternative to bodyweight.
+12. **Food portions** — household portions on bundled foods, amounts in any unit.
+13. **Grow the food list** — add the foods you're missing, with their portions.
 
 ---
 
@@ -385,7 +413,10 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 | Framework | Vanilla JS | Small data model, no build step, matches other tools, `persist.js` drops in |
 | Builds | One: this personal app, synced through `persist.js` | A public, local-only version is a later port to its own repo; `createLocalStore` is kept for it |
 | Food data | Bundled curated USDA JSON | Offline, no key, no backend, public domain |
-| Serving model | One serving per food | Avoids unit conversion complexity |
+| Serving model | One serving per food, the unit it's counted in; bundled foods add portions converted through grams | The serving never changes, so meals and snapshots keep their meaning with no migration. USDA's gram weights make cups and pieces exact conversions, and custom foods stay a one-unit form |
+| Slot totals | Any slot holding more than one thing is "N items" with the whole slot's total | The number on a slot is always all of it. A planned meal with extras is listed like anything else, so there's no second list or divider to read |
+| Food outside the slots | Other: an entry with no slot, shown after the slots once it holds something | Unplanned food still has to count, and a slot for it would change the template. It also gives an entry whose slot was removed a place on Today |
+| Macro split | By bodyweight (default) or by percent; overrides on top, never rebalanced | Protein by bodyweight suits lifting; a percent split suits one set by a coach or a diet. What you override is exactly what you get |
 | Repeat | Single daily template + per-day changes | Weekday templates deferred to v2 |
 | Flex slot | Auto "remaining", optional pinned budget of four numbers | Most useful default with zero setup; four numbers so a budget counts in the rings and lock-in like a meal |
 | Logging model | Plan by exception: planned meals count, you record changes | You eat the plan most days; marking every meal eaten is busywork |

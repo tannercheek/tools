@@ -358,8 +358,129 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - Reset on the added meal takes its lines away
   - indented names truncate while their amounts stay whole, at 360px and 390px in light and dark
 
-## Phase 9 — After a week of use
+## Phase 9 — Today's slot rows
 
-- [ ] **9.1 Grow the food list**
-      Only after a week of real use with the ~50 starter foods. List the foods you added as custom or went looking for, then add those to `food-list.json`, guided by SPEC §3.2's coverage list. Re-run `build-foods.mjs`. This step is data only — no code changes.
-      _Done when:_ every food you missed during the week is in `foods.json`, and you've skimmed the new entries for naming clarity (raw vs cooked, dry vs cooked) and emoji choices.
+- [x] **9.1 Tile at the top**
+      On Today, a slot row with lines under its numbers keeps its emoji tile at the top, level with the eyebrow, instead of centred. The chevron stays centred on the row (DESIGN §8 anatomy). Rows with nothing under their numbers don't change.
+      _Done when:_ a slot with an edited meal and two extras has its tile beside the slot's name, at 360px and 390px in light and dark; a slot with nothing under its numbers looks as before; the meal editor's and the Ingredients sheet's ingredient rows are unchanged.
+
+- [x] **9.2 "N items" for any slot with more than one thing**
+      A planned slot with anything added shows as "N items" (SPEC §3.6, DESIGN §8 meal slot).
+  - 🍽️, the whole slot's total on the numbers line, then the meal as the first line, its kcal at the slot's portion, then what's been added.
+  - An edited planned meal's ingredients go indented under its own line, through 8.11's nesting. 8.10's divider and its styles go, since nothing uses them.
+  - A skipped meal isn't an item: the row shows what's been added, one thing as itself or several as "N items", not muted, with "SKIPPED" still in the eyebrow.
+  - A planned meal on its own, open and filled flex slots, swapped slots and locked days are unchanged.
+
+  _Done when:_
+  - breakfast plus a banana shows "2 items" with their total, the meal first, its kcal at 1.5× when portioned
+  - editing breakfast's ingredients indents them under its line
+  - skipping breakfast with the banana added shows the banana under "Breakfast · Skipped"
+  - removing the banana brings back the meal's own row
+  - the rings don't move in any of these
+  - no divider is left in `row.js` or `row.css`
+  - it works at 360px and 390px in light and dark
+
+## Phase 10 — Food outside the slots
+
+- [ ] **10.1 Other: logic**
+      Entries outside the slots (SPEC §3.5), with no UI. An Other entry has `slotId: null` and `slotName: "Other"`.
+  - In `data.js`, the entry helpers take Other in place of a slot.
+  - In `slots.js`, a pure `otherEntries(day, slots)`: the day's entries with no slot or whose slot is gone, in the order added.
+  - Check that `dayTotal`, `flexGap`, `lockDay` and `recentEntries` treat them like any other added entry, and fix any that don't.
+
+  _Done when:_ tests cover:
+  - an Other entry counting in `dayTotal` and in an open flex slot's `flexGap`
+  - `otherEntries` picking up an entry whose slot was removed, and leaving out entries in a slot
+  - `lockDay` keeping an Other entry as it is, and `recentEntries` listing it
+  - an off-plan day counting it
+
+- [ ] **10.2 Other: UI**
+  - The slot chooser (DESIGN §8), opened by Today's Add food and Quick and by a locked day's Add, lists "Other" after the slots.
+  - Today shows the Other row after the slots once it holds something, reusing the filled flex row. Its sheet reuses the filled flex sheet, titled "Other" and ending in "Add to Other".
+  - A locked day lists Other's entries last, under "Other".
+
+  _Done when:_
+  - a banana added to Other through Add food shows in an "OTHER" row after the slots, counts in the rings, and lowers an open flex slot's "to fill"
+  - tapping the row lists the banana with remove; removing it (confirm sheet) takes the row away
+  - an edited meal in Other lists its ingredients, as in a filled flex slot
+  - removing a slot in Settings that has something added today moves that entry into Other
+  - the next day, the banana is in the locked list under "Other" and in Recent
+  - it works at 360px and 390px in light and dark
+
+## Phase 11 — Macro split by percent
+
+- [ ] **11.1 Macro split: logic**
+      In `calc.js`, `targets` takes the core doc's `macroSplit` (SPEC §3.1). By percent, each macro's grams come from its percent of the calorie target, override included. Add a pure `validSplit(percent)` (whole numbers 0–100 adding up to 100) and `splitFromTargets(targets)` (the targets as whole percents adding up to 100, carbs taking up the rounding), for filling the fields. A doc without `macroSplit` is by bodyweight. Export and import carry it with the core doc.
+      _Done when:_ tests cover:
+  - 30 / 25 / 45 at 2,600 kcal giving 195 g, 72.2 g and 292.5 g
+  - each macro's override on its own leaving the other two at their percents
+  - a calorie override moving all three
+  - no clamped-carbs warning by percent, and the below-BMR warning in both modes
+  - a split adding up to 99 or 101, or with a fraction, being invalid
+  - `splitFromTargets` adding up to 100 for targets that round awkwardly
+  - a doc without `macroSplit` giving the same targets as before
+
+- [ ] **11.2 Macro split: Settings**
+      The macro split control in Settings' profile and targets (DESIGN §10 macro split). Switching to percent fills the fields from the saved percents, else from the current targets, else 30 / 25 / 45. A change that adds up to 100 saves and moves the targets straight away. One that doesn't shows the error and saves nothing.
+      _Done when:_
+  - switching to percent shows fields adding up to 100, and the targets barely move
+  - protein 35 and carbs 40 moves the targets live everywhere: Today's rings, open flex slots, Plan totals
+  - 35 / 25 / 45 shows "Adds up to 105%" as an error, and the targets don't move
+  - an override still sticks and resets to calculated
+  - switching back to bodyweight brings back its targets, and switching to percent again brings back the saved percents
+  - it survives a reload and syncs between browsers
+  - it works at 360px and 390px in light and dark
+
+## Phase 12 — Food portions
+
+- [ ] **12.1 Portions in the food data**
+      `food-list.json` entries gain `portions`: USDA portion labels with the unit each shows as, first one the default, e.g. `{ "portion": "1 cup = 158 g", "unit": "cup" }`. `build-foods.mjs` writes each food's `grams` (its serving's weight) and `portions` as `{ unit, grams }`, and fails on a portion USDA doesn't have, listing the ones it does, as it already does for servings. Propose portions for the starter foods where a household measure is how you'd measure them (rice, oats and pasta by the cup; potatoes and fruit by the piece; oils and nut butters by the tbsp) and show me the list before building. Meat and fish may have grams only. No food's `id`, `serving` or numbers change.
+      _You'll need to:_ have the USDA CSVs unzipped again.
+      _Done when:_ tests cover the script reading portions and its failure message; every bundled food has `grams`; the foods you'd measure by volume or piece have portions; `git diff data/foods.json` shows only added fields; you spot-check three portions against the USDA website.
+
+- [ ] **12.2 Amounts in any unit: logic**
+      Pure functions in a new `js/portions.js`, with `calc.js`, `saved-meals.js` and `ingredients.js` using them (SPEC §3.2, §3.3):
+  - a food's units: its serving's unit, then grams if that isn't grams, then its portions; a custom food has only its serving's
+  - an amount in any unit as servings, through grams
+  - `foodTotals` and `mealTotals` for an item with a `unit`; an item without one is in the serving's unit, so saved meals need no change
+  - `addItem` and `addIngredient` merging the same food in another unit, converted into the unit it's already in
+  - an ingredient snapshot from an amount in any unit, keeping that unit
+
+  _Done when:_ tests cover:
+  - 1 cup of cooked rice giving 158 g's numbers
+  - 100 g of large egg giving 2 eggs' numbers
+  - an item without `unit` unchanged
+  - 1 cup merged into an item of 100 g
+  - a custom food offering only its own unit
+  - an ingredient in cups rescaling with no food lookup
+  - entries and locked days unchanged
+
+- [ ] **12.3 Unit choice when adding**
+  - The amount field's unit button and the Unit sheet (DESIGN §10 unit choice, §12), built as a shared component in `js/ui/`.
+  - The food picker starts at 1 of the default portion, else one serving.
+  - Food search results and the Foods list show the default portion with its weight and numbers (DESIGN §8).
+  - Used in the add sheet's Food segment and the swap sheet's Food.
+
+  _Done when:_
+  - adding 1 cup of cooked rice to a flex slot counts 158 g's numbers
+  - "1" with the unit switched from cup to g shows 1 g's numbers
+  - a custom food's unit stays plain text
+  - Recent adds the rice again as it was added
+  - search shows "1 CUP · 158 G" with the numbers for a cup
+  - the unit button and the Unit sheet's buttons are at least 44px, at 360px and 390px in light and dark
+
+- [ ] **12.4 Unit choice in meals and ingredients**
+      The meal editor's ingredient rows and the Ingredients sheet's rows get the same unit button, and their add food sheets start at the default portion. The ingredient swap sheet starts at the old amount when the new food has the old unit (DESIGN §8). Today's ingredient lines (8.10) show each amount in its own unit. If the quantity field needs more width for the button, add a token and call it out.
+      _Done when:_
+  - a meal with 1 cup of rice shows "1 cup" in the editor, with the same numbers after a reload
+  - switching it to 200 g changes its numbers and the meal's totals
+  - a meal saved before this phase opens with its amounts and numbers unchanged
+  - in today's Ingredients sheet, changing a unit moves the rings, and Reset brings back the original
+  - the rows' fields still line up, at 360px and 390px in light and dark
+
+## Phase 13 — Grow the food list
+
+- [ ] **13.1 Grow the food list**
+      After Phase 12, so new foods get their portions as they're added. List the foods you're missing: the custom foods you've made, the searches that found nothing, and gaps in SPEC §3.2's coverage list. Add those to `food-list.json`, with portions where a household measure is how you'd measure them, and re-run `build-foods.mjs`. Every number comes from USDA with its `fdcId`, as in 3.1; a food that can't be sourced is left out and listed. This step is data only — no code changes.
+      _You'll need to:_ give me the list of missing foods, and have the USDA CSVs unzipped.
+      _Done when:_ every food on your list is in `foods.json` or listed as unsourced; you've skimmed the new entries for naming clarity (raw vs cooked, dry vs cooked), emoji and portion choices; you spot-check three against the USDA website.

@@ -54,6 +54,13 @@
   color: var(--color-text-2);
 }
 
+/* A row with lines under its numbers, like a Today slot with extras (DESIGN §8 anatomy): the tile
+   stays at the top, level with the eyebrow, so it stays beside the slot's name as the row grows.
+   The trailing control stays centred on the row. */
+.row--lines > .emoji-tile {
+  align-self: flex-start;
+}
+
 /* Notice row, like Today's off-plan line (DESIGN §8): sunken, no tile. The sentence wraps
    rather than truncating, so the date always shows. */
 .row--notice {
@@ -220,25 +227,13 @@
 .macro-dot--fat { background: var(--macro-fat); }
 .macro-dot--carbs { background: var(--macro-carbs); }
 
-/* Plain lines under a row's numbers (DESIGN §8): what's been added to a slot, as emoji, label and
+/* Plain lines under a row's numbers (DESIGN §8): the things a slot holds, as emoji, label and
    kcal, or an edited meal's ingredients, with an amount in place of kcal. A long label truncates,
    so the kcal or amount always shows. */
 .row__extras {
   display: flex;
   flex-direction: column;
   padding-top: var(--space-1);
-}
-
-/* An edited meal's ingredients, then what's been added beside it below a divider, so the two read
-   as two lists. The gap above the divider matches the padding below it. */
-.row__lists {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.row__extras--divided {
-  border-top: var(--border-width) solid var(--color-border);
 }
 
 /* A line is its emoji, then its label and kcal or amount. A grid, so an edited meal added to the

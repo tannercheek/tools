@@ -68,11 +68,11 @@ function iconTile(iconName) {
   return tile;
 }
 
-// Plain lines under a row's numbers (DESIGN §8): a line each of emoji, label and kcal, like what's
-// been added to a slot, or with an amount in place of kcal, like an edited meal's ingredients.
+// Plain lines under a row's numbers (DESIGN §8): a line each of emoji, label and kcal, like the
+// things a slot holds, or with an amount in place of kcal, like an edited meal's ingredients.
 // items: [{ emoji, label, kcal, ingredients }] or [{ emoji, label, amount }], amount as text
 // ("3 egg"). ingredients, if any: lines of the second kind, indented under that line's label,
-// like an edited meal that's one of the things added to a slot.
+// like an edited meal that's one of a slot's items.
 function extrasLines(items) {
   const lines = document.createElement('span');
   lines.className = 'row__extras';
@@ -97,30 +97,15 @@ function extrasLines(items) {
   return lines;
 }
 
-// An edited meal's ingredients, then what's been added beside it below a divider, so the two read
-// as two lists (DESIGN §8). Either can be empty.
-function linesUnder(ingredients, extras) {
-  if (ingredients.length === 0) return extrasLines(extras);
-  if (extras.length === 0) return extrasLines(ingredients);
-  const lists = document.createElement('span');
-  lists.className = 'row__lists';
-  const below = extrasLines(extras);
-  below.classList.add('row__extras--divided');
-  lists.append(extrasLines(ingredients), below);
-  return lists;
-}
-
 // numbers: { kcal, protein, fat, carbs }, a word in their place (a skipped slot's "Skipped"), or
-// omitted. ingredients: an edited meal's ingredients as { emoji, label, amount }, listed under
-// the numbers, or omitted. extras: entries added to a slot as { emoji, label, kcal, ingredients },
-// listed under the numbers, below the ingredients if there are any, or omitted; an extra's own
-// ingredients, shaped like the row's, are indented under its line. trailing: one control element
-// or omitted. onClick or href: makes the whole row one button or link; its trailing can then only
-// be a rowActionIcon. placeholderIcon, in place of emoji: the dashed placeholder row with that
-// icon in its tile, like Plan's empty slot. With neither, the row has no tile, like a weigh-in,
-// since emoji only identify foods and meals. muted: the title and numbers in secondary text, like
-// a skipped slot (DESIGN §8).
-export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, ingredients = [], extras = [], trailing, onClick, href, muted = false }) {
+// omitted. lines: listed under the numbers, as extrasLines takes them, or omitted: the things a
+// slot holds, or an edited meal's ingredients. trailing: one control element or omitted. onClick
+// or href: makes the whole row one button or link; its trailing can then only be a rowActionIcon.
+// placeholderIcon, in place of emoji: the dashed placeholder row with that icon in its tile, like
+// Plan's empty slot. With neither, the row has no tile, like a weigh-in, since emoji only
+// identify foods and meals. muted: the title and numbers in secondary text, like a skipped slot
+// (DESIGN §8). With lines under the numbers, the tile sits at the top of the row.
+export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, lines = [], trailing, onClick, href, muted = false }) {
   const row = document.createElement(href ? 'a' : onClick ? 'button' : 'li');
   row.className = placeholderIcon ? 'row row--placeholder' : 'row';
   if (muted) row.classList.add('row--muted');
@@ -131,7 +116,10 @@ export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, ingre
   text.append(textLine('row__title', title));
   if (typeof numbers === 'string') text.append(textLine('row__numbers', numbers));
   else if (numbers) text.append(numbersLine(numbers));
-  if (ingredients.length > 0 || extras.length > 0) text.append(linesUnder(ingredients, extras));
+  if (lines.length > 0) {
+    text.append(extrasLines(lines));
+    row.classList.add('row--lines');
+  }
 
   if (placeholderIcon) row.append(iconTile(placeholderIcon));
   else if (emoji) row.append(emojiTile(emoji));
