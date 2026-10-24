@@ -1,15 +1,16 @@
 // Today (SPEC §3.6): the four rings showing where the day will land, the quick actions, then the
 // day's slots, for today or any day from 7 days ago on. Today and later days take changes:
 // tapping a planned slot opens its actions, an open flex slot's Log adds to it, and tapping a
-// filled flex slot lists what's in it. A locked past day lists its entries instead, each with
-// remove, plus Add. An off-plan day has every slot as flex, under a line with "Back on plan"
-// (SPEC §3.4).
+// filled flex slot lists what's in it. Other, after the slots, holds what's eaten outside them
+// (SPEC §3.5). A locked past day lists its entries instead, each with remove, plus Add. An
+// off-plan day has every slot as flex, under a line with "Back on plan" (SPEC §3.4).
 
 import { loadBundledFoods } from '../bundled-foods.js';
 import { addDays, dayTotal, flexGap, profileTargets } from '../calc.js';
 import {
   CoreDocUnavailableError,
   DaysUnavailableError,
+  OTHER,
   addEntry,
   createDays,
   createWeightLog,
@@ -29,6 +30,7 @@ import { foodLookup } from '../saved-meals.js';
 import {
   clearSlotChange,
   daySlots,
+  otherEntries,
   resetSlotIngredients,
   setSlotIngredients,
   setSlotMeal,
@@ -48,9 +50,9 @@ import { chooseSlotSheet } from './choose-slot-sheet.js';
 import { ingredientsSheet } from './ingredients-sheet.js';
 import { offPlanLine, offPlanSheet } from './off-plan.js';
 import { quickActions } from './quick-actions.js';
-import { filledFlexSheet, slotActionsSheet } from './slot-actions-sheet.js';
+import { filledFlexSheet, otherSheet, slotActionsSheet } from './slot-actions-sheet.js';
 import { swapSheet } from './swap-sheet.js';
-import { filledFlexRow, openFlexRow, plannedRow } from './today-rows.js';
+import { filledFlexRow, openFlexRow, otherRow, plannedRow } from './today-rows.js';
 import { logWeighInSheet } from './weigh-ins.js';
 
 function note(text) {
@@ -60,11 +62,15 @@ function note(text) {
   return element;
 }
 
-// A locked day's entries in slot order, by today's slots; one whose slot is gone goes last. Each
-// shows under the slot name it saved (SPEC §3.5).
+// A locked day's entries in slot order, by today's slots: one whose slot is gone after them, and
+// Other's last (SPEC §3.6). Each shows under the slot name it saved (SPEC §3.5), Other's under
+// "Other".
 function inSlotOrder(entries, slots) {
   const order = new Map(slots.map((slot, i) => [slot.id, i]));
-  const rank = (entry) => order.get(entry.slotId) ?? slots.length;
+  const rank = (entry) => {
+    if (entry.slotId === OTHER.id) return slots.length + 1;
+    return order.get(entry.slotId) ?? slots.length;
+  };
   return [...entries].sort((a, b) => rank(a) - rank(b));
 }
 
@@ -209,8 +215,9 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   }
 
   // Shown in the slot straight away, with a hop of its tile (DESIGN §14), then saved; on a locked
-  // day, the new entry's own row hops. slot: { id, name }. kind: the add sheet's segment to open
-  // on, if not its usual one. Recent is read once this screen's own writes are in, so it has them.
+  // day, the new entry's own row hops. slot: { id, name }, or OTHER. kind: the add sheet's segment
+  // to open on, if not its usual one. Recent is read once this screen's own writes are in, so it
+  // has them.
   async function add(slot, kind) {
     await writes;
     const recent = await days.recent(today());
@@ -220,8 +227,8 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     hopTile(day.locked ? entryRowsById.get(entry.id) : slotRows.get(slot.id));
   }
 
-  // Asks for the slot first: a locked day lists entries, not slots, and Add food and Quick
-  // numbers aren't in a slot. Focus goes back to the button that asked.
+  // Asks for the slot, or Other, first: a locked day lists entries, not slots, and Add food and
+  // Quick numbers aren't in a slot. Focus goes back to the button that asked.
   async function addToChosenSlot(button, kind) {
     const slot = await chooseSlotSheet({ slots: doc.slots ?? [] });
     if (slot) await add(slot, kind);
@@ -252,8 +259,9 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     if (confirmed) change((d) => removeEntry(d, entry.id));
   }
 
-  // What a slot's sheet picked: slot-actions-sheet.js's { action, entry }. Focus goes back to the
-  // slot: its row, or the Log button of a flex slot that's open again.
+  // What a slot's sheet picked: slot-actions-sheet.js's { action, entry }. plan: the slot, or
+  // OTHER. Focus goes back to the slot: its row, or the Log button of a flex slot that's open
+  // again. Other's row goes once it's empty, so focus goes to the last slot's, where it was.
   async function act(plan, picked) {
     const { action, entry } = picked ?? {};
     if (action === 'swap') await swap(plan);
@@ -263,7 +271,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     if (action === 'add') await add(plan);
     if (action === 'entry-ingredients') await editEntryIngredients(entry.id);
     if (action === 'remove') await remove(entry);
-    slotButtons.get(plan.id)?.focus();
+    (slotButtons.get(plan.id) ?? [...slotButtons.values()].at(-1))?.focus();
   }
 
   async function openActions(plan) {
@@ -276,6 +284,12 @@ export function render(container, { store, dateSwitcher, lockIn }) {
 
   async function openFilled(plan) {
     await act(plan, await filledFlexSheet({ plan }));
+  }
+
+  // Other's sheet acts like a filled flex slot's, with OTHER as its slot, so Add to Other adds
+  // outside the slots.
+  async function openOther(entries) {
+    await act(OTHER, await otherSheet({ entries }));
   }
 
   // This day up to the one picked. Shown straight away, then saved. The stretch runs on past the
@@ -326,10 +340,23 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     });
   }
 
+  // Other's row after the slots, once it holds something (SPEC §3.6): what was added outside the
+  // slots, and anything whose slot has since been removed. Kept under Other's id like a slot's
+  // row, so the hop and focus find it.
+  function otherRows(plans, takesChanges) {
+    const entries = otherEntries(day, plans);
+    if (entries.length === 0) return [];
+    const onClick = takesChanges ? () => openOther(entries) : undefined;
+    const item = otherRow(entries, onClick);
+    slotRows.set(OTHER.id, item);
+    if (onClick) slotButtons.set(OTHER.id, item.firstElementChild);
+    return [item];
+  }
+
   function slotList(plans) {
     // Only today and later take changes: a past day is locked, or from before the app was used.
     const takesChanges = !day.locked && date >= today();
-    return plans.map((plan) => {
+    const rows = plans.map((plan) => {
       let item;
       let button;
       if (plan.meal || plan.entries.length > 0) {
@@ -350,6 +377,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
       if (button) slotButtons.set(plan.id, button);
       return item;
     });
+    return [...rows, ...otherRows(plans, takesChanges)];
   }
 
   function show() {

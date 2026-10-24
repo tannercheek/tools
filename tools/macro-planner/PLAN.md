@@ -382,7 +382,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 10 — Food outside the slots
 
-- [ ] **10.1 Other: logic**
+- [x] **10.1 Other: logic**
       Entries outside the slots (SPEC §3.5), with no UI. An Other entry has `slotId: null` and `slotName: "Other"`.
   - In `data.js`, the entry helpers take Other in place of a slot.
   - In `slots.js`, a pure `otherEntries(day, slots)`: the day's entries with no slot or whose slot is gone, in the order added.
@@ -394,7 +394,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - `lockDay` keeping an Other entry as it is, and `recentEntries` listing it
   - an off-plan day counting it
 
-- [ ] **10.2 Other: UI**
+- [x] **10.2 Other: UI**
   - The slot chooser (DESIGN §8), opened by Today's Add food and Quick and by a locked day's Add, lists "Other" after the slots.
   - Today shows the Other row after the slots once it holds something, reusing the filled flex row. Its sheet reuses the filled flex sheet, titled "Other" and ending in "Add to Other".
   - A locked day lists Other's entries last, under "Other".

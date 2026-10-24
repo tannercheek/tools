@@ -181,7 +181,7 @@ export function slotTotals(plan, getFood) {
 
 // The day's total (SPEC §3.5): the planned meals after swaps, skips, portions and ingredient
 // changes, the pinned
-// budgets of open flex slots, and every added entry, including any whose slot is gone. Off plan,
+// budgets of open flex slots, and every added entry, Other's and any whose slot is gone too. Off plan,
 // the plan is ignored; locked, it's already written into the entries. Either way only the
 // entries count. plans: slots.js's daySlots for the same day.
 export function dayTotal(day, plans, getFood) {

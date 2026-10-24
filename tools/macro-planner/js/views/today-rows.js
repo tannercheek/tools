@@ -1,9 +1,9 @@
 // Today's slot rows (DESIGN §8): a planned meal, an open flex slot and a filled one, each with the
 // slot's name and any change in its eyebrow. A slot swapped to a food or quick numbers, and a
-// planned slot with anything added, show like a filled one.
+// planned slot with anything added, show like a filled one, and so does Other, after the slots.
 
 import { entriesTotals, slotTotals } from '../calc.js';
-import { DEFAULT_EMOJI } from '../data.js';
+import { DEFAULT_EMOJI, OTHER } from '../data.js';
 import { amountText, slotIngredients } from '../ingredients.js';
 import { listRow, rowActionIcon } from '../ui/row.js';
 
@@ -50,14 +50,14 @@ function mealItem(plan, getFood) {
 
 // What a slot holds (SPEC §3.6, DESIGN §8): one thing as itself, an edited meal's ingredients
 // under the row; several as 🍽️ "N items" with the whole slot's total, then a line each in order,
-// an edited meal's ingredients indented under its own line. onClick: opens the slot's sheet, on a
-// day that takes changes.
-function itemsRow(plan, items, onClick) {
+// an edited meal's ingredients indented under its own line. eyebrowText: the slot's eyebrow, or
+// Other's. onClick: opens the slot's sheet, on a day that takes changes.
+function itemsRow(eyebrowText, items, onClick) {
   const [first, ...more] = items;
   const several = more.length > 0;
   return listRow({
     emoji: several ? DEFAULT_EMOJI : first.emoji,
-    eyebrow: eyebrow(plan),
+    eyebrow: eyebrowText,
     title: several ? `${items.length} items` : first.label,
     numbers: entriesTotals(items),
     lines: several ? items : first.ingredients,
@@ -89,7 +89,14 @@ export function openFlexRow(plan, gap, log) {
 // opens what's in it, or the swapped slot's actions, on a day that takes changes.
 export function filledFlexRow(plan, onClick) {
   const entries = plan.swapEntry ? [plan.swapEntry, ...plan.entries] : plan.entries;
-  return itemsRow(plan, entries.map(entryItem), onClick);
+  return itemsRow(eyebrow(plan), entries.map(entryItem), onClick);
+}
+
+// Other (SPEC §3.6, DESIGN §8): what's eaten outside the slots, as a filled flex row with "Other"
+// as its whole eyebrow. entries: slots.js's otherEntries, not empty. onClick: opens the Other
+// sheet, on a day that takes changes.
+export function otherRow(entries, onClick) {
+  return itemsRow(OTHER.name, entries.map(entryItem), onClick);
 }
 
 // A planned meal on its own shows the meal and what it adds to the day, an edited one with its
@@ -100,8 +107,8 @@ export function filledFlexRow(plan, onClick) {
 // takes changes.
 export function plannedRow(plan, getFood, onClick) {
   const added = plan.entries.map(entryItem);
-  if (!plan.skipped) return itemsRow(plan, [mealItem(plan, getFood), ...added], onClick);
-  if (added.length > 0) return itemsRow(plan, added, onClick);
+  if (!plan.skipped) return itemsRow(eyebrow(plan), [mealItem(plan, getFood), ...added], onClick);
+  if (added.length > 0) return itemsRow(eyebrow(plan), added, onClick);
   return listRow({
     emoji: plan.meal.emoji,
     eyebrow: eyebrow(plan),

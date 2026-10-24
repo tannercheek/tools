@@ -1,9 +1,10 @@
 // A slot's sheets on Today (DESIGN §8): the slot actions sheet, what a planned slot changes for
-// the day (SPEC §3.5), and the sheet of what's in a filled flex slot. Each lists what's been
-// added to the slot, each with remove, or for a meal added with its ingredients, a way into
-// them, and has a way to add to the slot.
+// the day (SPEC §3.5), and the sheet of what's in a filled flex slot, which Other's reuses. Each
+// lists what's been added to the slot, each with remove, or for a meal added with its
+// ingredients, a way into them, and has a way to add to the slot.
 
 import { parseAmount } from '../custom-foods.js';
+import { OTHER } from '../data.js';
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
 import { segmentedControl } from '../ui/controls.js';
 import { numberField } from '../ui/inputs.js';
@@ -143,11 +144,10 @@ export async function slotActionsSheet({ plan, onPortion }) {
   return picked;
 }
 
-// A flex slot with something in it (SPEC §3.4): what's in it, each with remove, then Add to this
-// slot. plan: the slot as slots.js's daySlots plans it, with entries. Resolves like
-// slotActionsSheet, to { action: 'add' }, { action: 'entry-ingredients' or 'remove', entry }, or
-// null.
-export async function filledFlexSheet({ plan }) {
+// The filled flex sheet: entries, each with remove, then one button to add more, labelled
+// addLabel. Resolves like slotActionsSheet, to { action: 'add' }, { action: 'entry-ingredients'
+// or 'remove', entry }, or null.
+async function entriesSheet({ title, entries, addLabel }) {
   let picked = null;
   let sheet;
   const choose = (action, entry) => {
@@ -155,11 +155,20 @@ export async function filledFlexSheet({ plan }) {
     sheet.close();
   };
 
-  const add = secondaryButton('Add to this slot', { block: true, onClick: () => choose('add') });
-  sheet = openSheet({
-    title: `${plan.name} · Flex`,
-    content: [entryList(plan.entries, entryActions(choose)), add],
-  });
+  const add = secondaryButton(addLabel, { block: true, onClick: () => choose('add') });
+  sheet = openSheet({ title, content: [entryList(entries, entryActions(choose)), add] });
   await sheet.closed;
   return picked;
+}
+
+// A flex slot with something in it (SPEC §3.4): what's in it, then Add to this slot. plan: the
+// slot as slots.js's daySlots plans it, with entries.
+export function filledFlexSheet({ plan }) {
+  return entriesSheet({ title: `${plan.name} · Flex`, entries: plan.entries, addLabel: 'Add to this slot' });
+}
+
+// Other (SPEC §3.6, DESIGN §8): the filled flex sheet for what's eaten outside the slots, titled
+// "Other" and ending in Add to Other. entries: slots.js's otherEntries.
+export function otherSheet({ entries }) {
+  return entriesSheet({ title: OTHER.name, entries, addLabel: `Add to ${OTHER.name}` });
 }

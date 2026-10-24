@@ -97,7 +97,8 @@ export function templateSlots(doc) {
 // - swapEntry: a food or quick numbers swapped in, an entry snapshot eaten in place of the meal,
 //   or null. The slot keeps the template's meal as its meal, so it's still a planned slot.
 // - budget: a flex slot's pinned budget, or null. It counts only while the slot is open.
-// - entries: the day's entries added to this slot. An entry for a slot that's gone isn't in any.
+// - entries: the day's entries added to this slot. An entry in Other or for a slot that's gone
+//   isn't in any (otherEntries).
 // Changes are only on slots the template plans a meal in: a swap, skip or portion is made on a
 // planned slot, so one left on a slot that has since become flex is ignored. A swap to a meal
 // that's since been deleted falls back to the template's meal. Ingredients are kept with the
@@ -134,6 +135,15 @@ export function daySlots(doc, day) {
       entries,
     };
   });
+}
+
+// What Other holds on a day that isn't locked (SPEC §3.5, §3.6), in the order added: the entries
+// added outside the slots, and any whose slot has since been removed, since they have no slot to
+// show under. slots: the core doc's slots (daySlots' plans will do). A locked day lists every entry
+// under the slot name it saved instead.
+export function otherEntries(day, slots) {
+  const slotIds = new Set(slots.map((slot) => slot.id));
+  return (day.entries ?? []).filter((entry) => !slotIds.has(entry.slotId));
 }
 
 // --- A day's changes (SPEC §3.5) ---

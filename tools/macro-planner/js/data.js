@@ -116,7 +116,11 @@ export function pruneDays(daysDoc, today) {
 
 // --- Entries (SPEC §3.5) ---
 // An entry is a snapshot: it keeps its own label, emoji and numbers, and its slot's name, so
-// editing or deleting a food, a meal or a slot later never changes it. slot: { id, name }.
+// editing or deleting a food, a meal or a slot later never changes it. slot: { id, name }, or OTHER.
+
+// Other, for what's eaten outside the slots: passed to the entry helpers in place of a slot, so its
+// entries have no slot id. It's never part of the plan.
+export const OTHER = Object.freeze({ id: null, name: 'Other' });
 
 export function createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs }) {
   return { id: crypto.randomUUID(), slotId: slot.id, slotName: slot.name, label, emoji, kcal, protein, fat, carbs, source };
