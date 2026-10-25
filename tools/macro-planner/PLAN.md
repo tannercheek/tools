@@ -14,7 +14,7 @@ it" list. Don't run git commands that change the repo, and don't start the
 next step.
 ```
 
-Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you its changes. You review them and move on. Commits happen once per phase: on a phase's last step, Claude also suggests a commit message (`Macro Planner: Phase <n> — <phase title>`), and you commit and push the whole phase yourself.
+Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you its changes, ending with a suggested commit message (`Macro Planner: <step id> — <step title>`). You review them, then commit and push the step yourself. Phases 0–13 are done; new work goes in Phase 14, which stays open.
 
 **Design:** `DESIGN.md` and `tokens.css` are final and apply from step 0.1. Every UI step builds to them with the base components from step 0.3, so there's no restyle pass at the end.
 
@@ -480,7 +480,151 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 13 — Grow the food list
 
-- [ ] **13.1 Grow the food list**
+- [x] **13.1 Grow the food list**
       After Phase 12, so new foods get their portions as they're added. List the foods you're missing: the custom foods you've made, the searches that found nothing, and gaps in SPEC §3.2's coverage list. Add those to `food-list.json`, with portions where a household measure is how you'd measure them, and re-run `build-foods.mjs`. Every number comes from USDA with its `fdcId`, as in 3.1; a food that can't be sourced is left out and listed. This step is data only — no code changes.
       _You'll need to:_ give me the list of missing foods, and have the USDA CSVs unzipped.
       _Done when:_ every food on your list is in `foods.json` or listed as unsourced; you've skimmed the new entries for naming clarity (raw vs cooked, dry vs cooked), emoji and portion choices; you spot-check three against the USDA website.
+
+## Phase 14 — Ongoing
+
+One open-ended phase: steps are added here as they come up, in the order they should be built, and none of them ends the phase. Each one is committed on its own.
+
+- [ ] **14.1 Sheets above the keyboard**
+      On an iPhone, the on-screen keyboard covers the bottom of a sheet, so a field near the bottom, like Log weigh-in's weight, is hidden while you type. While a sheet is open, `js/ui/sheet.js` fits it to `window.visualViewport`: when the keyboard opens, the sheet shrinks to the space above it, and the focused field scrolls into view inside the sheet. Every sheet gets this from the shared component; no view changes. Where `visualViewport` is missing, nothing changes. Add the rule to DESIGN §10, and any new value as a token.
+      _Done when:_ on your iPhone, the weight field stays visible above the keyboard while you type in Stats' Log weigh-in and Today's Weigh in, and so do Quick numbers' fields and the custom food form's macro fields; closing the keyboard brings the sheet back to its full height; nothing changes on a desktop browser. A headless browser can't open an on-screen keyboard, so this is checked on the phone.
+
+- [ ] **14.2 "Added to this slot" heading**
+      In a planned slot's actions sheet on Today, the items added to the slot sit under the heading "Added to this slot", and Add to this slot moves under them, so the heading, the items and the button read as one group, apart from the meal's controls above (SPEC §3.6). With nothing added, only the button shows, with no heading. The heading uses the label style of the sheet's Portion control. The filled flex sheet and the Other sheet are unchanged, since everything in them is added. Update DESIGN §8's slot actions sheet.
+      _Done when:_ a planned breakfast with a banana added shows "Added to this slot", the banana, then Add to this slot; with nothing added there's no heading; the filled flex and Other sheets look as before; it works at 360px and 390px in light and dark.
+
+- [ ] **14.3 Birthday instead of age**
+      The profile's age becomes a birthday, and the age is worked out from it each day (SPEC §3.1).
+  - In `calc.js`, a pure `ageOn(birthDate, date)`: whole years, a 29 February birthday counting from 1 March in other years. The targets helper takes today's date and uses the birthday's age, or a stored `age` when there's no birthday.
+  - In Settings' profile, a Birthday date field replaces Age, reusing the weigh-in sheet's date field. Once set, the age shows under it in body `sm` `--color-text-2` ("35 years old"). First launch shows it empty.
+  - A profile saved with an age keeps its targets until a birthday is entered. Export and import carry `birthDate` with the core doc.
+
+  _Done when:_
+  - tests cover the age the day before, on and after a birthday, a 29 February birthday in a year without one, a profile with only a stored age, and no targets with neither
+  - entering a birthday shows the age under it and moves the targets everywhere
+  - a profile saved before this step keeps its targets until a birthday is entered
+  - it works at 360px and 390px in light and dark
+
+- [ ] **14.4 Past days grouped by slot**
+      A locked day lists its entries in one card per slot (SPEC §3.6), so it's clear which items belong together.
+  - A pure `lockedDayGroups(entries, slots)` in `slots.js`: the entries grouped by slot in today's slot order, each group under its saved slot name, keeping the order they were written in; a group whose slot has since been removed after the others; Other last.
+  - Each group is one card: the slot name above it as an eyebrow, then a line per entry (emoji, label, numbers, and its 44px remove icon button) with a `--border-width` `--color-border` divider between lines. Add stays after the cards.
+  - Focus after a remove and the hop after an add work as now, on the lines.
+  - Update DESIGN §8's entry row (locked past day).
+
+  _Done when:_
+  - tests cover slot order, a removed slot's group, Other last, and entries keeping their order within a group
+  - a past day with a planned breakfast and a banana added shows one Breakfast card holding both
+  - removing one leaves the card; removing the last takes the card away
+  - long labels truncate and the remove buttons stay 44px, at 360px and 390px in light and dark
+
+- [ ] **14.5 Swap in the meal editor**
+      Swap a food in a saved meal without removing and re-adding it (SPEC §3.3).
+  - In `saved-meals.js`, a pure `swapItem(meal, foodId, newFoodId, qty, unit)`: the new food takes the item's place; one already in the meal gets the amount added to it, converted into its unit, like `addItem`.
+  - The meal editor's ingredient rows trade their remove button for the swap icon button, opening the ingredient swap sheet from the Ingredients sheet (8.5): Remove from meal, then food search, the picked food starting at the old amount when it has the same unit. Reuse that sheet rather than copy it.
+  - Update DESIGN §8's ingredient row (meal editor).
+
+  _Done when:_
+  - tests cover a swap keeping its place, a swap merging into a food already in the meal in another unit, and the other items untouched
+  - swapping white bread for gluten-free bread in a saved meal keeps its place and amount, and the meal's totals move
+  - Remove from meal in the swap sheet removes the food
+  - locked days and today's ingredient changes are unchanged
+  - it works at 360px and 390px in light and dark
+
+- [ ] **14.6 Swap an added item**
+      On Today, anything added to a slot or to Other can be swapped, not only removed (SPEC §3.5).
+  - In `data.js`, a pure `swapDayEntry(day, entryId, entry)`: the new entry, made for the same slot, takes the old one's place in `entries`.
+  - In the slot actions sheet, the filled flex sheet and the Other sheet, an added entry's row becomes one row button with a chevron. A meal added with its ingredients opens its Ingredients sheet as now, which gains "Swap meal" above Remove from slot. Anything else opens a small item sheet titled with the entry: "Swap", then "Remove from slot" (confirm sheet).
+  - Swap opens the swap sheet (Meal · Food · Quick) without Make this the default, ending in Swap meal, Swap food or Swap numbers.
+  - Locked days are unchanged.
+  - Update DESIGN §8: the added entry row, the item sheet, and the swap sheet opened from an entry.
+
+  _Done when:_
+  - tests cover a swap keeping the entry's place and slot, and Recent listing the new entry
+  - a banana added to lunch, swapped for an apple, shows the apple where the banana was, and the rings move by the difference
+  - an item in a filled flex slot swaps for quick numbers, and an item in Other swaps for a saved meal
+  - an edited added meal swapped for a food leaves no ingredient lines behind
+  - Remove from slot still asks first
+  - it works at 360px and 390px in light and dark
+
+- [ ] **14.7 Planned foods: logic**
+      The pure logic for SPEC §3.4's planned foods and §3.5's changes to them, with no UI.
+  - In `slots.js`: `addSlotFood`, `updateSlotFood` and `removeSlotFood` on the template slot's `foods`, adding to the amount of a food already planned there, like `addItem`. `templateSlots` gives each slot its foods. A slot with a meal or foods isn't flex.
+  - `daySlots` gives each plan its planned foods as ingredient snapshots, from the template or the day's `foods` change; a skipped slot has none; an off-plan day ignores them. New day helpers set the day's version of a slot's planned foods (an empty list allowed), and `clearSlotChange` drops it; a meal swap keeps it.
+  - In `calc.js`: `slotTotals` adds the planned foods, the portion scaling only the meal; Plan totals and `flexGap` count them.
+  - In `lock-in.js`: each planned food becomes a `food` entry after the slot's meal, marked `planned: true`.
+  - In `custom-foods.js`: deleting a custom food planned in a slot archives it, as for one used in a meal.
+
+  _Done when:_ tests cover:
+  - a slot planning only a banana counting in `dayTotal` and `flexGap`, and not being flex
+  - a meal with a banana, at 1.5× scaling the meal and not the banana
+  - Skip dropping both; swapping the banana for an apple and removing a food for the day; As planned bringing back the template's
+  - a meal swap keeping the day's planned foods
+  - `lockDay` writing the meal, then its foods marked planned, and `recentEntries` leaving them out
+  - Plan totals including them; a pinned budget ignored on a slot with foods
+  - an off-plan day ignoring them
+  - editing or deleting the food after lock-in leaving the day as it was, and deleting a planned custom food archiving it
+  - a doc without `foods` giving the same results as before
+
+- [ ] **14.8 Planned foods: Plan**
+      Planned foods in the Plan view, using 14.7.
+  - Tapping a slot opens its sheet as now, with its planned foods above the meal picker: a row each with its amount and a remove icon button, then "Add food", which opens the add food sheet with its amount and unit button (12.3).
+  - A slot's row shows what it plans like a Today slot: one thing as itself, more than one as "N items" with the meal first, then its foods. A slot with foods and no meal no longer shows "Add a meal".
+  - The totals card counts planned foods.
+  - Update DESIGN §8's Plan slot rows and slot sheet.
+
+  _Done when:_
+  - adding 1 banana to a Snack slot shows "🍌 Banana" on its row, with no "Add a meal", and the totals card moves
+  - adding a banana to a lunch slot with a meal shows "2 items"
+  - adding a second banana makes it 2 banana, not a second line
+  - removing the last food and having no meal makes the slot flex again
+  - it survives a reload and syncs between browsers
+  - it works at 360px and 390px in light and dark
+
+- [ ] **14.9 Planned foods: Today**
+      Planned foods on Today, using 14.7.
+  - Slot rows follow SPEC §3.6: one planned food alone shows as itself, and a meal with foods, several foods or anything added shows as "N items", meal first, then planned foods, then what's been added.
+  - In the slot actions sheet, planned foods follow Portion as rows with a chevron, each opening the item sheet from 14.6 with "Swap" (food picker, starting at the old amount when the unit matches) and "Remove for today" (no confirm sheet, since As planned undoes it). With no meal, Swap and Edit in the top row are disabled and Portion doesn't show. The title is the slot with its meal, or with its one food ("Snack · Banana").
+  - Update DESIGN §8's meal slot and slot actions sheet.
+
+  _Done when:_
+  - a Snack slot planning a banana shows "🍌 Banana" and counts in the rings without being touched
+  - swapping it for an apple today shows the apple, and tomorrow is a banana again
+  - Remove for today takes it out of the rings, and As planned brings it back
+  - lunch with a meal and a banana shows "2 items", and 1.5× moves only the meal's numbers
+  - the next day, the banana is in the locked day as a food entry, and not in Recent
+  - it works at 360px and 390px in light and dark
+
+- [ ] **14.10 Custom food units: logic**
+      The pure logic for SPEC §3.2's units on custom foods, with no UI.
+  - In `custom-foods.js`: a custom food can have `grams` (its serving's weight, above 0) and `portions` (`[{ unit, grams }]`), each unit named once and never "g" or the serving's unit. A serving in g gives `grams` from its quantity.
+  - In `portions.js`: a custom food with `grams` has units like a bundled food's: its serving's, then grams, then its portions; without `grams`, only its serving's.
+  - A pure `unitsInUse(foodId, doc)`: the units its saved meals' items and the template's planned foods are in, so the form can keep those from being removed.
+  - Duplicating a bundled food keeps its `grams` and `portions`. Export and import carry them.
+
+  _Done when:_ tests cover:
+  - a custom food with a serving weight offering grams and its units, and one without offering only its serving's
+  - an amount in an added unit converting through grams
+  - a serving in g getting its weight from its quantity
+  - a repeated unit, "g" or the serving's unit refused as a unit
+  - `unitsInUse` finding a unit used in a meal and in a planned food
+  - a duplicate keeping its portions
+  - custom foods saved before this step unchanged
+
+- [ ] **14.11 Custom food units: form**
+      The custom food form gains the serving's weight and other units, using 14.10.
+  - After Carbs: "Serving weight", a numeric field with a "g" suffix, hidden when the serving is in g. Then "Other units": a row per unit (its name, then its weight with a "g" suffix, "1 cup = 158 g"), each with a remove icon button, then "Add unit" as a secondary button. Other units need the serving weight, so they show once it's filled in.
+  - A unit in use can't be removed: its remove button is disabled, with one line saying which meal uses it.
+  - Search results and the Foods list show a custom food at its default amount, like a bundled food (DESIGN §8).
+  - Update DESIGN §10's custom food form.
+
+  _Done when:_
+  - a custom protein powder with a 1 scoop serving, 31 g, can be added as 1 scoop or 45 g with the right numbers
+  - a custom overnight oats with a 100 g serving and "1 cup = 240 g" shows "1 CUP · 240 G" in search, and Unit offers cup and g
+  - a unit used in a meal can't be removed, and says where it's used
+  - it survives a reload and syncs between browsers
+  - it works at 360px and 390px in light and dark
