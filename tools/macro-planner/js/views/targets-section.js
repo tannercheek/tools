@@ -90,8 +90,9 @@ function targetField({ key, label, unit, message }, { onInput, onCommit }) {
 }
 
 // onCommit(key, value): save an override, or with null, reset that target to calculated.
-// Returns the section's elements, and show({ profile, weightKg, overrides }) to show the targets
-// for a profile and weight (what's saved, or being typed) and the saved overrides.
+// Returns the section's elements, and show({ profile, weightKg, overrides, macroSplit }) to show
+// the targets for a profile and weight (what's saved, or being typed), the saved overrides and
+// the core doc's macro split.
 export function targetsSection({ onCommit }) {
   const note = document.createElement('p');
   note.className = 'settings__note';
@@ -109,10 +110,10 @@ export function targetsSection({ onCommit }) {
   // moves the fat and carbs defaults.
   function show(next) {
     current = next;
-    const { profile, weightKg, overrides: saved } = next;
+    const { profile, weightKg, overrides: saved, macroSplit } = next;
     const overrides = { ...saved };
     for (const field of fields) overrides[field.key] = field.typed() ?? overrides[field.key];
-    const values = profileTargets(profile, weightKg, overrides);
+    const values = profileTargets(profile, weightKg, overrides, macroSplit);
 
     note.hidden = values !== null;
     grid.hidden = values === null;
@@ -122,7 +123,7 @@ export function targetsSection({ onCommit }) {
     for (const field of fields) {
       field.show({
         text: targetText(field.key, values, saved),
-        calculatedValue: profileTargets(profile, weightKg, { ...overrides, [field.key]: null })[field.key],
+        calculatedValue: profileTargets(profile, weightKg, { ...overrides, [field.key]: null }, macroSplit)[field.key],
         overridden: saved[field.key] != null,
       });
     }

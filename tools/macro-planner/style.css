@@ -392,6 +392,31 @@ html:has(.tabbar:not([hidden])) {
   color: var(--color-text-2);
 }
 
+/* Macro split by percent (DESIGN §10): Protein, Fat and Carbs side by side, then one line with
+   their total, which becomes the error message (.field__error) when it isn't 100. */
+.settings__split {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--stack-gap);
+}
+
+.settings__split-total {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
+.settings__split-total.field__error {
+  font-weight: var(--weight-semibold);
+  color: var(--color-error);
+}
+
 /* Under an overridden target: what Reset would give, then Reset, wrapping under it when the
    column is narrow. */
 .settings__calculated {

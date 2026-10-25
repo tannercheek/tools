@@ -40,8 +40,12 @@ export async function swapSheet({ plan, meals, foods, getFood, store }) {
       return element;
     },
     food: () =>
-      foodPicker({ foods, store, submitLabel: 'Swap food', onAdd: (food, qty) => done({ entry: foodEntry(plan, food, qty) }) })
-        .element,
+      foodPicker({
+        foods,
+        store,
+        submitLabel: 'Swap food',
+        onAdd: (food, qty, unit) => done({ entry: foodEntry(plan, food, qty, unit) }),
+      }).element,
     quick: () =>
       quickNumbersForm({ submitLabel: 'Swap numbers', onSubmit: (numbers, label) => done({ entry: quickEntry(plan, numbers, label) }) }),
   };

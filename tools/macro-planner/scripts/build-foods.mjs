@@ -9,11 +9,15 @@
 //
 // food-list.json is an array of entries like these:
 //   { "fdcId": 171287, "variant": "large", "name": "Egg, large", "portion": "1 large = 50 g", "unit": "egg", "emoji": "🥚" }
-//   { "fdcId": 2646170, "name": "Chicken breast, skinless, raw", "category": "poultry" }
+//   { "fdcId": 168878, "name": "Rice, white, cooked", "emoji": "🍚", "portions": [{ "portion": "1 cup = 158 g", "unit": "cup" }] }
+//   { "fdcId": 2646170, "name": "Chicken breast, skinless, raw", "category": "poultry", "portions": [{ "unit": "oz" }] }
 // - The id is usda-<fdcId>, plus -<variant> when one USDA food gives several entries (egg sizes).
 //   Ids must be unique and never change once set, because meals refer to foods by id.
 // - portion + unit: the serving is that USDA portion, counted in `unit`. Without them it's 100 g.
 //   A portion that doesn't match fails the build and lists the food's portions to copy from.
+// - portions: the food's other units (SPEC §3.2), the first one its default. Each is a USDA
+//   portion shown as `unit`, matched like the serving's, or { "unit": "oz" }, which needs no
+//   USDA portion because an ounce is the same weight on any food.
 // - emoji, or a category for its default emoji (SPEC §3.2). An emoji wins over a category.
 //
 // Any problem fails the whole build and writes nothing, so foods.json is never half-built.
@@ -47,6 +51,10 @@ export const CATEGORY_EMOJI = Object.freeze({
   'oils/fats': '🫒',
   supplements: '🥤',
 });
+
+// Units that are weights, in grams by definition, so they need no USDA portion. USDA's own
+// "3 oz = 85 g" rows are rounded to the gram, so they'd make 12 oz differ between foods.
+export const WEIGHT_UNITS = Object.freeze({ oz: 28.349523125 });
 
 // USDA nutrient ids, most preferred first. SR Legacy always has Energy (1008). Many
 // Foundation foods only report energy from Atwater factors; where one has both, 1008
@@ -209,6 +217,36 @@ export function entryProblems(entry) {
   if ((entry.portion === undefined) !== (entry.unit === undefined)) {
     problems.push('portion and unit go together: give both, or neither for 100 g');
   }
+  if (entry.portions !== undefined && !Array.isArray(entry.portions)) {
+    problems.push('portions must be a list');
+  } else {
+    problems.push(...portionProblems(entry));
+  }
+  return problems;
+}
+
+// Grams is always one of a bundled food's units, and so is its serving's unit, so a portion
+// can't repeat either, or another portion.
+function portionProblems(entry) {
+  const problems = [];
+  const units = new Set(['g', entry.unit ?? 'g']);
+  (entry.portions ?? []).forEach((item, index) => {
+    const { portion, unit } = item ?? {};
+    const named = typeof unit === 'string' && unit.trim() !== '';
+    const which = `portion ${index + 1}${named ? ` (${unit})` : ''}`;
+    if (!named) {
+      problems.push(`${which} needs a unit`);
+      return;
+    }
+    const isWeight = Object.hasOwn(WEIGHT_UNITS, unit);
+    if (portion === undefined && !isWeight) {
+      problems.push(`${which} needs the USDA portion it comes from; only oz goes without one`);
+    } else if (portion !== undefined && isWeight) {
+      problems.push(`${which} is always ${WEIGHT_UNITS[unit]} g, so leave out its portion`);
+    }
+    if (units.has(unit)) problems.push(`${which} is already one of the food's units`);
+    units.add(unit);
+  });
   return problems;
 }
 
@@ -216,6 +254,32 @@ export function entryProblems(entry) {
 // float noise from the multiply (74.44399999999999 → 74.444); USDA's precision is kept.
 function perServing(per100g, grams) {
   return Number(((per100g * grams) / 100).toPrecision(12));
+}
+
+// The USDA portion with this label, or a problem listing the food's portions to copy from.
+function findPortion(usda, label) {
+  const portion = usda.portions.find((option) => option.label === label);
+  if (portion) return { portion };
+  const options = usda.portions.map((option) => `"${option.label}"`).join(', ') || 'none';
+  return { problem: `no portion "${label}". USDA's portions for this food: ${options}` };
+}
+
+// The entry's portions as { unit, grams }, grams being the weight of 1 of the unit, so
+// "2 tbsp = 32 g" is { unit: "tbsp", grams: 16 }. Leaves out the ones entryProblems reports.
+function buildPortions(entry, usda, problems) {
+  const portions = [];
+  for (const item of Array.isArray(entry.portions) ? entry.portions : []) {
+    const { portion: label, unit } = item ?? {};
+    if (Object.hasOwn(WEIGHT_UNITS, unit)) {
+      if (label === undefined) portions.push({ unit, grams: WEIGHT_UNITS[unit] });
+      continue;
+    }
+    if (label === undefined) continue;
+    const { portion, problem } = findPortion(usda, label);
+    if (problem) problems.push(problem);
+    else portions.push({ unit, grams: Number((portion.grams / portion.amount).toPrecision(12)) });
+  }
+  return portions;
 }
 
 function buildFood(entry, usdaFoods) {
@@ -229,15 +293,15 @@ function buildFood(entry, usdaFoods) {
   let serving = { qty: 100, unit: 'g' };
   let grams = 100;
   if (entry.portion !== undefined) {
-    const portion = usda.portions.find(({ label }) => label === entry.portion);
+    const { portion, problem } = findPortion(usda, entry.portion);
     if (portion) {
       serving = { qty: portion.amount, unit: entry.unit };
       grams = portion.grams;
     } else {
-      const options = usda.portions.map(({ label }) => `"${label}"`).join(', ') || 'none';
-      problems.push(`no portion "${entry.portion}". USDA's portions for this food: ${options}`);
+      problems.push(problem);
     }
   }
+  const portions = buildPortions(entry, usda, problems);
 
   const per100g = {};
   let energyId;
@@ -260,6 +324,8 @@ function buildFood(entry, usdaFoods) {
     protein: perServing(per100g.protein, grams),
     fat: perServing(per100g.fat, grams),
     carbs: perServing(per100g.carbs, grams),
+    grams,
+    portions,
     custom: false,
     archived: false,
   };
@@ -328,10 +394,12 @@ function logLine(food, source) {
   const n = (value) => value.toFixed(1);
   const kcalFrom = source.energy === ENERGY_NAMES[1008] ? '' : `, kcal is ${source.energy}`;
   const grams = food.serving.unit === 'g' ? '' : ` (${source.grams} g)`;
+  const portions = food.portions.map((portion) => `1 ${portion.unit} = ${portion.grams} g`).join(', ');
   return [
     `  ${food.emoji} ${food.name}: ${food.serving.qty} ${food.serving.unit}${grams} · ` +
       `${n(food.kcal)} kcal, P ${n(food.protein)}, F ${n(food.fat)}, C ${n(food.carbs)}`,
     `      ${food.id}, ${source.dataset}: "${source.description}"${kcalFrom}`,
+    ...(portions ? [`      portions: ${portions}`] : []),
   ].join('\n');
 }
 

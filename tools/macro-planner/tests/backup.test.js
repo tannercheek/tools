@@ -22,7 +22,8 @@ function freshStore() {
   return createLocalStore(createFakeStorage());
 }
 
-// A core doc with a custom food, a meal, an override and a filled-in profile. Made-up numbers.
+// A core doc with a custom food, a meal, an override, a percent macro split and a filled-in
+// profile. Made-up numbers.
 function usedCoreDoc() {
   const doc = createCoreDoc('2026-10-01');
   const food = { id: 'custom-1', name: 'Protein bar', emoji: '🍫', serving: { qty: 1, unit: 'bar' }, kcal: 200, protein: 20, fat: 7, carbs: 22, custom: true };
@@ -31,6 +32,7 @@ function usedCoreDoc() {
     ...doc,
     profile: { sex: 'male', age: 30, heightCm: 180, activity: 'moderate', goal: 'lose', rateKgPerWeek: 0.5 },
     overrides: { ...doc.overrides, protein: 180 },
+    macroSplit: { by: 'percent', percent: { protein: 30, fat: 25, carbs: 45 } },
     settings: { units: 'imperial' },
     template: { ...doc.template, [doc.slots[0].id]: { mealId: 'meal-1', budget: null } },
     foods: [food],
@@ -132,6 +134,11 @@ test('readBackup refuses an export with a doc missing or the wrong shape', async
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], schemaVersion: 2 } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], meals: {} } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], startedOn: 'yesterday' } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: 'percent' } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'calories' } } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'percent' } } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'percent', percent: { protein: 30, fat: 25, carbs: 44 } } } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'bodyweight', percent: { protein: 30.5, fat: 25, carbs: 44.5 } } } },
     { [DAYS_DOC_ID]: { 'Oct 20': emptyDay() } },
     { [DAYS_DOC_ID]: { '2026-10-20': [] } },
     { [WEIGHT_DOC_ID]: { weighIns: {} } },
@@ -140,6 +147,19 @@ test('readBackup refuses an export with a doc missing or the wrong shape', async
   ];
   for (const changes of broken) {
     assert.throws(() => readBackup(withDocs(changes)), { name: 'BackupError', message: 'That export is incomplete or damaged, so nothing was imported.' }, JSON.stringify(changes));
+  }
+});
+
+test('readBackup takes a core doc without a macro split, or by bodyweight with or without kept percents', async () => {
+  const docs = (await exportDocs(await storeWithData(), NOW)).docs;
+  const { macroSplit: _split, ...withoutSplit } = docs[CORE_DOC_ID];
+  for (const core of [
+    withoutSplit,
+    { ...withoutSplit, macroSplit: { by: 'bodyweight' } },
+    { ...withoutSplit, macroSplit: { by: 'bodyweight', percent: { protein: 35, fat: 25, carbs: 40 } } },
+  ]) {
+    const file = JSON.stringify({ app: 'macro-planner', docs: { ...docs, [CORE_DOC_ID]: core } });
+    assert.deepEqual(readBackup(file)[CORE_DOC_ID], core, JSON.stringify(core.macroSplit));
   }
 });
 
@@ -155,6 +175,14 @@ test('import replaces every doc, including data the file doesn’t have', async 
 
   await importDocs(store, docs, TODAY, []);
   assert.deepEqual(await allDocs(store), docs);
+});
+
+test('export and import carry the macro split with the core doc', async () => {
+  const docs = readBackup(asFile(await exportDocs(await storeWithData(), NOW)));
+  assert.deepEqual(docs[CORE_DOC_ID].macroSplit, { by: 'percent', percent: { protein: 30, fat: 25, carbs: 45 } });
+  const store = freshStore();
+  await importDocs(store, docs, TODAY, []);
+  assert.deepEqual((await store.load(CORE_DOC_ID)).macroSplit, docs[CORE_DOC_ID].macroSplit);
 });
 
 test('an imported weight log with nothing ever saved becomes an empty one the log can add to', async () => {

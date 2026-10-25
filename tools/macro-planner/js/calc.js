@@ -1,6 +1,8 @@
 // Nutrition math. Pure: no DOM, so it can be tested in Node.
 // Inputs and results are metric and unrounded; convert and round only for display.
 
+import { toServings } from './portions.js';
+
 // Both exact by definition.
 const KG_PER_LB = 0.45359237;
 const CM_PER_IN = 2.54;
@@ -69,6 +71,7 @@ export function goalAdjustment(goal, rateKgPerWeek) {
 const PROTEIN_G_PER_KG = 1.8;
 const FAT_SHARE_OF_KCAL = 0.25;
 const KCAL_PER_G = { protein: 4, fat: 9, carbs: 4 };
+const MACRO_KEYS = ['protein', 'fat', 'carbs'];
 
 export const TARGET_WARNINGS = Object.freeze({
   BELOW_BMR: 'below-bmr',
@@ -77,18 +80,27 @@ export const TARGET_WARNINGS = Object.freeze({
 
 // Daily targets: kcal, and macros in grams, keyed like a totals object.
 // overrides: { kcal, protein, fat, carbs }, each a number or absent/null
-// (null = use the calculated value). Defaults are worked out from the final
-// kcal, protein and fat, so overriding kcal also moves the fat and carbs defaults.
-export function targets(profile, overrides = {}) {
+// (null = use the calculated value). An override replaces only its own target; nothing is
+// rebalanced. macroSplit: the core doc's (SPEC §3.1); without one, macros are by bodyweight.
+// Macros are worked out from the final kcal, so overriding kcal moves every one calculated from
+// it: fat and carbs by bodyweight, all three by percent.
+export function targets(profile, overrides = {}, macroSplit) {
   const bmrKcal = bmr(profile);
   const calculatedKcal = tdee(bmrKcal, profile.activity) + goalAdjustment(profile.goal, profile.rateKgPerWeek);
-
   const kcal = overrides.kcal ?? calculatedKcal;
-  const protein = overrides.protein ?? PROTEIN_G_PER_KG * profile.weightKg;
-  const fat = overrides.fat ?? (FAT_SHARE_OF_KCAL * kcal) / KCAL_PER_G.fat;
 
   const warnings = [];
   if (kcal < bmrKcal) warnings.push(TARGET_WARNINGS.BELOW_BMR);
+
+  // By percent, carbs are their own share of the calories, not what's left, so they can't go
+  // negative and are never clamped.
+  if (macroSplit?.by === 'percent') {
+    const grams = (key) => overrides[key] ?? (macroSplit.percent[key] * kcal) / (100 * KCAL_PER_G[key]);
+    return { kcal, protein: grams('protein'), fat: grams('fat'), carbs: grams('carbs'), warnings };
+  }
+
+  const protein = overrides.protein ?? PROTEIN_G_PER_KG * profile.weightKg;
+  const fat = overrides.fat ?? (FAT_SHARE_OF_KCAL * kcal) / KCAL_PER_G.fat;
 
   let carbs = overrides.carbs;
   if (carbs == null) {
@@ -102,20 +114,42 @@ export function targets(profile, overrides = {}) {
   return { kcal, protein, fat, carbs, warnings };
 }
 
+// Whether a percent split can be saved (SPEC §3.1): { protein, fat, carbs } as whole numbers
+// from 0 to 100 adding up to 100.
+export function validSplit(percent) {
+  const values = MACRO_KEYS.map((key) => percent?.[key]);
+  return (
+    values.every((value) => Number.isInteger(value) && value >= 0 && value <= 100) &&
+    values.reduce((sum, value) => sum + value, 0) === 100
+  );
+}
+
+// The targets as a percent split, for filling the fields on switching to percent (SPEC §3.1):
+// each macro's share of the calorie target in whole percents, carbs taking up the rounding, so
+// the targets barely move. Protein and fat can pass the calorie target, as when carbs are
+// clamped by bodyweight; they're capped then, so the split still adds up to 100.
+export function splitFromTargets(targetValues) {
+  const percentOf = (key) => Math.round((targetValues[key] * KCAL_PER_G[key] * 100) / targetValues.kcal);
+  const capped = (value, max) => Math.min(Math.max(value, 0), max);
+  const protein = capped(percentOf('protein'), 100);
+  const fat = capped(percentOf('fat'), 100 - protein);
+  return { protein, fat, carbs: 100 - protein - fat };
+}
+
 // What targets need from the core doc's profile (SPEC §3.1). The rate is checked apart,
 // since maintain doesn't use one.
 const PROFILE_KEYS = ['sex', 'age', 'heightCm', 'activity', 'goal'];
 
 // Targets from the saved profile, the current weight (the latest weigh-in, or null before
-// the first) and overrides. null until the profile is complete: until then there are no
-// targets, calculated or overridden.
-export function profileTargets(profile, weightKg, overrides = {}) {
+// the first), overrides and the core doc's macroSplit. null until the profile is complete:
+// until then there are no targets, calculated or overridden.
+export function profileTargets(profile, weightKg, overrides = {}, macroSplit) {
   const incomplete =
     PROFILE_KEYS.some((key) => profile[key] == null) ||
     weightKg == null ||
     (profile.goal !== 'maintain' && profile.rateKgPerWeek == null);
   if (incomplete) return null;
-  return targets({ ...profile, weightKg }, overrides);
+  return targets({ ...profile, weightKg }, overrides, macroSplit);
 }
 
 // --- Totals ---
@@ -135,19 +169,21 @@ export function scaleTotals(totals, multiplier) {
   return Object.fromEntries(TOTAL_KEYS.map((key) => [key, totals[key] * multiplier]));
 }
 
-// A food's numbers are per serving; qty is in the serving's unit,
-// so 150 of a { qty: 100, unit: 'g' } serving is 1.5 servings.
-export function foodTotals(food, qty) {
-  return scaleTotals(food, qty / food.serving.qty);
+// A food's numbers are per serving; qty is in unit, one of portions.js's foodUnits, or in the
+// serving's unit without one. So 150 of a { qty: 100, unit: 'g' } serving is 1.5 servings, and
+// 1 cup of cooked rice counts as its 158 g.
+export function foodTotals(food, qty, unit) {
+  return scaleTotals(food, toServings(food, qty, unit));
 }
 
-// getFood(id) must also resolve archived foods, since meals keep using them.
+// getFood(id) must also resolve archived foods, since meals keep using them. An item without a
+// unit is in its food's serving unit, as in meals saved before portions.
 export function mealTotals(meal, getFood) {
   return sumTotals(
-    meal.items.map(({ foodId, qty }) => {
+    meal.items.map(({ foodId, qty, unit }) => {
       const food = getFood(foodId);
       if (!food) throw new RangeError(`Unknown food: ${foodId}`);
-      return foodTotals(food, qty);
+      return foodTotals(food, qty, unit);
     }),
   );
 }

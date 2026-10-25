@@ -7,6 +7,7 @@ import { loadBundledFoods } from '../bundled-foods.js';
 import { foodTotals, mealTotals } from '../calc.js';
 import { parseAmount } from '../custom-foods.js';
 import { CoreDocUnavailableError, updateCoreDoc } from '../data.js';
+import { foodUnits } from '../portions.js';
 import { mealRoute, routeParam } from '../routes.js';
 import {
   addItem,
@@ -27,10 +28,11 @@ import { CORE_DOC_ID } from '../store.js';
 import { iconButton, secondaryButton } from '../ui/buttons.js';
 import { newTagPill, tagGroup, tagPill } from '../ui/controls.js';
 import { emojiField } from '../ui/emoji-picker.js';
-import { formError, numberField, textField } from '../ui/inputs.js';
+import { formError, textField } from '../ui/inputs.js';
 import { ingredientRow, rowList } from '../ui/row.js';
 import { confirmSheet } from '../ui/sheet.js';
 import { totalsCard } from '../ui/totals-card.js';
+import { amountField } from '../ui/unit-choice.js';
 import { addFoodSheet } from './add-food-sheet.js';
 import { newTagSheet } from './new-tag-sheet.js';
 
@@ -147,7 +149,8 @@ export function render(container, { route, replaceRoute, goBack, store }) {
     return row;
   }
 
-  // The totals card, then a row per food with its quantity in the food's serving unit.
+  // The totals card, then a row per food with its quantity in its own unit, which can be switched
+  // to any the food has (SPEC §3.3).
   function ingredients() {
     const totals = totalsCard();
     const list = rowList([]);
@@ -166,13 +169,19 @@ export function render(container, { route, replaceRoute, goBack, store }) {
       totals.show(mealTotals(meal, getFood));
     }
 
-    function rowFor({ foodId, qty }) {
+    // An item saved before portions has no unit: its amount is in the food's serving unit.
+    function rowFor({ foodId, qty, unit }) {
       const food = getFood(foodId);
-      const quantity = numberField({ unit: food.serving.unit, value: String(qty) });
+      const quantity = amountField({
+        units: foodUnits(food),
+        unit: unit ?? food.serving.unit,
+        value: String(qty),
+        onUnitChange: changeUnit,
+      });
       const row = ingredientRow({
         emoji: food.emoji,
         title: food.name,
-        numbers: foodTotals(food, qty),
+        numbers: foodTotals(food, qty, quantity.unit()),
         quantity,
         trailing: iconButton('x', `Remove ${food.name}`, { onClick: remove }),
       });
@@ -183,9 +192,18 @@ export function render(container, { route, replaceRoute, goBack, store }) {
       quantity.input.addEventListener('input', () => {
         quantity.setError(null);
         const shownQty = parseAmount(quantity.input.value) || savedQty();
-        row.setNumbers(foodTotals(food, shownQty));
+        row.setNumbers(foodTotals(food, shownQty, quantity.unit()));
         totals.show(mealTotals(updateItem(meal, foodId, shownQty), getFood));
       });
+
+      // The number in the field stays, now in the new unit (DESIGN §10), or the saved amount does
+      // while the field doesn't read as one.
+      function changeUnit(next) {
+        const nextQty = parseAmount(quantity.input.value) || savedQty();
+        edit((m) => updateItem(m, foodId, nextQty, next));
+        row.setNumbers(foodTotals(food, nextQty, next));
+        totals.show(mealTotals(meal, getFood));
+      }
 
       quantity.input.addEventListener('change', () => {
         const typed = parseAmount(quantity.input.value);
@@ -217,7 +235,7 @@ export function render(container, { route, replaceRoute, goBack, store }) {
       const picked = await addFoodSheet({ foods, store });
       useFoods((await store.load(CORE_DOC_ID)).foods ?? []);
       if (!picked) return;
-      edit((m) => addItem(m, picked.food.id, picked.qty));
+      edit((m) => addItem(m, picked.food, picked.qty, picked.unit));
       showList();
     }
 

@@ -409,7 +409,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 11 — Macro split by percent
 
-- [ ] **11.1 Macro split: logic**
+- [x] **11.1 Macro split: logic**
       In `calc.js`, `targets` takes the core doc's `macroSplit` (SPEC §3.1). By percent, each macro's grams come from its percent of the calorie target, override included. Add a pure `validSplit(percent)` (whole numbers 0–100 adding up to 100) and `splitFromTargets(targets)` (the targets as whole percents adding up to 100, carbs taking up the rounding), for filling the fields. A doc without `macroSplit` is by bodyweight. Export and import carry it with the core doc.
       _Done when:_ tests cover:
   - 30 / 25 / 45 at 2,600 kcal giving 195 g, 72.2 g and 292.5 g
@@ -420,7 +420,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - `splitFromTargets` adding up to 100 for targets that round awkwardly
   - a doc without `macroSplit` giving the same targets as before
 
-- [ ] **11.2 Macro split: Settings**
+- [x] **11.2 Macro split: Settings**
       The macro split control in Settings' profile and targets (DESIGN §10 macro split). Switching to percent fills the fields from the saved percents, else from the current targets, else 30 / 25 / 45. A change that adds up to 100 saves and moves the targets straight away. One that doesn't shows the error and saves nothing.
       _Done when:_
   - switching to percent shows fields adding up to 100, and the targets barely move
@@ -433,12 +433,12 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
 
 ## Phase 12 — Food portions
 
-- [ ] **12.1 Portions in the food data**
+- [x] **12.1 Portions in the food data**
       `food-list.json` entries gain `portions`: USDA portion labels with the unit each shows as, first one the default, e.g. `{ "portion": "1 cup = 158 g", "unit": "cup" }`. `build-foods.mjs` writes each food's `grams` (its serving's weight) and `portions` as `{ unit, grams }`, and fails on a portion USDA doesn't have, listing the ones it does, as it already does for servings. Propose portions for the starter foods where a household measure is how you'd measure them (rice, oats and pasta by the cup; potatoes and fruit by the piece; oils and nut butters by the tbsp) and show me the list before building. Meat and fish may have grams only. No food's `id`, `serving` or numbers change.
       _You'll need to:_ have the USDA CSVs unzipped again.
       _Done when:_ tests cover the script reading portions and its failure message; every bundled food has `grams`; the foods you'd measure by volume or piece have portions; `git diff data/foods.json` shows only added fields; you spot-check three portions against the USDA website.
 
-- [ ] **12.2 Amounts in any unit: logic**
+- [x] **12.2 Amounts in any unit: logic**
       Pure functions in a new `js/portions.js`, with `calc.js`, `saved-meals.js` and `ingredients.js` using them (SPEC §3.2, §3.3):
   - a food's units: its serving's unit, then grams if that isn't grams, then its portions; a custom food has only its serving's
   - an amount in any unit as servings, through grams
@@ -455,7 +455,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - an ingredient in cups rescaling with no food lookup
   - entries and locked days unchanged
 
-- [ ] **12.3 Unit choice when adding**
+- [x] **12.3 Unit choice when adding**
   - The amount field's unit button and the Unit sheet (DESIGN §10 unit choice, §12), built as a shared component in `js/ui/`.
   - The food picker starts at 1 of the default portion, else one serving.
   - Food search results and the Foods list show the default portion with its weight and numbers (DESIGN §8).
@@ -469,7 +469,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
   - search shows "1 CUP · 158 G" with the numbers for a cup
   - the unit button and the Unit sheet's buttons are at least 44px, at 360px and 390px in light and dark
 
-- [ ] **12.4 Unit choice in meals and ingredients**
+- [x] **12.4 Unit choice in meals and ingredients**
       The meal editor's ingredient rows and the Ingredients sheet's rows get the same unit button, and their add food sheets start at the default portion. The ingredient swap sheet starts at the old amount when the new food has the old unit (DESIGN §8). Today's ingredient lines (8.10) show each amount in its own unit. If the quantity field needs more width for the button, add a token and call it out.
       _Done when:_
   - a meal with 1 cup of rice shows "1 cup" in the editor, with the same numbers after a reload

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ftInToCm, goalAdjustment, lbToKg } from '../js/calc.js';
+import { ftInToCm, goalAdjustment, lbToKg, profileTargets, targets } from '../js/calc.js';
 import { createCoreDoc } from '../js/data.js';
 import {
   heightCmText,
@@ -10,11 +10,17 @@ import {
   readAmount,
   readHeightFtIn,
   readHeightPart,
+  readPercent,
+  readSplit,
   readTarget,
   readWeight,
   setOverride,
   setProfileField,
+  setSplitBodyweight,
+  setSplitPercent,
   setUnits,
+  splitBy,
+  startingSplit,
   targetText,
   weightText,
 } from '../js/profile.js';
@@ -221,4 +227,74 @@ test('a target field shows an override as entered and a calculated target rounde
   assert.equal(targetText('protein', values, overrides), '150.5');
   assert.equal(targetText('fat', values, overrides), '77');
   assert.equal(targetText('carbs', values, overrides), '0');
+});
+
+// --- Macro split ---
+
+// TDEE 2759 by bodyweight: 144 g protein, 76.6 g fat, 373.3 g carbs. As in calc.test.js.
+const MALE_PLAN = { sex: 'male', age: 30, heightCm: 180, weightKg: 80, activity: 'moderate', goal: 'maintain', rateKgPerWeek: 0.5 };
+
+test('a doc without a macro split is by bodyweight', () => {
+  assert.equal(splitBy(createCoreDoc('2026-10-15')), 'bodyweight');
+  assert.equal(splitBy({ macroSplit: { by: 'percent', percent: { protein: 30, fat: 25, carbs: 45 } } }), 'percent');
+});
+
+test('switching to percent starts from the saved percents, else the targets, else 30 / 25 / 45', () => {
+  const saved = { protein: 40, fat: 30, carbs: 30 };
+  const bodyweight = targets(MALE_PLAN);
+  assert.deepEqual(startingSplit({ macroSplit: { by: 'bodyweight', percent: saved } }, bodyweight), saved);
+  assert.deepEqual(startingSplit(createCoreDoc('2026-10-15'), bodyweight), { protein: 21, fat: 25, carbs: 54 });
+  assert.deepEqual(startingSplit(createCoreDoc('2026-10-15'), null), { protein: 30, fat: 25, carbs: 45 });
+});
+
+test('the targets barely move on switching to percent from them', () => {
+  const doc = createCoreDoc('2026-10-15');
+  const bodyweight = targets(MALE_PLAN);
+  const percent = targets(MALE_PLAN, {}, setSplitPercent(doc, startingSplit(doc, bodyweight)).macroSplit);
+  assert.equal(percent.kcal, bodyweight.kcal);
+  // Half a percent of 2,759 kcal at most: 3.4 g of protein or carbs, 1.5 g of fat.
+  for (const key of ['protein', 'fat', 'carbs']) {
+    assert.ok(Math.abs(percent[key] - bodyweight[key]) <= 3.5, `${key}: ${bodyweight[key]} → ${percent[key]}`);
+  }
+});
+
+test('a saved split moves the targets, and switching back to bodyweight keeps it for next time', () => {
+  const doc = setSplitPercent(createCoreDoc('2026-10-15'), { protein: 35, fat: 25, carbs: 40 });
+  assert.deepEqual(doc.macroSplit, { by: 'percent', percent: { protein: 35, fat: 25, carbs: 40 } });
+  assertClose(profileTargets(MALE_PLAN, 80, {}, doc.macroSplit).protein, (0.35 * 2759) / 4);
+
+  const back = setSplitBodyweight(doc);
+  assert.deepEqual(back.macroSplit, { by: 'bodyweight', percent: { protein: 35, fat: 25, carbs: 40 } });
+  assertClose(profileTargets(MALE_PLAN, 80, {}, back.macroSplit).protein, 144);
+  assert.deepEqual(startingSplit(back, targets(MALE_PLAN)), { protein: 35, fat: 25, carbs: 40 });
+});
+
+test('switching to bodyweight with no percents saved stores none', () => {
+  assert.deepEqual(setSplitBodyweight(createCoreDoc('2026-10-15')).macroSplit, { by: 'bodyweight' });
+});
+
+test('the split changes leave the doc passed in as it was', () => {
+  const doc = setSplitPercent(createCoreDoc('2026-10-15'), { protein: 30, fat: 25, carbs: 45 });
+  const before = structuredClone(doc);
+  setSplitPercent(doc, { protein: 40, fat: 30, carbs: 30 });
+  setSplitBodyweight(doc);
+  assert.deepEqual(doc, before);
+});
+
+test('a percent is a whole number, with a blank as 0', () => {
+  assert.equal(readPercent('35'), 35);
+  assert.equal(readPercent(' 0 '), 0);
+  assert.equal(readPercent(''), 0);
+  for (const text of ['30.5', '-5', '30%', 'abc', '1e2']) assert.equal(readPercent(text), null, JSON.stringify(text));
+});
+
+test('a split as typed gives its total, and the split only when it adds up to 100', () => {
+  assert.deepEqual(readSplit({ protein: '35', fat: '25', carbs: '40' }), {
+    total: 100,
+    percent: { protein: 35, fat: 25, carbs: 40 },
+  });
+  assert.deepEqual(readSplit({ protein: '35', fat: '25', carbs: '45' }), { total: 105, percent: null });
+  assert.deepEqual(readSplit({ protein: '', fat: '25', carbs: '45' }), { total: 70, percent: null });
+  assert.deepEqual(readSplit({ protein: '30', fat: '', carbs: '70' }), { total: 100, percent: { protein: 30, fat: 0, carbs: 70 } });
+  assert.deepEqual(readSplit({ protein: '30.5', fat: '25', carbs: '44.5' }), { total: null, percent: null });
 });

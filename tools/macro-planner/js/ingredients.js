@@ -5,24 +5,27 @@
 // Each change returns a new list and leaves the one passed in as it was.
 
 import { foodTotals, scaleTotals } from './calc.js';
+import { convertAmount } from './portions.js';
 
-// qty is in the food's serving unit, like a meal item's.
+// qty is in the ingredient's unit.
 function assertQty(qty) {
   if (!Number.isFinite(qty) || qty <= 0) throw new RangeError(`Not a quantity above 0: ${qty}`);
 }
 
-export function ingredient(food, qty) {
+// qty of food in unit, one of portions.js's foodUnits, or in the serving's unit without one, like
+// a meal item's. The ingredient keeps that unit.
+export function ingredient(food, qty, unit = food.serving.unit) {
   assertQty(qty);
-  const { kcal, protein, fat, carbs } = foodTotals(food, qty);
-  return { foodId: food.id, name: food.name, emoji: food.emoji, unit: food.serving.unit, qty, kcal, protein, fat, carbs };
+  const { kcal, protein, fat, carbs } = foodTotals(food, qty, unit);
+  return { foodId: food.id, name: food.name, emoji: food.emoji, unit, qty, kcal, protein, fat, carbs };
 }
 
 // The meal's items as ingredients. getFood: saved-meals.js's foodLookup, archived foods included.
 export function mealIngredients(meal, getFood) {
-  return meal.items.map(({ foodId, qty }) => {
+  return meal.items.map(({ foodId, qty, unit }) => {
     const food = getFood(foodId);
     if (!food) throw new RangeError(`Unknown food: ${foodId}`);
-    return ingredient(food, qty);
+    return ingredient(food, qty, unit);
   });
 }
 
@@ -40,12 +43,25 @@ export function setIngredientQty(items, foodId, qty) {
   return items.map((item) => (item.foodId === foodId ? rescale(item, qty) : item));
 }
 
-// Like saved-meals.js's addItem: a food that's already in the list gets the amount added to it.
-export function addIngredient(items, food, qty) {
+// food's ingredient at qty in another of its units, when the amount's unit is switched (DESIGN
+// §10): 2 g after 2 cups. Its numbers rescale from its own through grams, so food is only asked
+// what the units weigh, and the snapshot stays its own.
+export function setIngredientUnit(items, food, qty, unit) {
+  assertQty(qty);
+  return items.map((item) =>
+    item.foodId === food.id ? { ...rescale(item, convertAmount(food, qty, unit, item.unit)), qty, unit } : item,
+  );
+}
+
+// Like saved-meals.js's addItem: a food that's already in the list gets the amount added to it,
+// converted into the unit it's in.
+export function addIngredient(items, food, qty, unit = food.serving.unit) {
   assertQty(qty);
   const existing = items.find((item) => item.foodId === food.id);
-  if (existing) return setIngredientQty(items, food.id, existing.qty + qty);
-  return [...items, ingredient(food, qty)];
+  if (existing) {
+    return setIngredientQty(items, food.id, existing.qty + convertAmount(food, qty, unit, existing.unit));
+  }
+  return [...items, ingredient(food, qty, unit)];
 }
 
 // A meal keeps at least one ingredient (SPEC §3.5), but that's checked where the list is kept.
@@ -53,14 +69,14 @@ export function removeIngredient(items, foodId) {
   return items.filter((item) => item.foodId !== foodId);
 }
 
-// food takes foodId's place in the list, at qty. A food that's already in the list gets the
-// amount added to it where it is instead, like addIngredient, so it's still listed once.
-export function swapIngredient(items, foodId, food, qty) {
+// food takes foodId's place in the list, at qty in unit. A food that's already in the list gets
+// the amount added to it where it is instead, like addIngredient, so it's still listed once.
+export function swapIngredient(items, foodId, food, qty, unit = food.serving.unit) {
   assertQty(qty);
   if (food.id !== foodId && items.some((item) => item.foodId === food.id)) {
-    return addIngredient(removeIngredient(items, foodId), food, qty);
+    return addIngredient(removeIngredient(items, foodId), food, qty, unit);
   }
-  return items.map((item) => (item.foodId === foodId ? ingredient(food, qty) : item));
+  return items.map((item) => (item.foodId === foodId ? ingredient(food, qty, unit) : item));
 }
 
 // What a slot eats (SPEC §3.5): the day's ingredients, or else its meal's, at its portion.

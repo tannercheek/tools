@@ -3,8 +3,12 @@
 // can be tested in Node. Stored values are metric and unrounded; only what's shown is converted
 // and rounded (SPEC §5.2).
 
-import { cmToFtIn, ftInToCm, kgToLb, lbToKg } from './calc.js';
+import { cmToFtIn, ftInToCm, kgToLb, lbToKg, splitFromTargets, validSplit } from './calc.js';
 import { parseAmount } from './custom-foods.js';
+
+const SPLIT_KEYS = ['protein', 'fat', 'carbs'];
+// Where a percent split starts with no saved percents and no targets yet (SPEC §3.1).
+const DEFAULT_SPLIT = { protein: 30, fat: 25, carbs: 45 };
 
 // --- Goal rate ---
 
@@ -35,6 +39,32 @@ export function setProfileField(doc, key, value) {
 // key: 'kcal', 'protein', 'fat' or 'carbs'. value: the target, or null for the calculated one.
 export function setOverride(doc, key, value) {
   return { ...doc, overrides: { ...doc.overrides, [key]: value } };
+}
+
+// --- Macro split (SPEC §3.1) ---
+
+// A doc without a macro split is by bodyweight.
+export function splitBy(doc) {
+  return doc.macroSplit?.by ?? 'bodyweight';
+}
+
+// What switching to percent starts from: the percents saved last time, else the current targets
+// as percents, so they barely move, else 30 / 25 / 45. currentTargets: calc.js's targets(), or
+// null with no targets yet.
+export function startingSplit(doc, currentTargets) {
+  if (doc.macroSplit?.percent) return { ...doc.macroSplit.percent };
+  return currentTargets ? splitFromTargets(currentTargets) : { ...DEFAULT_SPLIT };
+}
+
+// percent: a split that adds up to 100 (calc.js's validSplit).
+export function setSplitPercent(doc, percent) {
+  return { ...doc, macroSplit: { by: 'percent', percent: { ...percent } } };
+}
+
+// The percents are kept for switching back. A doc that never had any gets none.
+export function setSplitBodyweight(doc) {
+  const percent = doc.macroSplit?.percent;
+  return { ...doc, macroSplit: percent ? { by: 'bodyweight', percent } : { by: 'bodyweight' } };
 }
 
 // The rate moves to the new system's matching option, so it always shows as one of them.
@@ -98,6 +128,22 @@ export function readHeightFtIn(ftText, inchesText) {
 export function readTarget(key, text) {
   const amount = parseAmount(text);
   return key === 'kcal' ? amount || null : amount;
+}
+
+// One macro's percent: a whole number, with a blank as 0. null for anything else, like 30.5.
+export function readPercent(text) {
+  const trimmed = String(text ?? '').trim();
+  if (trimmed === '') return 0;
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+}
+
+// texts: the percent fields as typed, { protein, fat, carbs }. total: what they add up to, or null
+// if one isn't a whole number. percent: the split, only once it can be saved (validSplit).
+export function readSplit(texts) {
+  const percent = Object.fromEntries(SPLIT_KEYS.map((key) => [key, readPercent(texts[key])]));
+  const values = Object.values(percent);
+  const total = values.includes(null) ? null : values.reduce((sum, value) => sum + value, 0);
+  return { total, percent: validSplit(percent) ? percent : null };
 }
 
 // What a target's field shows: an override as it was entered, a calculated target as a whole

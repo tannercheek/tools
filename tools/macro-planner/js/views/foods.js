@@ -2,6 +2,8 @@
 // Tapping a custom food edits it; tapping a bundled food duplicates it into a custom one.
 
 import { loadBundledFoods } from '../bundled-foods.js';
+import { foodTotals } from '../calc.js';
+import { amountLabel, defaultAmount } from '../portions.js';
 import { searchFoods } from '../search.js';
 import { CORE_DOC_ID } from '../store.js';
 import { secondaryButton } from '../ui/buttons.js';
@@ -11,18 +13,17 @@ import { searchField } from '../ui/inputs.js';
 import { listRow, rowActionIcon, rowList } from '../ui/row.js';
 import { foodFormSheet } from './food-form.js';
 
-// Quantities show as entered (SPEC §5.2), so no rounding to whole numbers.
-const quantity = new Intl.NumberFormat();
-
-// "Custom" in the eyebrow tells a custom food from a bundled one of the same name, and the
-// trailing icon says what a tap does: edit a custom food, duplicate a bundled one (DESIGN §8).
+// A food at its default amount, with its numbers for that amount (SPEC §3.2). "Custom" in the
+// eyebrow tells a custom food from a bundled one of the same name, and the trailing icon says what
+// a tap does: edit a custom food, duplicate a bundled one (DESIGN §8).
 function foodRow(food, onClick) {
-  const serving = `${quantity.format(food.serving.qty)} ${food.serving.unit}`;
+  const amount = defaultAmount(food);
+  const label = amountLabel(food, amount);
   return listRow({
     emoji: food.emoji,
-    eyebrow: food.custom ? `Custom · ${serving}` : serving,
+    eyebrow: food.custom ? `Custom · ${label}` : label,
     title: food.name,
-    numbers: food,
+    numbers: foodTotals(food, amount.qty, amount.unit),
     trailing: food.custom ? rowActionIcon('pencil', 'Edit') : rowActionIcon('copy', 'Duplicate'),
     onClick,
   });

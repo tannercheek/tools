@@ -190,6 +190,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
       items: slotIngredients(plan, getFood),
       edited: plan.edited,
       foods,
+      getFood,
       store,
       onChange: (items) => change((d) => setSlotIngredients(d, slotId, mealId, items)),
     });
@@ -206,6 +207,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
       items: entry.ingredients,
       edited: Boolean(entry.originalIngredients),
       foods,
+      getFood,
       store,
       onChange: (items) => change((d) => setEntryIngredients(d, entryId, items)),
       removable: true,
@@ -236,7 +238,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   }
 
   function updateTargets() {
-    targets = profileTargets(doc.profile ?? {}, currentWeight(weighIns), doc.overrides ?? {});
+    targets = profileTargets(doc.profile ?? {}, currentWeight(weighIns), doc.overrides ?? {}, doc.macroSplit);
   }
 
   // The new weigh-in can move the targets, so the rings and open flex slots move with them.

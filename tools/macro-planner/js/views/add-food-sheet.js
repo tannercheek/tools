@@ -1,22 +1,29 @@
-// Adding a food (SPEC §3.3, §3.5): search, pick a food, then enter its quantity in that food's
-// serving unit. One step shows at a time, in the same sheet.
+// Adding a food (SPEC §3.3, §3.5): search, pick a food, then enter its amount, in any unit the food
+// has (SPEC §3.2). One step shows at a time, in the same sheet.
 
+import { foodTotals } from '../calc.js';
 import { parseAmount } from '../custom-foods.js';
+import { amountLabel, defaultAmount, foodUnits } from '../portions.js';
 import { searchFoods } from '../search.js';
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
 import { emptyState } from '../ui/empty-state.js';
-import { numberField, searchField } from '../ui/inputs.js';
+import { searchField } from '../ui/inputs.js';
 import { listRow, rowList } from '../ui/row.js';
 import { openSheet } from '../ui/sheet.js';
+import { amountField } from '../ui/unit-choice.js';
 import { foodFormSheet } from './food-form.js';
 
-// Quantities show as entered (SPEC §5.2), so no rounding to whole numbers.
-const quantity = new Intl.NumberFormat();
-
-// The serving, with "Custom" first on a custom food, as in the foods list (DESIGN §8).
-function eyebrow(food) {
-  const serving = `${quantity.format(food.serving.qty)} ${food.serving.unit}`;
-  return food.custom ? `Custom · ${serving}` : serving;
+// A food's row at an amount: the amount in the eyebrow, with "Custom" first on a custom food, as
+// in the foods list, and the numbers for that amount (DESIGN §8).
+function foodRow(food, amount, trailing) {
+  const label = amountLabel(food, amount);
+  return listRow({
+    emoji: food.emoji,
+    eyebrow: food.custom ? `Custom · ${label}` : label,
+    title: food.name,
+    numbers: foodTotals(food, amount.qty, amount.unit),
+    trailing,
+  });
 }
 
 function noMatch(query, onAdd) {
@@ -29,12 +36,14 @@ function noMatch(query, onAdd) {
 }
 
 // Search, pick a food, then enter its amount, one step at a time in the same element. Used by
-// the add food sheet, the add sheet on Today and the Ingredients sheet's swap sheet. foods:
-// bundled and custom foods together; archived ones are left out of the search. store: the app's
-// store, for a custom food made from "No match". submitLabel: the amount step's primary button.
-// startAmount: { qty, unit }, where the amount starts for a food counted in that unit, like the
-// amount of the food being swapped; any other food starts at one serving. onAdd(food, qty) runs
-// when it's submitted. Returns { element, searchInput }.
+// the add food sheet, the add sheet on Today, the swap sheet and the Ingredients sheet's swap
+// sheet. Results show each food at its default amount (portions.js). foods: bundled and custom
+// foods together; archived ones are left out of the search. store: the app's store, for a custom
+// food made from "No match". submitLabel: the amount step's primary button. The amount can be in
+// any of the food's units, with the unit button (DESIGN §10). startAmount: { qty, unit }, where the
+// amount starts for a food with that unit, like the amount of the food being swapped; any other
+// food starts at its default amount. onAdd(food, qty, unit) runs when it's submitted. Returns
+// { element, searchInput }.
 export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   let choices = foods;
 
@@ -49,7 +58,7 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   function rowFor(food) {
     if (!rows.has(food)) {
       const add = iconButton('plus', `Add ${food.name}`, { onClick: () => showAmount(food, add) });
-      rows.set(food, listRow({ emoji: food.emoji, eyebrow: eyebrow(food), title: food.name, numbers: food, trailing: add }));
+      rows.set(food, foodRow(food, defaultAmount(food), add));
     }
     return rows.get(food);
   }
@@ -84,14 +93,26 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
     focusTarget.focus();
   }
 
-  // Step 2: the amount, starting at one serving, or at startAmount in the same unit, however
-  // it's capitalised. pickedWith: where "Back to search" puts focus: the add button that chose
-  // the food, or the search field for a new custom food.
+  // Step 2: the amount, starting at startAmount in a unit the food has, however it's capitalised,
+  // else at the default amount. The picked food's row shows the numbers for the amount as it's
+  // typed or its unit changed, keeping the last one that reads as a number. pickedWith: where
+  // "Back to search" puts focus: the add button that chose the food, or the search field for a
+  // new custom food.
   function showAmount(food, pickedWith) {
-    const sameUnit = startAmount?.unit.toLowerCase() === food.serving.unit.toLowerCase();
-    const start = sameUnit ? startAmount.qty : food.serving.qty;
-    const amount = numberField({ label: 'Amount', unit: food.serving.unit, value: String(start) });
-    amount.input.addEventListener('input', () => amount.setError(null));
+    const units = foodUnits(food);
+    const startUnit = units.find((unit) => unit.toLowerCase() === startAmount?.unit.toLowerCase());
+    const start = startUnit ? { qty: startAmount.qty, unit: startUnit } : defaultAmount(food);
+
+    const picked = rowList([foodRow(food, start)]);
+    const amount = amountField({ label: 'Amount', units, unit: start.unit, value: String(start.qty), onUnitChange: showNumbers });
+    amount.input.addEventListener('input', () => {
+      amount.setError(null);
+      showNumbers();
+    });
+    function showNumbers() {
+      const qty = parseAmount(amount.input.value);
+      if (qty) picked.replaceChildren(foodRow(food, { qty, unit: amount.unit() }));
+    }
 
     const form = document.createElement('form');
     form.className = 'add-food__form';
@@ -104,17 +125,16 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
         amount.input.focus();
         return;
       }
-      onAdd(food, qty);
+      onAdd(food, qty, amount.unit());
     });
 
     const submit = primaryButton(submitLabel, { block: true });
     submit.type = 'submit';
     const back = secondaryButton('Back to search', { block: true, onClick: () => showSearch(pickedWith) });
-    const picked = listRow({ emoji: food.emoji, eyebrow: eyebrow(food), title: food.name, numbers: food });
-    form.append(rowList([picked]), amount.element, submit, back);
+    form.append(picked, amount.element, submit, back);
 
     body.replaceChildren(form);
-    // Selected, so typing replaces the serving it starts at.
+    // Selected, so typing replaces the amount it starts at.
     amount.input.focus();
     amount.input.select();
   }
@@ -123,9 +143,9 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   return { element: body, searchInput: search.input };
 }
 
-// For the meal editor and the Ingredients sheet. Resolves to { food, qty } for the food to add,
-// or null if the sheet closes without one. The food itself comes back, since it may be a custom
-// food made in the sheet, which the caller's own list doesn't have yet.
+// For the meal editor and the Ingredients sheet. Resolves to { food, qty, unit } for the food to
+// add, or null if the sheet closes without one. The food itself comes back, since it may be a
+// custom food made in the sheet, which the caller's own list doesn't have yet.
 export async function addFoodSheet({ foods, store }) {
   let added = null;
   let sheet;
@@ -133,8 +153,8 @@ export async function addFoodSheet({ foods, store }) {
     foods,
     store,
     submitLabel: 'Add to meal',
-    onAdd: (food, qty) => {
-      added = { food, qty };
+    onAdd: (food, qty, unit) => {
+      added = { food, qty, unit };
       sheet.close();
     },
   });

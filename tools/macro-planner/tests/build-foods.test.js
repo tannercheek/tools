@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   CATEGORY_EMOJI,
+  WEIGHT_UNITS,
   buildFoods,
   entryProblems,
   foodId,
@@ -139,11 +140,15 @@ test('with no portion, a food is per 100 g with USDA values as given, in the SPE
       protein: 12.56,
       fat: 9.51,
       carbs: 0.72,
+      grams: 100,
+      portions: [],
       custom: false,
       archived: false,
     },
   ]);
-  assert.deepEqual(Object.keys(foods[0]), ['id', 'name', 'serving', 'emoji', 'kcal', 'protein', 'fat', 'carbs', 'custom', 'archived']);
+  assert.deepEqual(Object.keys(foods[0]), [
+    'id', 'name', 'serving', 'emoji', 'kcal', 'protein', 'fat', 'carbs', 'grams', 'portions', 'custom', 'archived',
+  ]);
 });
 
 test('a portion sets the serving and scales the numbers to its gram weight', () => {
@@ -152,9 +157,10 @@ test('a portion sets the serving and scales the numbers to its gram weight', () 
   const [egg] = foods;
   assert.deepEqual(egg.serving, { qty: 1, unit: 'egg' });
   assert.deepEqual([egg.kcal, egg.protein, egg.fat, egg.carbs], [71.5, 6.28, 4.755, 0.36]);
+  assert.equal(egg.grams, 50);
 });
 
-test("a portion's amount becomes the serving qty", () => {
+test("a portion's amount becomes the serving qty, and grams is the whole serving's weight", () => {
   const index = usda({
     foods: [['2', 'Peanut butter']],
     nutrients: [['2', '1008', '598'], ['2', '1003', '22.21'], ['2', '1004', '51.36'], ['2', '1005', '22.31']],
@@ -163,6 +169,7 @@ test("a portion's amount becomes the serving qty", () => {
   const { foods } = buildFoods([{ fdcId: 2, name: 'Peanut butter', portion: '2 tbsp = 32 g', unit: 'tbsp', emoji: '🥜' }], index);
   assert.deepEqual(foods[0].serving, { qty: 2, unit: 'tbsp' });
   assert.equal(foods[0].kcal, 191.36);
+  assert.equal(foods[0].grams, 32);
 });
 
 test('scaling strips float noise but keeps USDA precision', () => {
@@ -190,6 +197,104 @@ test('a portion without a unit, or a unit without a portion, fails', () => {
     assert.deepEqual(foods, []);
     assert.match(problems[0], /portion and unit go together/);
   }
+});
+
+// --- Food portions (SPEC §3.2) ---
+
+// SR Legacy's cooked white rice per 100 g, with made-up portions in several shapes.
+const RICE = {
+  foods: [['168878', 'Rice, white, long-grain, regular, enriched, cooked']],
+  nutrients: [
+    ['168878', '1008', '130'],
+    ['168878', '1003', '2.69'],
+    ['168878', '1004', '0.28'],
+    ['168878', '1005', '28.17'],
+  ],
+  portions: [
+    ['168878', '1', '9999', 'cup', '158'],
+    ['168878', '2', '9999', 'tbsp', '19.8'],
+    ['168878', '0.33', '9999', 'cup, packed', '60'],
+    ['168878', '3', '9999', 'oz', '85'],
+  ],
+};
+const rice = (portions) => ({ fdcId: 168878, name: 'Rice, white, cooked', emoji: '🍚', portions });
+
+test('portions are written in the listed order as { unit, grams }, grams being 1 of the unit', () => {
+  const { foods, problems } = buildFoods(
+    [rice([{ portion: '2 tbsp = 19.8 g', unit: 'tbsp' }, { portion: '1 cup = 158 g', unit: 'cup' }])],
+    usda(RICE),
+  );
+  assert.deepEqual(problems, []);
+  assert.deepEqual(foods[0].portions, [{ unit: 'tbsp', grams: 9.9 }, { unit: 'cup', grams: 158 }]);
+});
+
+test("portions don't change the serving or its numbers", () => {
+  const without = buildFoods([rice(undefined)], usda(RICE)).foods[0];
+  const withCup = buildFoods([rice([{ portion: '1 cup = 158 g', unit: 'cup' }])], usda(RICE)).foods[0];
+  assert.deepEqual({ ...withCup, portions: [] }, without);
+  assert.deepEqual([withCup.serving, withCup.grams, withCup.kcal], [{ qty: 100, unit: 'g' }, 100, 130]);
+});
+
+test("a portion's weight per unit strips float noise from the divide", () => {
+  const { foods } = buildFoods([rice([{ portion: '0.33 cup, packed = 60 g', unit: 'cup' }])], usda(RICE));
+  // 60 / 0.33 is 181.8181818181818 in floating point.
+  assert.deepEqual(foods[0].portions, [{ unit: 'cup', grams: 181.818181818 }]);
+});
+
+test('oz needs no USDA portion and is exactly 28.349523125 g', () => {
+  assert.deepEqual(WEIGHT_UNITS, { oz: 28.349523125 });
+  const { foods, problems } = buildFoods([entry({ portions: [{ unit: 'oz' }] })], usda(EGG));
+  assert.deepEqual(problems, []);
+  assert.deepEqual(foods[0].portions, [{ unit: 'oz', grams: 28.349523125 }]);
+});
+
+test("oz with a USDA portion fails, since USDA's are rounded to the gram", () => {
+  const { foods, problems } = buildFoods([rice([{ portion: '3 oz = 85 g', unit: 'oz' }])], usda(RICE));
+  assert.deepEqual(foods, []);
+  assert.deepEqual(problems, ['entry 1 (Rice, white, cooked): portion 1 (oz) is always 28.349523125 g, so leave out its portion']);
+});
+
+test('a listed portion USDA does not have fails and lists the portions to choose from', () => {
+  const { foods, problems } = buildFoods([rice([{ portion: '1 cup = 160 g', unit: 'cup' }])], usda(RICE));
+  assert.deepEqual(foods, []);
+  assert.deepEqual(problems, [
+    'entry 1 (Rice, white, cooked): no portion "1 cup = 160 g". USDA\'s portions for this food: ' +
+      '"1 cup = 158 g", "2 tbsp = 19.8 g", "0.33 cup, packed = 60 g", "3 oz = 85 g"',
+  ]);
+});
+
+test('a listed portion on a food with no USDA portions says there are none', () => {
+  const { problems } = buildFoods([entry({ portions: [{ portion: '1 cup = 243 g', unit: 'cup' }] })], usda({ ...EGG, portions: [] }));
+  assert.deepEqual(problems, ['entry 1 (Egg, large): no portion "1 cup = 243 g". USDA\'s portions for this food: none']);
+});
+
+test('a portion other than oz needs the USDA portion it comes from', () => {
+  assert.deepEqual(entryProblems(rice([{ unit: 'cup' }])), [
+    'portion 1 (cup) needs the USDA portion it comes from; only oz goes without one',
+  ]);
+});
+
+test("a portion can't repeat grams, the serving's unit or another portion's unit", () => {
+  const cup = { portion: '1 cup = 158 g', unit: 'cup' };
+  assert.deepEqual(entryProblems(rice([{ unit: 'g', portion: '1 cup = 158 g' }])), ['portion 1 (g) is already one of the food\'s units']);
+  assert.deepEqual(entryProblems(rice([cup, { unit: 'oz' }, cup])), ['portion 3 (cup) is already one of the food\'s units']);
+  assert.deepEqual(entryProblems(entry({ portion: '1 large = 50 g', unit: 'egg', portions: [{ portion: '1 medium = 44 g', unit: 'egg' }] })), [
+    'portion 1 (egg) is already one of the food\'s units',
+  ]);
+});
+
+test('portions must be a list of portions with units', () => {
+  assert.deepEqual(entryProblems(rice({ unit: 'oz' })), ['portions must be a list']);
+  assert.deepEqual(entryProblems(rice([{ portion: '1 cup = 158 g' }, null, { unit: ' ' }])), [
+    'portion 1 needs a unit',
+    'portion 2 needs a unit',
+    'portion 3 needs a unit',
+  ]);
+});
+
+test('every portion problem is reported, alongside the rest', () => {
+  const list = [rice([{ portion: '1 bowl = 300 g', unit: 'bowl' }, { unit: 'cup' }, { portion: '1 cup, heaped = 200 g', unit: 'heap' }])];
+  assert.equal(buildFoods(list, usda(RICE)).problems.length, 3);
 });
 
 // --- Emoji ---
@@ -352,14 +457,35 @@ test('food-list.json entries are all valid, with no id used twice', () => {
 
 test('foods.json was rebuilt from the current food-list.json', () => {
   assert.deepEqual(
-    bundledFoods.map(({ id, name, emoji, serving }) => ({ id, name, emoji, unit: serving.unit })),
+    bundledFoods.map(({ id, name, emoji, serving, portions }) => ({
+      id,
+      name,
+      emoji,
+      unit: serving.unit,
+      portions: portions.map(({ unit }) => unit),
+    })),
     foodList.map((item) => ({
       id: foodId(item),
       name: item.name,
       emoji: item.emoji ?? CATEGORY_EMOJI[item.category],
       unit: item.unit ?? 'g',
+      portions: (item.portions ?? []).map(({ unit }) => unit),
     })),
   );
+});
+
+test("every bundled food has its serving's weight and portions in units of their own", () => {
+  for (const food of bundledFoods) {
+    assert.ok(food.grams > 0, food.name);
+    assert.ok(food.serving.unit !== 'g' || food.grams === food.serving.qty, food.name);
+    assert.ok(Array.isArray(food.portions), food.name);
+    const units = ['g', food.serving.unit, ...food.portions.map(({ unit }) => unit)];
+    assert.equal(new Set(units).size, units.length - (food.serving.unit === 'g' ? 1 : 0), food.name);
+    for (const { unit, grams } of food.portions) {
+      assert.ok(typeof unit === 'string' && unit !== '' && grams > 0, `${food.name} ${unit}`);
+      if (Object.hasOwn(WEIGHT_UNITS, unit)) assert.equal(grams, WEIGHT_UNITS[unit], `${food.name} ${unit}`);
+    }
+  }
 });
 
 test('every bundled food has a USDA id, one emoji character, a serving and four numbers', () => {

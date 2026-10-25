@@ -37,7 +37,7 @@ function assertTotals(actual, expected) {
 }
 
 function riceAndBeef() {
-  return addItem(addItem(createMeal({ name: 'Rice & beef', emoji: '🍚' }), 'rice', 200), 'beef', 150);
+  return addItem(addItem(createMeal({ name: 'Rice & beef', emoji: '🍚' }), RICE, 200), BEEF, 150);
 }
 // 200 g rice (260 / 5 / 0.6 / 56) + 150 g beef (375 / 39 / 22.5 / 0).
 const RICE_AND_BEEF_TOTALS = { kcal: 635, protein: 44, fat: 23.1, carbs: 56 };
@@ -89,23 +89,23 @@ test('setting the emoji changes only the emoji', () => {
 test('added items are kept in order, and the totals add them up', () => {
   const meal = riceAndBeef();
   assert.deepEqual(meal.items, [
-    { foodId: 'rice', qty: 200 },
-    { foodId: 'beef', qty: 150 },
+    { foodId: 'rice', qty: 200, unit: 'g' },
+    { foodId: 'beef', qty: 150, unit: 'g' },
   ]);
   assertTotals(mealTotals(meal, getFood), RICE_AND_BEEF_TOTALS);
 });
 
 test('quantities can be fractions of a serving', () => {
-  const meal = addItem(createMeal({ name: 'Eggs' }), 'egg', 1.5);
-  assert.deepEqual(meal.items, [{ foodId: 'egg', qty: 1.5 }]);
+  const meal = addItem(createMeal({ name: 'Eggs' }), EGG, 1.5);
+  assert.deepEqual(meal.items, [{ foodId: 'egg', qty: 1.5, unit: 'egg' }]);
   assertTotals(mealTotals(meal, getFood), { kcal: 105, protein: 9, fat: 7.5, carbs: 0.75 });
 });
 
 test('adding a food that’s already in the meal adds to its quantity', () => {
-  const meal = addItem(riceAndBeef(), 'rice', 50);
+  const meal = addItem(riceAndBeef(), RICE, 50);
   assert.deepEqual(meal.items, [
-    { foodId: 'rice', qty: 250 },
-    { foodId: 'beef', qty: 150 },
+    { foodId: 'rice', qty: 250, unit: 'g' },
+    { foodId: 'beef', qty: 150, unit: 'g' },
   ]);
   // 250 g rice (325 / 6.25 / 0.75 / 70) + 150 g beef.
   assertTotals(mealTotals(meal, getFood), { kcal: 700, protein: 45.25, fat: 23.25, carbs: 70 });
@@ -114,15 +114,15 @@ test('adding a food that’s already in the meal adds to its quantity', () => {
 test('updating an item sets its quantity and keeps its place', () => {
   const meal = updateItem(riceAndBeef(), 'rice', 100);
   assert.deepEqual(meal.items, [
-    { foodId: 'rice', qty: 100 },
-    { foodId: 'beef', qty: 150 },
+    { foodId: 'rice', qty: 100, unit: 'g' },
+    { foodId: 'beef', qty: 150, unit: 'g' },
   ]);
   assertTotals(mealTotals(meal, getFood), { kcal: 505, protein: 41.5, fat: 22.8, carbs: 28 });
 });
 
 test('removing an item drops only that food, and an emptied meal totals zero', () => {
   const beefOnly = removeItem(riceAndBeef(), 'rice');
-  assert.deepEqual(beefOnly.items, [{ foodId: 'beef', qty: 150 }]);
+  assert.deepEqual(beefOnly.items, [{ foodId: 'beef', qty: 150, unit: 'g' }]);
   assertTotals(mealTotals(beefOnly, getFood), { kcal: 375, protein: 39, fat: 22.5, carbs: 0 });
 
   const empty = removeItem(beefOnly, 'beef');
@@ -139,7 +139,7 @@ test('updating or removing a food that isn’t in the meal changes nothing', () 
 test('quantities must be numbers above 0', () => {
   const meal = riceAndBeef();
   for (const qty of [0, -1, NaN, Infinity, '100', null, undefined]) {
-    assert.throws(() => addItem(meal, 'egg', qty), RangeError, `add ${qty}`);
+    assert.throws(() => addItem(meal, EGG, qty), RangeError, `add ${qty}`);
     assert.throws(() => updateItem(meal, 'rice', qty), RangeError, `update ${qty}`);
   }
 });
@@ -149,8 +149,8 @@ test('changes to a meal leave the one passed in as it was', () => {
   const before = structuredClone(meal);
   renameMeal(meal, 'Beef bowl');
   setMealEmoji(meal, '🥩');
-  addItem(meal, 'egg', 2);
-  addItem(meal, 'rice', 50);
+  addItem(meal, EGG, 2);
+  addItem(meal, RICE, 50);
   updateItem(meal, 'beef', 100);
   removeItem(meal, 'rice');
   setMealTags(meal, ['Dinner']);
@@ -278,11 +278,11 @@ test('updating a meal applies the change to that meal only', () => {
   const oats = createMeal({ name: 'Oats' });
   const bowl = riceAndBeef();
   const doc = docWith([oats, bowl]);
-  const next = updateMeal(doc, bowl.id, (meal) => renameMeal(addItem(meal, 'egg', 2), 'Rice, beef & eggs'));
+  const next = updateMeal(doc, bowl.id, (meal) => renameMeal(addItem(meal, EGG, 2), 'Rice, beef & eggs'));
   assert.equal(next.meals[0], oats);
   assert.equal(next.meals[1].id, bowl.id);
   assert.equal(next.meals[1].name, 'Rice, beef & eggs');
-  assert.deepEqual(next.meals[1].items.at(-1), { foodId: 'egg', qty: 2 });
+  assert.deepEqual(next.meals[1].items.at(-1), { foodId: 'egg', qty: 2, unit: 'egg' });
   assert.equal(doc.meals[1], bowl);
   assert.equal(bowl.items.length, 2);
 });

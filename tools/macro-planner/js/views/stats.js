@@ -77,7 +77,7 @@ export function render(container, { store, lockIn }) {
       if (!screen.isConnected) return;
       const units = doc.settings?.units ?? 'metric';
       // Targets need the latest weigh-in, so logging or deleting one here moves them.
-      const targetsFor = (log) => profileTargets(doc.profile ?? {}, currentWeight(log), doc.overrides ?? {});
+      const targetsFor = (log) => profileTargets(doc.profile ?? {}, currentWeight(log), doc.overrides ?? {}, doc.macroSplit);
       const averages = averagesSection(days, today, targetsFor(weighIns));
       const onChange = (log) => averages.setTargets(targetsFor(log));
       const weight = weighInsSection({ weightLog, weighIns, units, profile: doc.profile ?? {}, onChange });

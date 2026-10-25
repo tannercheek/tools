@@ -2,6 +2,7 @@
 // replaces every doc with it, and reset puts the app back to a first run. Pure: the store is
 // passed in, so this never touches window and runs in Node.
 
+import { validSplit } from './calc.js';
 import { DAYS_DOC_ID, WEIGHT_DOC_ID, createCoreDoc, pruneDays } from './data.js';
 import { lockPastDays } from './lock-in.js';
 import { CORE_DOC_ID } from './store.js';
@@ -61,6 +62,17 @@ function isObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// A doc without a macro split is by bodyweight (SPEC §3.1). Percents are only saved once they
+// add up, and by percent the targets are worked out from them.
+function isMacroSplit(split) {
+  if (split == null) return true;
+  return (
+    isObject(split) &&
+    ['bodyweight', 'percent'].includes(split.by) &&
+    (validSplit(split.percent) || (split.by === 'bodyweight' && split.percent === undefined))
+  );
+}
+
 // Enough of the shape that the app can open on it. The core doc's schemaVersion says which
 // shape it is; 1 is the only one so far.
 function isCoreDoc(doc) {
@@ -69,7 +81,8 @@ function isCoreDoc(doc) {
     doc.schemaVersion === 1 &&
     DATE_PATTERN.test(doc.startedOn) &&
     [doc.profile, doc.overrides, doc.settings, doc.template].every(isObject) &&
-    [doc.slots, doc.foods, doc.meals].every(Array.isArray)
+    [doc.slots, doc.foods, doc.meals].every(Array.isArray) &&
+    isMacroSplit(doc.macroSplit)
   );
 }
 

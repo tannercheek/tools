@@ -135,9 +135,10 @@ export function mealEntry(slot, meal, getFood) {
   return { ...entry, ingredients };
 }
 
-// qty is in the food's serving unit.
-export function foodEntry(slot, food, qty) {
-  return createEntry(slot, { label: food.name, emoji: food.emoji, source: 'food' }, foodTotals(food, qty));
+// qty is in unit, one of portions.js's foodUnits, or in the serving's unit without one. The entry
+// keeps the amount's numbers, not the amount, so it's the same snapshot in any unit.
+export function foodEntry(slot, food, qty, unit) {
+  return createEntry(slot, { label: food.name, emoji: food.emoji, source: 'food' }, foodTotals(food, qty, unit));
 }
 
 // Quick numbers use 🍽️. With no label they take the slot's name, like a pinned budget at lock-in.

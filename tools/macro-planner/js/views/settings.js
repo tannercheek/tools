@@ -4,7 +4,7 @@
 // button, and the targets follow along as you type. Weight comes from the weight log, so entering
 // one here logs a weigh-in for today.
 
-import { ACTIVITY_MULTIPLIERS } from '../calc.js';
+import { ACTIVITY_MULTIPLIERS, profileTargets } from '../calc.js';
 import {
   CoreDocUnavailableError,
   WeightLogUnavailableError,
@@ -24,6 +24,8 @@ import {
   readWeight,
   setOverride,
   setProfileField,
+  setSplitBodyweight,
+  setSplitPercent,
   setUnits,
   weightText,
 } from '../profile.js';
@@ -31,6 +33,7 @@ import { CORE_DOC_ID } from '../store.js';
 import { segmentedControl } from '../ui/controls.js';
 import { formError, numberField, selectField } from '../ui/inputs.js';
 import { dataSection } from './data-section.js';
+import { macroSplitSection } from './macro-split-section.js';
 import { slotsSection } from './slots-section.js';
 import { targetsSection } from './targets-section.js';
 
@@ -297,6 +300,15 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   activity.input.addEventListener('change', () => edit((d) => setProfileField(d, 'activity', activity.input.value)));
   const goal = choice('Goal', 'goal', GOAL_OPTIONS);
   let rate = rateInput();
+  const split = macroSplitSection({
+    doc: () => doc,
+    currentTargets: () => {
+      const { profile: shown, weightKg: kg, overrides, macroSplit } = shownProfile();
+      return profileTargets(shown, kg, overrides, macroSplit);
+    },
+    onPercent: (percent) => edit((d) => setSplitPercent(d, percent)),
+    onBodyweight: () => edit(setSplitBodyweight),
+  });
   const targets = targetsSection({ onCommit: (key, value) => edit((d) => setOverride(d, key, value)) });
 
   // The fields that show a unit swap for ones in the new system.
@@ -309,14 +321,21 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
     refresh();
   }
 
-  // Maintain needs no rate, so it's hidden; the stored one is kept for switching back.
-  function refresh() {
-    rate.element.hidden = profile().goal === 'maintain';
-    targets.show({
+  // What the targets are worked out from: the profile as saved or being typed, and the doc's
+  // overrides and macro split.
+  function shownProfile() {
+    return {
       profile: { ...profile(), age: age.live(), heightCm: height.live() },
       weightKg: weight.live(),
       overrides: doc.overrides ?? {},
-    });
+      macroSplit: doc.macroSplit,
+    };
+  }
+
+  // Maintain needs no rate, so it's hidden; the stored one is kept for switching back.
+  function refresh() {
+    rate.element.hidden = profile().goal === 'maintain';
+    targets.show(shownProfile());
   }
 
   const element = document.createElement('div');
@@ -333,7 +352,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
       goal.element,
       rate.element,
     ),
-    section('Targets', ...targets.elements),
+    section('Targets', ...split, ...targets.elements),
     error.element,
   );
   refresh();

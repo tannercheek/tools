@@ -6,18 +6,27 @@
 
 import { ingredientsTotals } from '../calc.js';
 import { parseAmount } from '../custom-foods.js';
-import { addIngredient, amountText, removeIngredient, setIngredientQty, swapIngredient } from '../ingredients.js';
+import {
+  addIngredient,
+  amountText,
+  removeIngredient,
+  setIngredientQty,
+  setIngredientUnit,
+  swapIngredient,
+} from '../ingredients.js';
+import { foodUnits } from '../portions.js';
 import { iconButton, secondaryButton } from '../ui/buttons.js';
-import { numberField } from '../ui/inputs.js';
 import { ingredientRow, rowList } from '../ui/row.js';
 import { openSheet } from '../ui/sheet.js';
 import { totalsCard } from '../ui/totals-card.js';
+import { amountField } from '../ui/unit-choice.js';
 import { addFoodSheet, foodPicker } from './add-food-sheet.js';
 
 // The swap button's sheet: "Remove from meal", disabled on the meal's last ingredient, since a
 // meal keeps at least one (SPEC §3.5), then food search to swap another food in at the same
-// amount, if it's counted in the same unit. item: the ingredient as the sheet shows it. Resolves
-// to { remove: true }, to { food, qty } for the food to swap in, or to null.
+// amount, if the food has the same unit, else at its default amount. item: the ingredient as the
+// sheet shows it. Resolves to { remove: true }, to { food, qty, unit } for the food to swap in, or
+// to null.
 async function swapIngredientSheet({ item, canRemove, foods, store }) {
   let picked = null;
   let sheet;
@@ -36,7 +45,7 @@ async function swapIngredientSheet({ item, canRemove, foods, store }) {
     store,
     submitLabel: 'Swap food',
     startAmount: { qty: Number(amountText(item.qty)), unit: item.unit },
-    onAdd: (food, qty) => choose({ food, qty }),
+    onAdd: (food, qty, unit) => choose({ food, qty, unit }),
   });
   sheet = openSheet({
     title: `${item.name} · Swap`,
@@ -50,11 +59,13 @@ async function swapIngredientSheet({ item, canRemove, foods, store }) {
 // name: the meal's name, for the title. items: the ingredients the slot eats now, at its portion
 // (ingredients.js's slotIngredients). edited: whether they're already the day's own, so Reset
 // shows from the start. foods: bundled and custom foods together, for Add food and a swap's
-// search. store: the app's store, for a custom food made from either. onChange(items) runs with
-// the whole new list after each change, for the caller to save. removable: an added meal, which
-// ends in Remove from slot. Resolves to { action: 'reset' } when Reset to original meal is tapped,
-// or { action: 'remove' } for Remove from slot, for the caller to apply or confirm, or to null.
-export async function ingredientsSheet({ name, items, edited, foods, store, onChange, removable = false }) {
+// search. getFood: saved-meals.js's foodLookup over them, for the units an ingredient's amount
+// can be switched to. store: the app's store, for a custom food made from either. onChange(items)
+// runs with the whole new list after each change, for the caller to save. removable: an added
+// meal, which ends in Remove from slot. Resolves to { action: 'reset' } when Reset to original
+// meal is tapped, or { action: 'remove' } for Remove from slot, for the caller to apply or
+// confirm, or to null.
+export async function ingredientsSheet({ name, items, edited, foods, getFood, store, onChange, removable = false }) {
   let current = items;
   let picked = null;
   let sheet;
@@ -86,9 +97,13 @@ export async function ingredientsSheet({ name, items, edited, foods, store, onCh
     totals.show(ingredientsTotals(current));
   }
 
+  // The amount's unit can be switched to any its food has, while the food is there and still has
+  // the unit the ingredient is in; otherwise the unit is plain text.
   function rowFor(item) {
     const { foodId } = item;
-    const quantity = numberField({ unit: item.unit, value: amountText(item.qty) });
+    const food = getFood(foodId);
+    const units = food && foodUnits(food).includes(item.unit) ? foodUnits(food) : [item.unit];
+    const quantity = amountField({ units, unit: item.unit, value: amountText(item.qty), onUnitChange: changeUnit });
     const swap = iconButton('arrow-left-right', `Swap ${item.name}`, { onClick: () => swapOrRemove(foodId) });
     swapButtons.set(foodId, swap);
     const row = ingredientRow({ emoji: item.emoji, title: item.name, numbers: item, quantity, trailing: swap });
@@ -116,6 +131,14 @@ export async function ingredientsSheet({ name, items, edited, foods, store, onCh
       if (quantity.input.value !== amountText(saved.qty)) change(setIngredientQty(current, foodId, typed));
     });
 
+    // The number in the field stays, now in the new unit (DESIGN §10), or the saved amount does
+    // while the field doesn't read as one.
+    function changeUnit(unit) {
+      const qty = parseAmount(quantity.input.value) || current.find((own) => own.foodId === foodId).qty;
+      change(setIngredientUnit(current, food, qty, unit));
+      row.setNumbers(current.find((own) => own.foodId === foodId));
+    }
+
     return row.element;
   }
 
@@ -125,7 +148,11 @@ export async function ingredientsSheet({ name, items, edited, foods, store, onCh
     const index = current.findIndex((item) => item.foodId === foodId);
     const result = await swapIngredientSheet({ item: current[index], canRemove: current.length > 1, foods, store });
     if (!result) return;
-    change(result.remove ? removeIngredient(current, foodId) : swapIngredient(current, foodId, result.food, result.qty));
+    change(
+      result.remove
+        ? removeIngredient(current, foodId)
+        : swapIngredient(current, foodId, result.food, result.qty, result.unit),
+    );
     showList();
     const focusId = result.remove ? current[Math.min(index, current.length - 1)].foodId : result.food.id;
     swapButtons.get(focusId).focus();
@@ -135,7 +162,7 @@ export async function ingredientsSheet({ name, items, edited, foods, store, onCh
   async function add() {
     const result = await addFoodSheet({ foods, store });
     if (!result) return;
-    change(addIngredient(current, result.food, result.qty));
+    change(addIngredient(current, result.food, result.qty, result.unit));
     showList();
   }
 

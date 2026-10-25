@@ -74,8 +74,12 @@ export async function addEntrySheet({ slot, meals, foods, getFood, store, recent
             },
           }),
     food: () =>
-      foodPicker({ foods, store, submitLabel: 'Log food', onAdd: (food, qty) => done(foodEntry(slot, food, qty)) })
-        .element,
+      foodPicker({
+        foods,
+        store,
+        submitLabel: 'Log food',
+        onAdd: (food, qty, unit) => done(foodEntry(slot, food, qty, unit)),
+      }).element,
     quick: () =>
       quickNumbersForm({ submitLabel: 'Log numbers', onSubmit: (numbers, label) => done(quickEntry(slot, numbers, label)) }),
   };

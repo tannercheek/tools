@@ -3,8 +3,10 @@
 // from calc.js's mealTotals.
 
 import { DEFAULT_EMOJI } from './data.js';
+import { assertUnit, convertAmount } from './portions.js';
 
-// A meal lists each food once, so items are found by foodId. qty is in the food's serving unit.
+// A meal lists each food once, so items are found by foodId. An item's qty is in its unit, or in
+// the food's serving unit when it has none, as in meals saved before portions (SPEC §3.3).
 function assertQty(qty) {
   if (!Number.isFinite(qty) || qty <= 0) throw new RangeError(`Not a quantity above 0: ${qty}`);
 }
@@ -63,17 +65,26 @@ export function filterMeals(meals, tag) {
   return meals.filter((meal) => (meal.tags ?? []).some((own) => tagKey(own) === tagKey(tag)));
 }
 
-// A food that's already in the meal gets the quantity added to its item, not a second item.
-export function addItem(meal, foodId, qty) {
+// qty of food in unit, one of portions.js's foodUnits, or in the serving's unit without one. A
+// food that's already in the meal gets the amount added to its item, not a second item,
+// converted into the unit the item is in: 1 cup of cooked rice onto 100 g makes 258 g.
+export function addItem(meal, food, qty, unit = food.serving.unit) {
   assertQty(qty);
-  const existing = meal.items.find((item) => item.foodId === foodId);
-  if (existing) return updateItem(meal, foodId, existing.qty + qty);
-  return { ...meal, items: [...meal.items, { foodId, qty }] };
+  assertUnit(food, unit);
+  const existing = meal.items.find((item) => item.foodId === food.id);
+  if (existing) {
+    const added = convertAmount(food, qty, unit, existing.unit ?? food.serving.unit);
+    return updateItem(meal, food.id, existing.qty + added);
+  }
+  return { ...meal, items: [...meal.items, { foodId: food.id, qty, unit }] };
 }
 
-export function updateItem(meal, foodId, qty) {
+// unit: the one qty is in now, one of portions.js's foodUnits, when the amount's unit is switched
+// (DESIGN §10); without it, the item keeps the unit it's in.
+export function updateItem(meal, foodId, qty, unit) {
   assertQty(qty);
-  return { ...meal, items: meal.items.map((item) => (item.foodId === foodId ? { ...item, qty } : item)) };
+  const updated = (item) => (unit === undefined ? { ...item, qty } : { ...item, qty, unit });
+  return { ...meal, items: meal.items.map((item) => (item.foodId === foodId ? updated(item) : item)) };
 }
 
 export function removeItem(meal, foodId) {
@@ -99,7 +110,7 @@ export function addMeal(doc, meal) {
   return { ...doc, meals: [...(doc.meals ?? []), meal] };
 }
 
-// change takes the stored meal and returns the new one, e.g. (meal) => addItem(meal, foodId, qty).
+// change takes the stored meal and returns the new one, e.g. (meal) => addItem(meal, food, qty).
 export function updateMeal(doc, id, change) {
   return { ...doc, meals: (doc.meals ?? []).map((meal) => (meal.id === id ? change(meal) : meal)) };
 }

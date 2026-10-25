@@ -11,7 +11,9 @@ function setDescribedBy(input, ids) {
 }
 
 // Shared shell for every field type. prefixIcon and trailing sit inside the box,
-// before the input and after everything else. macro ('kcal', 'protein', 'fat' or 'carbs')
+// before the input and after everything else. suffix: the unit as text, or { control, text } for
+// a control in its place, like a unit button (unit-choice.js), whose text element names the unit
+// in the input's description. macro ('kcal', 'protein', 'fat' or 'carbs')
 // puts that macro's dot before the label (DESIGN §10). Leave label out only when a visible
 // <label> elsewhere names the input, like an ingredient row's title (row.js).
 function field({ label, input, suffix, prefixIcon, trailing, macro }) {
@@ -40,13 +42,17 @@ function field({ label, input, suffix, prefixIcon, trailing, macro }) {
   box.append(input);
 
   let suffixId = null;
-  if (suffix) {
+  if (typeof suffix === 'string') {
     suffixId = `${id}-unit`;
     const suffixEl = document.createElement('span');
     suffixEl.className = 'input-box__suffix';
     suffixEl.id = suffixId;
     suffixEl.textContent = suffix;
     box.append(suffixEl);
+  } else if (suffix) {
+    suffixId = `${id}-unit`;
+    suffix.text.id = suffixId;
+    box.append(suffix.control);
   }
   if (trailing) box.append(trailing);
 
@@ -85,7 +91,8 @@ export function textField({ label, value = '', placeholder = '' } = {}) {
   return field({ label, input });
 }
 
-// type="text" with a decimal keypad: avoids number-input spinners and locale quirks.
+// type="text" with a decimal keypad: avoids number-input spinners and locale quirks. unit: a
+// suffix, as field takes it.
 export function numberField({ label, unit, value = '', placeholder = '', macro } = {}) {
   const input = document.createElement('input');
   input.type = 'text';

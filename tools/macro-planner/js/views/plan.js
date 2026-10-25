@@ -206,7 +206,7 @@ export function render(container, { store }) {
       if (!screen.isConnected) return;
       doc = loaded;
       getFood = foodLookup([...(doc.foods ?? []), ...bundled]);
-      targets = profileTargets(doc.profile ?? {}, currentWeight(weighIns), doc.overrides ?? {});
+      targets = profileTargets(doc.profile ?? {}, currentWeight(weighIns), doc.overrides ?? {}, doc.macroSplit);
       screen.replaceChildren(totals.element, list, error.element);
       show();
     },

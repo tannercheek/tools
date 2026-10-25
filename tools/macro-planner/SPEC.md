@@ -133,7 +133,7 @@ Goal adjustment: rate in kg per week × 7700 kcal/kg ÷ 7. Rate options: 0.25, 0
 - **Portions:** a bundled food also records its serving's weight in grams and a few household portions from USDA ("cup", "medium", "tbsp"), each with its weight.
   - An amount can be entered in the serving's unit, in grams, or in any portion. It's converted through grams, so 1 cup of cooked rice counts as 158 g.
   - The first portion is the food's default: search results and the Foods list show the food at 1 of it, with its numbers, and the amount field starts there. A food with no portions shows and starts at one serving.
-  - Portions are picked per food in `scripts/food-list.json`, only where a household measure is how you'd measure it. Meat and fish may have only grams.
+  - Portions are picked per food in `scripts/food-list.json`, only where a household measure is how you'd measure it. Each one's weight comes from USDA, except oz: an ounce is exactly 28.349523125 g on any food, so it needs no USDA portion. Meat and fish get oz, since you can guess a 12 oz steak or a 4 oz patty but not its grams, and so do other foods sold by weight (cheese, tofu, dry pasta, nuts).
 - Egg sizes, raw vs cooked, and so on are still separate entries, since their numbers differ.
 - **Bundled ids:** `usda-<fdcId>`. When one USDA food gives several entries, each gets a variant suffix: egg sizes are one USDA food with three portions, so they're `usda-171287-small`, `-medium` and `-large`. Ids never change once set, because meals refer to foods by id.
 - Name labels must be unambiguous about state: "Rice, white, cooked" vs "Rice, white, dry".
@@ -414,6 +414,7 @@ Storage and math keep raw values. Only what's shown is rounded, to what's useful
 | Builds | One: this personal app, synced through `persist.js` | A public, local-only version is a later port to its own repo; `createLocalStore` is kept for it |
 | Food data | Bundled curated USDA JSON | Offline, no key, no backend, public domain |
 | Serving model | One serving per food, the unit it's counted in; bundled foods add portions converted through grams | The serving never changes, so meals and snapshots keep their meaning with no migration. USDA's gram weights make cups and pieces exact conversions, and custom foods stay a one-unit form |
+| Ounces | oz on meat, fish and other foods sold by weight, at exactly 28.349523125 g | Eating out or at home, you can guess ounces but not grams. USDA lists oz for only some of these foods, rounded to the gram ("3 oz = 85 g"), and an ounce weighs the same on any food |
 | Slot totals | Any slot holding more than one thing is "N items" with the whole slot's total | The number on a slot is always all of it. A planned meal with extras is listed like anything else, so there's no second list or divider to read |
 | Food outside the slots | Other: an entry with no slot, shown after the slots once it holds something | Unplanned food still has to count, and a slot for it would change the template. It also gives an entry whose slot was removed a place on Today |
 | Macro split | By bodyweight (default) or by percent; overrides on top, never rebalanced | Protein by bodyweight suits lifting; a percent split suits one set by a coach or a diet. What you override is exactly what you get |

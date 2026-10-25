@@ -126,6 +126,12 @@
   width: var(--qty-input-w);
 }
 
+/* The box is as wide as the number and its unit, but never wider than the row's body, so a long
+   unit on a unit button truncates rather than running under the trailing control. */
+.row--ingredient .input-box {
+  max-width: 100%;
+}
+
 .emoji-tile {
   display: inline-flex;
   flex: none;
