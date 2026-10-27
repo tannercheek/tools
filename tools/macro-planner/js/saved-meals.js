@@ -91,6 +91,20 @@ export function removeItem(meal, foodId) {
   return { ...meal, items: meal.items.filter((item) => item.foodId !== foodId) };
 }
 
+// food takes foodId's place in the meal, at qty in unit, one of portions.js's foodUnits (SPEC
+// §3.3). A food that's already in the meal gets the amount added to its item where it is instead,
+// like addItem, so it's still listed once. Swapping a food that isn't in the meal changes nothing.
+export function swapItem(meal, foodId, food, qty, unit = food.serving.unit) {
+  assertQty(qty);
+  assertUnit(food, unit);
+  if (!meal.items.some((item) => item.foodId === foodId)) return meal;
+  if (food.id !== foodId && meal.items.some((item) => item.foodId === food.id)) {
+    return addItem(removeItem(meal, foodId), food, qty, unit);
+  }
+  const swapped = { foodId: food.id, qty, unit };
+  return { ...meal, items: meal.items.map((item) => (item.foodId === foodId ? swapped : item)) };
+}
+
 // A new meal with its own id. "copy" in the name tells it apart from the original in the list.
 // It keeps the original's tags, if it has any.
 export function duplicateMeal(meal) {
@@ -119,7 +133,8 @@ export function isMealPlanned(doc, id) {
   return Object.values(doc.template ?? {}).some((slot) => slot.mealId === id);
 }
 
-// Template slots that planned the meal become flex, so nothing points at a meal that's gone.
+// Template slots that planned the meal lose it, so nothing points at a meal that's gone. One that
+// plans no foods is flex again.
 // Past days keep it: they're locked in as snapshot entries in the days doc (SPEC §3.5).
 export function deleteMeal(doc, id) {
   const template = Object.fromEntries(

@@ -31,7 +31,7 @@ export function rateOption(rateKg, units) {
 // --- Core doc changes ---
 // Each returns a new core doc and leaves the one passed in as it was.
 
-// key: 'sex', 'age', 'heightCm', 'activity', 'goal' or 'rateKgPerWeek', with its stored value.
+// key: 'sex', 'birthDate', 'heightCm', 'activity', 'goal' or 'rateKgPerWeek', with its stored value.
 export function setProfileField(doc, key, value) {
   return { ...doc, profile: { ...doc.profile, [key]: value } };
 }
@@ -81,9 +81,19 @@ export function setUnits(doc, units) {
 // For the form's fields: stored values in, text out, and typed text back to a stored value.
 // A read is null unless the text is a valid amount.
 
-// An amount above 0, like an age or a height in cm.
+// An amount above 0, like a height in cm.
 export function readAmount(text) {
   return parseAmount(text) || null;
+}
+
+// A birthday as the date field gives it: 'YYYY-MM-DD', today or earlier. null for anything else.
+export function readBirthDate(text, today) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(text ?? '') && text <= today ? text : null;
+}
+
+// What shows under the birthday: "35 years old".
+export function ageText(age) {
+  return `${age} ${age === 1 ? 'year' : 'years'} old`;
 }
 
 // One decimal. Stored unrounded, so 180 lb entered shows 180.0 lb again, never 179.9.

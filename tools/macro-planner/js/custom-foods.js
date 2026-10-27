@@ -58,12 +58,17 @@ export function updateCustomFood(doc, id, fields) {
   return { ...doc, foods: (doc.foods ?? []).map((food) => (food.id === id ? { ...food, ...fields } : food)) };
 }
 
+// In use: in a saved meal, or planned in a slot (SPEC §3.4).
 export function isFoodInUse(doc, id) {
-  return (doc.meals ?? []).some((meal) => meal.items.some((item) => item.foodId === id));
+  const uses = (items = []) => items.some((item) => item.foodId === id);
+  return (
+    (doc.meals ?? []).some((meal) => uses(meal.items)) ||
+    Object.values(doc.template ?? {}).some((slot) => uses(slot.foods))
+  );
 }
 
-// A food a meal still uses is archived: hidden from search and the foods list, but still
-// there for the meal to resolve. A food nothing uses is removed.
+// A food a meal still uses, or a slot plans, is archived: hidden from search and the foods list,
+// but still there for the meal or the template to resolve. A food nothing uses is removed.
 export function deleteCustomFood(doc, id) {
   const foods = doc.foods ?? [];
   return {

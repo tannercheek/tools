@@ -3,7 +3,7 @@
 // a Tab loop that never leaves the sheet, and focus return on close.
 
 import { primaryButton, secondaryButton } from './buttons.js';
-import { FOCUSABLE, focusWrapIndex } from './focus.js';
+import { FOCUSABLE, focusWrapIndex, revealScrollDelta } from './focus.js';
 import { uniqueId } from './ids.js';
 
 // Only the checked radio in a group is a Tab stop, and hidden elements are skipped.
@@ -21,6 +21,50 @@ function tabStops(container) {
 function settled(elements) {
   const animations = elements.flatMap((element) => element.getAnimations());
   return Promise.all(animations.map((animation) => animation.finished.catch(() => {})));
+}
+
+// Scrolls only the panel, never the page behind the sheet, so the page keeps its place.
+function revealFocused(panel) {
+  const field = document.activeElement;
+  if (field === panel || !panel.contains(field)) return;
+  const gap = parseFloat(getComputedStyle(panel).getPropertyValue('--stack-gap'));
+  panel.scrollTop += revealScrollDelta(field.getBoundingClientRect(), panel.getBoundingClientRect(), gap);
+}
+
+// An on-screen keyboard (iOS) shrinks only the visual viewport, not the layout viewport the
+// dialog is fixed to, so it covers the bottom of the sheet. Fitting the dialog to the visual
+// viewport keeps the whole sheet above it (DESIGN §10). Returns a function that stops fitting.
+function fitToVisualViewport(dialog, panel) {
+  const viewport = window.visualViewport;
+  if (!viewport) return () => {};
+  // Shorter than the tallest it's been while this sheet is open means the keyboard is up.
+  let tallest = viewport.height;
+  const keyboardUp = () => viewport.height < tallest;
+
+  function fit() {
+    dialog.style.top = `${viewport.offsetTop}px`;
+    dialog.style.height = `${viewport.height}px`;
+  }
+
+  function resized() {
+    tallest = Math.max(tallest, viewport.height);
+    fit();
+    if (keyboardUp()) revealFocused(panel);
+  }
+
+  // Moving to another field with the keyboard up; after the browser's own focus scroll.
+  function focused() {
+    if (keyboardUp()) requestAnimationFrame(() => revealFocused(panel));
+  }
+
+  fit();
+  viewport.addEventListener('resize', resized);
+  viewport.addEventListener('scroll', fit);
+  panel.addEventListener('focusin', focused);
+  return () => {
+    viewport.removeEventListener('resize', resized);
+    viewport.removeEventListener('scroll', fit);
+  };
 }
 
 // content: a node or an array of nodes. initialFocus: an element inside the sheet,
@@ -59,6 +103,7 @@ export function openSheet({ title, content, initialFocus, role = 'dialog', descr
   });
 
   function finish() {
+    stopFitting();
     if (dialog.open) dialog.close();
     dialog.remove();
     if (returnFocus?.isConnected) returnFocus.focus();
@@ -98,6 +143,7 @@ export function openSheet({ title, content, initialFocus, role = 'dialog', descr
   });
 
   dialog.showModal();
+  const stopFitting = fitToVisualViewport(dialog, panel);
   // The panel still sits below the screen here; a plain focus() would scroll it into view
   // and fight the slide-in.
   (initialFocus ?? panel).focus({ preventScroll: true });

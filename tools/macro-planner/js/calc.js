@@ -136,20 +136,44 @@ export function splitFromTargets(targetValues) {
   return { protein, fat, carbs: 100 - protein - fat };
 }
 
-// What targets need from the core doc's profile (SPEC §3.1). The rate is checked apart,
-// since maintain doesn't use one.
-const PROFILE_KEYS = ['sex', 'age', 'heightCm', 'activity', 'goal'];
+// --- Age (SPEC §3.1) ---
+
+function isLeapYear(year) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+// Age in whole years on date, both 'YYYY-MM-DD'. A 29 February birthday counts from 1 March in
+// years without one.
+export function ageOn(birthDate, date) {
+  const year = Number(date.slice(0, 4));
+  const birthday = birthDate.slice(5) === '02-29' && !isLeapYear(year) ? '03-01' : birthDate.slice(5);
+  return year - Number(birthDate.slice(0, 4)) - (date.slice(5) < birthday ? 1 : 0);
+}
+
+// The age the targets use on today: the birthday's, else an age saved before birthdays, else
+// null. Nothing guesses a birthday from a saved age.
+export function profileAge(profile, today) {
+  if (profile.birthDate != null) return ageOn(profile.birthDate, today);
+  return profile.age ?? null;
+}
+
+// What targets need from the core doc's profile (SPEC §3.1). The age and rate are checked apart:
+// the age comes from the birthday, and maintain doesn't use a rate.
+const PROFILE_KEYS = ['sex', 'heightCm', 'activity', 'goal'];
 
 // Targets from the saved profile, the current weight (the latest weigh-in, or null before
-// the first), overrides and the core doc's macroSplit. null until the profile is complete:
-// until then there are no targets, calculated or overridden.
-export function profileTargets(profile, weightKg, overrides = {}, macroSplit) {
+// the first), overrides and the core doc's macroSplit, on today ('YYYY-MM-DD'), which the age
+// is worked out for. null until the profile is complete: until then there are no targets,
+// calculated or overridden.
+export function profileTargets(profile, weightKg, overrides = {}, macroSplit, today) {
+  const age = profileAge(profile, today);
   const incomplete =
     PROFILE_KEYS.some((key) => profile[key] == null) ||
+    age == null ||
     weightKg == null ||
     (profile.goal !== 'maintain' && profile.rateKgPerWeek == null);
   if (incomplete) return null;
-  return targets({ ...profile, weightKg }, overrides, macroSplit);
+  return targets({ ...profile, age, weightKg }, overrides, macroSplit);
 }
 
 // --- Totals ---
@@ -200,26 +224,33 @@ export function ingredientsTotals(ingredients) {
   return sumTotals(ingredients);
 }
 
-// What one slot adds to the day (SPEC §3.5): its meal, or the day's ingredients for it, at its
-// portion, a food or quick numbers swapped in, or an open flex slot's pinned budget. A skipped
-// slot, an open flex slot with no budget and a filled flex slot add nothing of their own; what's
-// added to a slot counts in dayTotal. plan: one of slots.js's daySlots.
+// What a slot's meal adds (SPEC §3.5): the day's ingredients for it, or else the meal's, at the
+// slot's portion. Its planned foods aren't part of it. plan: one of slots.js's daySlots, with a
+// meal.
+export function slotMealTotals(plan, getFood) {
+  const meal = plan.ingredients ? ingredientsTotals(plan.ingredients) : mealTotals(plan.meal, getFood);
+  return scaleTotals(meal, plan.portion);
+}
+
+// What one slot adds to the day (SPEC §3.5): its meal at its portion, or a food or quick numbers
+// swapped in for it, and its planned foods at their own amounts; or an open flex slot's pinned
+// budget. A skipped slot, an open flex slot with no budget and a filled flex slot add nothing of
+// their own; what's added to a slot counts in dayTotal. plan: one of slots.js's daySlots.
 export function slotTotals(plan, getFood) {
   if (plan.skipped) return sumTotals([]);
-  if (plan.swapEntry) return entriesTotals([plan.swapEntry]);
-  if (plan.meal) {
-    const meal = plan.ingredients ? ingredientsTotals(plan.ingredients) : mealTotals(plan.meal, getFood);
-    return scaleTotals(meal, plan.portion);
-  }
+  const foods = ingredientsTotals(plan.foods);
+  if (plan.swapEntry) return sumTotals([plan.swapEntry, foods]);
+  if (plan.meal) return sumTotals([slotMealTotals(plan, getFood), foods]);
+  if (!plan.flex) return foods;
   const open = plan.entries.length === 0;
   return open && plan.budget ? sumTotals([plan.budget]) : sumTotals([]);
 }
 
 // The day's total (SPEC §3.5): the planned meals after swaps, skips, portions and ingredient
-// changes, the pinned
-// budgets of open flex slots, and every added entry, Other's and any whose slot is gone too. Off plan,
-// the plan is ignored; locked, it's already written into the entries. Either way only the
-// entries count. plans: slots.js's daySlots for the same day.
+// changes, the planned foods after the day's changes, the pinned budgets of open flex slots, and
+// every added entry, Other's and any whose slot is gone too. Off plan, the plan is ignored;
+// locked, it's already written into the entries. Either way only the entries count. plans:
+// slots.js's daySlots for the same day.
 export function dayTotal(day, plans, getFood) {
   const entries = entriesTotals(day.entries);
   if (day.offPlan || day.locked) return entries;
@@ -238,10 +269,10 @@ export function flexGap(targetValues, day, plans, slotId, getFood) {
   return displayRemainingTotals(targetValues, rest);
 }
 
-// Plan's "left for flex" (SPEC §3.4): the targets minus what the template adds up to, its meals
-// and pinned budgets. One figure for every flex slot together, never split between them. Each
-// key is displayRemaining's { amount, over }, so a plan over target shows "over", never a
-// negative. null with no targets.
+// Plan's "left for flex" (SPEC §3.4): the targets minus what the template adds up to, its meals,
+// planned foods and pinned budgets. One figure for every flex slot together, never split between
+// them. Each key is displayRemaining's { amount, over }, so a plan over target shows "over", never
+// a negative. null with no targets.
 export function leftForFlex(targetValues, templateTotals) {
   if (!targetValues) return null;
   return displayRemainingTotals(targetValues, templateTotals);

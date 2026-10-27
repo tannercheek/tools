@@ -4,7 +4,7 @@
 // button, and the targets follow along as you type. Weight comes from the weight log, so entering
 // one here logs a weigh-in for today.
 
-import { ACTIVITY_MULTIPLIERS, profileTargets } from '../calc.js';
+import { ACTIVITY_MULTIPLIERS, ageOn, profileTargets } from '../calc.js';
 import {
   CoreDocUnavailableError,
   WeightLogUnavailableError,
@@ -14,11 +14,13 @@ import {
   updateCoreDoc,
 } from '../data.js';
 import {
+  ageText,
   heightCmText,
   heightFtInText,
   rateOption,
   rateOptions,
   readAmount,
+  readBirthDate,
   readHeightFtIn,
   readHeightPart,
   readWeight,
@@ -31,7 +33,7 @@ import {
 } from '../profile.js';
 import { CORE_DOC_ID } from '../store.js';
 import { segmentedControl } from '../ui/controls.js';
-import { formError, numberField, selectField } from '../ui/inputs.js';
+import { dateField, formError, numberField, selectField } from '../ui/inputs.js';
 import { dataSection } from './data-section.js';
 import { macroSplitSection } from './macro-split-section.js';
 import { slotsSection } from './slots-section.js';
@@ -112,14 +114,14 @@ function feetAndInches() {
   return { element, fields: [feet, inches], setError };
 }
 
-// A profile number (age, height or weight) typed into one or more number fields. text(value)
+// A profile value (birthday, height or weight) entered into one or more fields. text(value)
 // gives each field's text for a saved value, and read(...texts) the value back, or null if it
 // isn't valid. A valid entry saves with commit(value) once the field is left. A blank field with
 // nothing saved is left alone, since every field starts empty; anything else that isn't valid
 // says so, and the saved value stays. setError defaults to the first field's. live() is what the
 // targets use: what's typed, once it's valid and differs from what was shown for the saved
 // value, since that can show rounded.
-function profileNumber({ element, fields, text, read, saved, message, commit, onInput, setError = fields[0].setError }) {
+function profileInput({ element, fields, text, read, saved, message, commit, onInput, setError = fields[0].setError }) {
   const inputs = fields.map((field) => field.input);
   const texts = () => inputs.map((input) => input.value);
   let shown = text(saved());
@@ -158,6 +160,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   let weightKg = loadedWeight;
   const units = () => doc.settings?.units ?? 'metric';
   const profile = () => doc.profile ?? {};
+  const today = () => localDate(new Date());
 
   const error = formError();
   let writes = Promise.resolve();
@@ -187,7 +190,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   // Today's weigh-in is the latest, so it's the profile's weight from now on (SPEC §3.1).
   function logWeight(kg) {
     weightKg = kg;
-    save(() => weightLog.add({ date: localDate(new Date()), kg }));
+    save(() => weightLog.add({ date: today(), kg }));
     refresh();
   }
 
@@ -201,18 +204,29 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
     });
   }
 
-  function ageInput() {
-    const field = numberField({ label: 'Age', unit: 'years', placeholder: 'Age' });
-    return profileNumber({
+  // The age comes from the birthday (SPEC §3.1), so it shows under it once there is one. A profile
+  // saved before birthdays keeps its age for the targets, unshown, until a birthday is entered.
+  function birthdayInput() {
+    const field = dateField({ label: 'Birthday', max: today() });
+    const age = document.createElement('p');
+    age.className = 'settings__age';
+    field.element.append(age);
+    const input = profileInput({
       element: field.element,
       fields: [field],
-      text: (age) => [age == null ? '' : String(age)],
-      read: readAmount,
-      saved: () => profile().age,
-      message: 'Enter your age, like 30',
-      commit: (age) => edit((d) => setProfileField(d, 'age', age)),
+      text: (birthDate) => [birthDate ?? ''],
+      read: (text) => readBirthDate(text, today()),
+      saved: () => profile().birthDate,
+      message: 'Pick your birthday, today or earlier',
+      commit: (birthDate) => edit((d) => setProfileField(d, 'birthDate', birthDate)),
       onInput: refresh,
     });
+    function showAge() {
+      const birthDate = input.live();
+      age.hidden = birthDate == null;
+      age.textContent = birthDate == null ? '' : ageText(ageOn(birthDate, today()));
+    }
+    return { ...input, showAge };
   }
 
   // Whole cm, or feet and whole inches (SPEC §5.2).
@@ -223,7 +237,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
       onInput: refresh,
     };
     if (units() === 'imperial') {
-      return profileNumber({
+      return profileInput({
         ...feetAndInches(),
         text: (cm) => {
           const { ft, inches } = heightFtInText(cm);
@@ -235,7 +249,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
       });
     }
     const field = numberField({ label: 'Height', unit: 'cm', placeholder: 'Height' });
-    return profileNumber({
+    return profileInput({
       element: field.element,
       fields: [field],
       text: (cm) => [heightCmText(cm)],
@@ -249,7 +263,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   function weightInput() {
     const imperial = units() === 'imperial';
     const field = numberField({ label: 'Weight', unit: WEIGHT_UNIT[units()], placeholder: 'Weight' });
-    return profileNumber({
+    return profileInput({
       element: field.element,
       fields: [field],
       text: (kg) => [weightText(kg, units())],
@@ -288,7 +302,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
     },
   });
   const sex = choice('Sex', 'sex', SEX_OPTIONS);
-  const age = ageInput();
+  const birthday = birthdayInput();
   let height = heightInput();
   let weight = weightInput();
   const activity = selectField({
@@ -303,8 +317,8 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   const split = macroSplitSection({
     doc: () => doc,
     currentTargets: () => {
-      const { profile: shown, weightKg: kg, overrides, macroSplit } = shownProfile();
-      return profileTargets(shown, kg, overrides, macroSplit);
+      const { profile: shown, weightKg: kg, overrides, macroSplit, today: date } = shownProfile();
+      return profileTargets(shown, kg, overrides, macroSplit, date);
     },
     onPercent: (percent) => edit((d) => setSplitPercent(d, percent)),
     onBodyweight: () => edit(setSplitBodyweight),
@@ -322,19 +336,21 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
   }
 
   // What the targets are worked out from: the profile as saved or being typed, and the doc's
-  // overrides and macro split.
+  // overrides and macro split, on today, which the age is worked out for.
   function shownProfile() {
     return {
-      profile: { ...profile(), age: age.live(), heightCm: height.live() },
+      profile: { ...profile(), birthDate: birthday.live(), heightCm: height.live() },
       weightKg: weight.live(),
       overrides: doc.overrides ?? {},
       macroSplit: doc.macroSplit,
+      today: today(),
     };
   }
 
   // Maintain needs no rate, so it's hidden; the stored one is kept for switching back.
   function refresh() {
     rate.element.hidden = profile().goal === 'maintain';
+    birthday.showAge();
     targets.show(shownProfile());
   }
 
@@ -345,7 +361,7 @@ function profileForm({ store, weightLog, doc: loaded, weightKg: loadedWeight }) 
       'Profile',
       unitsControl.element,
       sex.element,
-      age.element,
+      birthday.element,
       height.element,
       weight.element,
       activity.element,

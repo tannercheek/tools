@@ -143,22 +143,25 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   return { element: body, searchInput: search.input };
 }
 
-// For the meal editor and the Ingredients sheet. Resolves to { food, qty, unit } for the food to
-// add, or null if the sheet closes without one. The food itself comes back, since it may be a
-// custom food made in the sheet, which the caller's own list doesn't have yet.
-export async function addFoodSheet({ foods, store }) {
+// For the meal editor, the Ingredients sheet, Plan's slot sheet and a planned food's swap on
+// Today. Resolves to { food, qty, unit } for the food to add, or null if the sheet closes without
+// one. The food itself comes back, since it may be a custom food made in the sheet, which the
+// caller's own list doesn't have yet. submitLabel: the amount step's primary button. title and
+// startAmount: for a swap, "Banana · Swap" and the old amount, as foodPicker takes it.
+export async function addFoodSheet({ foods, store, submitLabel = 'Add to meal', title = 'Add food', startAmount }) {
   let added = null;
   let sheet;
   const picker = foodPicker({
     foods,
     store,
-    submitLabel: 'Add to meal',
+    submitLabel,
+    startAmount,
     onAdd: (food, qty, unit) => {
       added = { food, qty, unit };
       sheet.close();
     },
   });
-  sheet = openSheet({ title: 'Add food', content: picker.element, initialFocus: picker.searchInput });
+  sheet = openSheet({ title, content: picker.element, initialFocus: picker.searchInput });
   await sheet.closed;
   return added;
 }

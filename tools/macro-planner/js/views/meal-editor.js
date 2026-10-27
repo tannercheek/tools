@@ -1,7 +1,7 @@
 // A saved meal's own screen, pushed from the Meals list: the meal editor (SPEC §3.3; DESIGN §8
 // ingredient row). Emoji, name and tags, live totals in a sticky card, the foods with their
-// quantities, then Duplicate and Delete. Each change saves as soon as it's made, so there's no
-// Save button and nothing to lose on Back.
+// quantities and a swap button each, then Duplicate and Delete. Each change saves as soon as it's
+// made, so there's no Save button and nothing to lose on Back.
 
 import { loadBundledFoods } from '../bundled-foods.js';
 import { foodTotals, mealTotals } from '../calc.js';
@@ -21,6 +21,7 @@ import {
   renameMeal,
   setMealEmoji,
   setMealTags,
+  swapItem,
   updateItem,
   updateMeal,
 } from '../saved-meals.js';
@@ -34,6 +35,7 @@ import { confirmSheet } from '../ui/sheet.js';
 import { totalsCard } from '../ui/totals-card.js';
 import { amountField } from '../ui/unit-choice.js';
 import { addFoodSheet } from './add-food-sheet.js';
+import { swapIngredientSheet } from './ingredients-sheet.js';
 import { newTagSheet } from './new-tag-sheet.js';
 
 function group(className, ...children) {
@@ -150,7 +152,7 @@ export function render(container, { route, replaceRoute, goBack, store }) {
   }
 
   // The totals card, then a row per food with its quantity in its own unit, which can be switched
-  // to any the food has (SPEC §3.3).
+  // to any the food has, and its swap button (SPEC §3.3).
   function ingredients() {
     const totals = totalsCard();
     const list = rowList([]);
@@ -183,7 +185,7 @@ export function render(container, { route, replaceRoute, goBack, store }) {
         title: food.name,
         numbers: foodTotals(food, qty, quantity.unit()),
         quantity,
-        trailing: iconButton('x', `Remove ${food.name}`, { onClick: remove }),
+        trailing: iconButton('arrow-left-right', `Swap ${food.name}`, { onClick: swapOrRemove }),
       });
       const savedQty = () => meal.items.find((item) => item.foodId === foodId).qty;
 
@@ -215,15 +217,28 @@ export function render(container, { route, replaceRoute, goBack, store }) {
         edit((m) => updateItem(m, foodId, typed));
       });
 
-      // Focus moves to the next row's remove button, or the one before, so several foods can
-      // go one after another; with none left, to "Add food".
-      function remove() {
-        const next = row.element.nextElementSibling ?? row.element.previousElementSibling;
-        edit((m) => removeItem(m, foodId));
-        row.element.remove();
-        showCount();
-        totals.show(mealTotals(meal, getFood));
-        (next?.querySelector('.icon-btn') ?? addFood).focus();
+      // The swap sheet swaps the food for another, starting at its amount when the new food has
+      // its unit, or removes it. Custom foods are read again after it, as after "Add food". Focus
+      // goes to the row now in its place: the food swapped in, or the one it merged into; after a
+      // remove, the next row, or the one before it at the end of the list; with none left, "Add
+      // food".
+      async function swapOrRemove() {
+        const index = meal.items.findIndex((item) => item.foodId === foodId);
+        const { qty: oldQty, unit: oldUnit = food.serving.unit } = meal.items[index];
+        const result = await swapIngredientSheet({
+          item: { name: food.name, qty: oldQty, unit: oldUnit },
+          canRemove: true,
+          foods,
+          store,
+        });
+        useFoods((await store.load(CORE_DOC_ID)).foods ?? []);
+        if (!result) return;
+        edit((m) => (result.remove ? removeItem(m, foodId) : swapItem(m, foodId, result.food, result.qty, result.unit)));
+        showList();
+        const focusIndex = result.remove
+          ? Math.min(index, meal.items.length - 1)
+          : meal.items.findIndex((item) => item.foodId === result.food.id);
+        (list.children[focusIndex]?.querySelector('.icon-btn') ?? addFood).focus();
       }
 
       return row.element;

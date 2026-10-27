@@ -3,7 +3,7 @@
 // it's reset. Until the profile is complete there are no targets, calculated or overridden, so
 // the section is just a note.
 
-import { TARGET_WARNINGS, bmr, profileTargets } from '../calc.js';
+import { TARGET_WARNINGS, bmr, profileAge, profileTargets } from '../calc.js';
 import { icon } from '../icons.js';
 import { readTarget, targetText } from '../profile.js';
 import { secondaryButton } from '../ui/buttons.js';
@@ -90,9 +90,9 @@ function targetField({ key, label, unit, message }, { onInput, onCommit }) {
 }
 
 // onCommit(key, value): save an override, or with null, reset that target to calculated.
-// Returns the section's elements, and show({ profile, weightKg, overrides, macroSplit }) to show
-// the targets for a profile and weight (what's saved, or being typed), the saved overrides and
-// the core doc's macro split.
+// Returns the section's elements, and show({ profile, weightKg, overrides, macroSplit, today }) to
+// show the targets for a profile and weight (what's saved, or being typed), the saved overrides
+// and the core doc's macro split, on today, which the age is worked out for.
 export function targetsSection({ onCommit }) {
   const note = document.createElement('p');
   note.className = 'settings__note';
@@ -110,10 +110,10 @@ export function targetsSection({ onCommit }) {
   // moves the fat and carbs defaults.
   function show(next) {
     current = next;
-    const { profile, weightKg, overrides: saved, macroSplit } = next;
+    const { profile, weightKg, overrides: saved, macroSplit, today } = next;
     const overrides = { ...saved };
     for (const field of fields) overrides[field.key] = field.typed() ?? overrides[field.key];
-    const values = profileTargets(profile, weightKg, overrides, macroSplit);
+    const values = profileTargets(profile, weightKg, overrides, macroSplit, today);
 
     note.hidden = values !== null;
     grid.hidden = values === null;
@@ -123,11 +123,11 @@ export function targetsSection({ onCommit }) {
     for (const field of fields) {
       field.show({
         text: targetText(field.key, values, saved),
-        calculatedValue: profileTargets(profile, weightKg, { ...overrides, [field.key]: null }, macroSplit)[field.key],
+        calculatedValue: profileTargets(profile, weightKg, { ...overrides, [field.key]: null }, macroSplit, today)[field.key],
         overridden: saved[field.key] != null,
       });
     }
-    const bmrKcal = bmr({ ...profile, weightKg });
+    const bmrKcal = bmr({ ...profile, age: profileAge(profile, today), weightKg });
     warnings.replaceChildren(...values.warnings.map((warning) => warningLine(warning, bmrKcal)));
   }
 

@@ -1,8 +1,9 @@
 // The Ingredients sheet (SPEC §3.5, DESIGN §8): a slot's meal, or a meal added to a slot, changed
 // for that day only. The meal editor's totals card, a row per food with its amount, Add food, then
-// Reset to original meal once something has changed, and for an added meal, Remove from slot.
+// Reset to original meal once something has changed, and for an added meal, Swap meal and Remove
+// from slot.
 // Each change is passed on as it's made, so there's no Save button. A row's swap button opens a
-// sheet to swap its food for another, or to remove it.
+// sheet to swap its food for another, or to remove it, which the meal editor shares.
 
 import { ingredientsTotals } from '../calc.js';
 import { parseAmount } from '../custom-foods.js';
@@ -22,12 +23,12 @@ import { totalsCard } from '../ui/totals-card.js';
 import { amountField } from '../ui/unit-choice.js';
 import { addFoodSheet, foodPicker } from './add-food-sheet.js';
 
-// The swap button's sheet: "Remove from meal", disabled on the meal's last ingredient, since a
-// meal keeps at least one (SPEC §3.5), then food search to swap another food in at the same
-// amount, if the food has the same unit, else at its default amount. item: the ingredient as the
-// sheet shows it. Resolves to { remove: true }, to { food, qty, unit } for the food to swap in, or
-// to null.
-async function swapIngredientSheet({ item, canRemove, foods, store }) {
+// The swap button's sheet, here and in the meal editor (SPEC §3.3, §3.5): "Remove from meal", then
+// food search to swap another food in at the same amount, if the food has the same unit, else at
+// its default amount. canRemove: false on the day's meal's last ingredient, since it keeps at least
+// one; a saved meal can lose its last food. item: { name, qty, unit }, the food as the sheet shows
+// it. Resolves to { remove: true }, to { food, qty, unit } for the food to swap in, or to null.
+export async function swapIngredientSheet({ item, canRemove, foods, store }) {
   let picked = null;
   let sheet;
   const choose = (result) => {
@@ -61,11 +62,11 @@ async function swapIngredientSheet({ item, canRemove, foods, store }) {
 // shows from the start. foods: bundled and custom foods together, for Add food and a swap's
 // search. getFood: saved-meals.js's foodLookup over them, for the units an ingredient's amount
 // can be switched to. store: the app's store, for a custom food made from either. onChange(items)
-// runs with the whole new list after each change, for the caller to save. removable: an added
-// meal, which ends in Remove from slot. Resolves to { action: 'reset' } when Reset to original
-// meal is tapped, or { action: 'remove' } for Remove from slot, for the caller to apply or
-// confirm, or to null.
-export async function ingredientsSheet({ name, items, edited, foods, getFood, store, onChange, removable = false }) {
+// runs with the whole new list after each change, for the caller to save. added: a meal added to
+// a slot, which ends in Swap meal and Remove from slot. Resolves to { action: 'reset' } when Reset
+// to original meal is tapped, { action: 'swap' } for Swap meal, or { action: 'remove' } for
+// Remove from slot, for the caller to apply, open the swap sheet or confirm, or to null.
+export async function ingredientsSheet({ name, items, edited, foods, getFood, store, onChange, added = false }) {
   let current = items;
   let picked = null;
   let sheet;
@@ -81,7 +82,12 @@ export async function ingredientsSheet({ name, items, edited, foods, getFood, st
   const addFood = secondaryButton('Add food', { block: true, onClick: add });
   const reset = secondaryButton('Reset to original meal', { block: true, onClick: () => choose('reset') });
   reset.hidden = !edited;
-  const remove = removable ? [secondaryButton('Remove from slot', { block: true, onClick: () => choose('remove') })] : [];
+  const entryActions = added
+    ? [
+        secondaryButton('Swap meal', { block: true, onClick: () => choose('swap') }),
+        secondaryButton('Remove from slot', { block: true, onClick: () => choose('remove') }),
+      ]
+    : [];
 
   // Shown straight away, then passed on to be saved.
   function change(next) {
@@ -167,7 +173,7 @@ export async function ingredientsSheet({ name, items, edited, foods, getFood, st
   }
 
   showList();
-  sheet = openSheet({ title: `${name} · Ingredients`, content: [totals.element, list, addFood, reset, ...remove] });
+  sheet = openSheet({ title: `${name} · Ingredients`, content: [totals.element, list, addFood, reset, ...entryActions] });
   await sheet.closed;
   return picked;
 }

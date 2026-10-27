@@ -1,4 +1,5 @@
-// Focus-trap helpers. Pure: no DOM access, so they can be tested in Node.
+// Focus helpers for sheets: the Tab trap, and keeping the focused field in view.
+// Pure: no DOM access, so they can be tested in Node.
 
 export const FOCUSABLE = [
   'a[href]',
@@ -20,4 +21,16 @@ export function focusWrapIndex(index, count, backwards) {
   if (backwards && index === 0) return count - 1;
   if (!backwards && index === count - 1) return 0;
   return null;
+}
+
+// How far to scroll a panel so the focused field shows inside it, `gap` clear of its edges.
+// `field` and `view` are { top, bottom } boxes in the same coordinates, e.g. from
+// getBoundingClientRect(). Returns the change to the panel's scrollTop: positive scrolls down,
+// 0 when the field already shows. A field taller than the view keeps its top in view.
+export function revealScrollDelta(field, view, gap) {
+  const top = view.top + gap;
+  const bottom = view.bottom - gap;
+  if (field.top < top) return field.top - top;
+  if (field.bottom > bottom) return Math.min(field.bottom - bottom, field.top - top);
+  return 0;
 }

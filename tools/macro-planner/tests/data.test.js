@@ -58,7 +58,7 @@ test('default slots have their own uuids, and each starts as flex with no budget
 test('a first-run profile is empty, with no weight, since weight comes from the weight log', () => {
   assert.deepEqual(createCoreDoc('2026-10-15').profile, {
     sex: null,
-    age: null,
+    birthDate: null,
     heightCm: null,
     activity: null,
     goal: null,
@@ -69,8 +69,8 @@ test('a first-run profile is empty, with no weight, since weight comes from the 
 test('each first-run doc is its own copy, with new slot ids', () => {
   const a = createCoreDoc('2026-10-15');
   const b = createCoreDoc('2026-10-15');
-  a.profile.age = 30;
-  assert.equal(b.profile.age, null);
+  a.profile.birthDate = '1990-04-12';
+  assert.equal(b.profile.birthDate, null);
   assert.notEqual(a.slots[0].id, b.slots[0].id);
 });
 

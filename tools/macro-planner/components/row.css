@@ -9,6 +9,32 @@
   list-style: none;
 }
 
+/* Rows that belong together, like a locked day's slot (DESIGN §8): the eyebrow, then one card
+   whose rows drop their own outline and fill for the card's, with a divider between them. A
+   group without the card (a Today or Plan slot) is the eyebrow over a row that keeps its look. */
+.row-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row-group__card {
+  gap: 0;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.row-group__card > .row {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.row-group__card > .row + .row {
+  border-top: var(--border-width) solid var(--color-border);
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -55,8 +81,8 @@
 }
 
 /* A row with lines under its numbers, like a Today slot with extras (DESIGN §8 anatomy): the tile
-   stays at the top, level with the eyebrow, so it stays beside the slot's name as the row grows.
-   The trailing control stays centred on the row. */
+   stays at the top, level with the title (the slot's name is above the card), so it stays beside
+   what the slot holds as the row grows. The trailing control stays centred on the row. */
 .row--lines > .emoji-tile {
   align-self: flex-start;
 }

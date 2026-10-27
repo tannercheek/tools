@@ -20,13 +20,18 @@ export function ingredient(food, qty, unit = food.serving.unit) {
   return { foodId: food.id, name: food.name, emoji: food.emoji, unit, qty, kcal, protein, fat, carbs };
 }
 
-// The meal's items as ingredients. getFood: saved-meals.js's foodLookup, archived foods included.
-export function mealIngredients(meal, getFood) {
-  return meal.items.map(({ foodId, qty, unit }) => {
+// Items, { foodId, qty, unit } like a meal's or a slot's planned foods (SPEC §3.4), as
+// ingredients. getFood: saved-meals.js's foodLookup, archived foods included.
+export function itemIngredients(items, getFood) {
+  return items.map(({ foodId, qty, unit }) => {
     const food = getFood(foodId);
     if (!food) throw new RangeError(`Unknown food: ${foodId}`);
     return ingredient(food, qty, unit);
   });
+}
+
+export function mealIngredients(meal, getFood) {
+  return itemIngredients(meal.items, getFood);
 }
 
 function rescale(item, qty) {

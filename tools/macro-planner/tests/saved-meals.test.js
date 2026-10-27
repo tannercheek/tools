@@ -16,6 +16,7 @@ import {
   renameMeal,
   setMealEmoji,
   setMealTags,
+  swapItem,
   updateItem,
   updateMeal,
 } from '../js/saved-meals.js';
@@ -23,11 +24,17 @@ import {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const ZERO = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
 
-// Test fixtures with made-up round numbers, not real nutrition data.
-const RICE = { id: 'rice', serving: { qty: 100, unit: 'g' }, kcal: 130, protein: 2.5, fat: 0.3, carbs: 28 };
+// Test fixtures with made-up round numbers, not real nutrition data. grams is the serving's
+// weight, and a portion's is 1 of its unit's (SPEC §3.2).
+const RICE = {
+  id: 'rice', serving: { qty: 100, unit: 'g' }, grams: 100, portions: [{ unit: 'cup', grams: 158 }],
+  kcal: 130, protein: 2.5, fat: 0.3, carbs: 28,
+};
 const BEEF = { id: 'beef', serving: { qty: 100, unit: 'g' }, kcal: 250, protein: 26, fat: 15, carbs: 0 };
 const EGG = { id: 'egg', serving: { qty: 1, unit: 'egg' }, kcal: 70, protein: 6, fat: 5, carbs: 0.5 };
-const getFood = foodLookup([RICE, BEEF, EGG]);
+const WHITE_BREAD = { id: 'white-bread', serving: { qty: 1, unit: 'slice' }, grams: 30, kcal: 80, protein: 3, fat: 1, carbs: 15 };
+const GF_BREAD = { id: 'gf-bread', serving: { qty: 1, unit: 'slice' }, grams: 35, kcal: 90, protein: 2, fat: 2, carbs: 17 };
+const getFood = foodLookup([RICE, BEEF, EGG, WHITE_BREAD, GF_BREAD]);
 
 // Float math: compare to within a hair, not exactly.
 function assertTotals(actual, expected) {
@@ -130,10 +137,12 @@ test('removing an item drops only that food, and an emptied meal totals zero', (
   assert.deepEqual(mealTotals(empty, getFood), ZERO);
 });
 
-test('updating or removing a food that isn’t in the meal changes nothing', () => {
+test('updating, removing or swapping a food that isn’t in the meal changes nothing', () => {
   const meal = riceAndBeef();
   assert.deepEqual(updateItem(meal, 'egg', 2), meal);
   assert.deepEqual(removeItem(meal, 'egg'), meal);
+  assert.deepEqual(swapItem(meal, 'egg', GF_BREAD, 2), meal);
+  assert.deepEqual(swapItem(meal, 'egg', RICE, 1, 'cup'), meal);
 });
 
 test('quantities must be numbers above 0', () => {
@@ -141,6 +150,7 @@ test('quantities must be numbers above 0', () => {
   for (const qty of [0, -1, NaN, Infinity, '100', null, undefined]) {
     assert.throws(() => addItem(meal, EGG, qty), RangeError, `add ${qty}`);
     assert.throws(() => updateItem(meal, 'rice', qty), RangeError, `update ${qty}`);
+    assert.throws(() => swapItem(meal, 'rice', EGG, qty), RangeError, `swap ${qty}`);
   }
 });
 
@@ -153,9 +163,68 @@ test('changes to a meal leave the one passed in as it was', () => {
   addItem(meal, RICE, 50);
   updateItem(meal, 'beef', 100);
   removeItem(meal, 'rice');
+  swapItem(meal, 'beef', EGG, 2);
+  swapItem(meal, 'beef', RICE, 1, 'cup');
   setMealTags(meal, ['Dinner']);
   duplicateMeal(meal);
   assert.deepEqual(meal, before);
+});
+
+// --- Swapping a food (SPEC §3.3) ---
+
+function eggToast() {
+  return addItem(addItem(addItem(createMeal({ name: 'Egg toast', emoji: '🍳' }), EGG, 2), WHITE_BREAD, 2), BEEF, 50);
+}
+
+test('a swapped-in food takes the old one’s place at its amount, and the totals move', () => {
+  const meal = eggToast();
+  const swapped = swapItem(meal, 'white-bread', GF_BREAD, 2);
+  assert.deepEqual(swapped.items, [
+    { foodId: 'egg', qty: 2, unit: 'egg' },
+    { foodId: 'gf-bread', qty: 2, unit: 'slice' },
+    { foodId: 'beef', qty: 50, unit: 'g' },
+  ]);
+  // 2 eggs (140 / 12 / 10 / 1) + 50 g beef (125 / 13 / 7.5 / 0), with 2 slices of white bread
+  // (160 / 6 / 2 / 30), then of gluten-free (180 / 4 / 4 / 34).
+  assertTotals(mealTotals(meal, getFood), { kcal: 425, protein: 31, fat: 19.5, carbs: 31 });
+  assertTotals(mealTotals(swapped, getFood), { kcal: 445, protein: 29, fat: 21.5, carbs: 35 });
+});
+
+test('a swap leaves the other items as they were', () => {
+  const meal = eggToast();
+  const swapped = swapItem(meal, 'white-bread', GF_BREAD, 2);
+  assert.equal(swapped.items[0], meal.items[0]);
+  assert.equal(swapped.items[2], meal.items[2]);
+  assert.equal(swapped.id, meal.id);
+  assert.equal(swapped.name, meal.name);
+});
+
+test('a swapped-in food is in the unit given, or its serving’s without one', () => {
+  const meal = eggToast();
+  assert.deepEqual(swapItem(meal, 'beef', RICE, 1, 'cup').items[2], { foodId: 'rice', qty: 1, unit: 'cup' });
+  assert.deepEqual(swapItem(meal, 'egg', RICE, 150).items[0], { foodId: 'rice', qty: 150, unit: 'g' });
+  assert.throws(() => swapItem(meal, 'beef', EGG, 1, 'cup'), RangeError);
+});
+
+test('swapping to a food already in the meal adds the amount to it, converted into its unit', () => {
+  const meal = addItem(riceAndBeef(), EGG, 2);
+  const swapped = swapItem(meal, 'beef', RICE, 1, 'cup');
+  // 1 cup is 158 g, onto 200 g.
+  assert.deepEqual(swapped.items, [
+    { foodId: 'rice', qty: 358, unit: 'g' },
+    { foodId: 'egg', qty: 2, unit: 'egg' },
+  ]);
+  assert.equal(swapped.items[1], meal.items[2]);
+  // 358 g rice (465.4 / 8.95 / 1.074 / 100.24) + 2 eggs (140 / 12 / 10 / 1).
+  assertTotals(mealTotals(swapped, getFood), { kcal: 605.4, protein: 20.95, fat: 11.074, carbs: 101.24 });
+});
+
+test('swapping a food for itself sets its amount and unit, in its place', () => {
+  const swapped = swapItem(riceAndBeef(), 'rice', RICE, 1, 'cup');
+  assert.deepEqual(swapped.items, [
+    { foodId: 'rice', qty: 1, unit: 'cup' },
+    { foodId: 'beef', qty: 150, unit: 'g' },
+  ]);
 });
 
 // --- Tags ---

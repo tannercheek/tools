@@ -25,10 +25,11 @@ export function localDate(date) {
 // --- Core doc ---
 
 // Every field starts empty (null) and is filled in on first launch (SPEC §5).
-// Weight isn't here: it always comes from the weight log (SPEC §3.1).
+// Weight isn't here: it always comes from the weight log (SPEC §3.1). Nor is age: it comes from
+// the birthday, and only a profile saved before birthdays has one.
 const EMPTY_PROFILE = Object.freeze({
   sex: null,
-  age: null,
+  birthDate: null,
   heightCm: null,
   activity: null,
   goal: null,
@@ -191,6 +192,14 @@ export function removeEntry(day, entryId) {
 // on another device, leaves it as it was.
 function withEntry(day, entryId, edit) {
   return { ...day, entries: (day.entries ?? []).map((entry) => (entry.id === entryId ? edit(entry) : entry)) };
+}
+
+// Swapping an added entry (SPEC §3.5): entry, a new snapshot made for the same slot, takes the old
+// one's place in entries, so the slot lists it where the old one was. It keeps the old one's slot
+// id and name, so it can't move to another slot. Nothing of the old one comes with it, an added
+// meal's ingredients included, and it has its own id, so Recent lists it like anything added.
+export function swapDayEntry(day, entryId, entry) {
+  return withEntry(day, entryId, ({ slotId, slotName }) => ({ ...entry, slotId, slotName }));
 }
 
 // An added meal changed for the day (SPEC §3.5): items, ingredients.js's list, become its

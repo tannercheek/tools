@@ -134,6 +134,7 @@ test('readBackup refuses an export with a doc missing or the wrong shape', async
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], schemaVersion: 2 } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], meals: {} } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], startedOn: 'yesterday' } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], profile: { ...docs[CORE_DOC_ID].profile, birthDate: '12/04/1990' } } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: 'percent' } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'calories' } } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'percent' } } },
@@ -183,6 +184,16 @@ test('export and import carry the macro split with the core doc', async () => {
   const store = freshStore();
   await importDocs(store, docs, TODAY, []);
   assert.deepEqual((await store.load(CORE_DOC_ID)).macroSplit, docs[CORE_DOC_ID].macroSplit);
+});
+
+test('export and import carry the birthday with the core doc', async () => {
+  const store = await storeWithData();
+  const core = await store.load(CORE_DOC_ID);
+  await store.save(CORE_DOC_ID, { ...core, profile: { ...core.profile, birthDate: '1990-04-12' } });
+  const docs = readBackup(asFile(await exportDocs(store, NOW)));
+  const imported = freshStore();
+  await importDocs(imported, docs, TODAY, []);
+  assert.equal((await imported.load(CORE_DOC_ID)).profile.birthDate, '1990-04-12');
 });
 
 test('an imported weight log with nothing ever saved becomes an empty one the log can add to', async () => {

@@ -1,6 +1,7 @@
 // List rows (DESIGN §8): emoji tile → text stack → one trailing control.
 
 import { icon } from '../icons.js';
+import { uniqueId } from './ids.js';
 
 const integer = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -104,8 +105,10 @@ function extrasLines(items) {
 // placeholderIcon, in place of emoji: the dashed placeholder row with that icon in its tile, like
 // Plan's empty slot. With neither, the row has no tile, like a weigh-in, since emoji only
 // identify foods and meals. muted: the title and numbers in secondary text, like a skipped slot
-// (DESIGN §8). With lines under the numbers, the tile sits at the top of the row.
-export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, lines = [], trailing, onClick, href, muted = false }) {
+// (DESIGN §8). With lines under the numbers, the tile sits at the top of the row. hiddenEyebrow:
+// on a row that is one button or link, an eyebrow shown above the row instead, like a Today or
+// Plan slot's name under rowGroup, kept as hidden text so the button still says which slot it is.
+export function listRow({ emoji, placeholderIcon, eyebrow, hiddenEyebrow, title, numbers, lines = [], trailing, onClick, href, muted = false }) {
   const row = document.createElement(href ? 'a' : onClick ? 'button' : 'li');
   row.className = placeholderIcon ? 'row row--placeholder' : 'row';
   if (muted) row.classList.add('row--muted');
@@ -113,6 +116,7 @@ export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, lines
   const text = document.createElement('span');
   text.className = 'row__text';
   if (eyebrow) text.append(textLine('row__eyebrow', eyebrow));
+  if (hiddenEyebrow && (onClick || href)) text.append(textLine('visually-hidden', hiddenEyebrow));
   text.append(textLine('row__title', title));
   if (typeof numbers === 'string') text.append(textLine('row__numbers', numbers));
   else if (numbers) text.append(numbersLine(numbers));
@@ -136,9 +140,9 @@ export function listRow({ emoji, placeholderIcon, eyebrow, title, numbers, lines
   return item;
 }
 
-// Ingredient row (DESIGN §8): a quantity field, then one trailing control: the meal editor's
-// remove button, or the Ingredients sheet's swap button. quantity: a numberField with no label of
-// its own; the food's name is its visible label, so tapping the name focuses it.
+// Ingredient row (DESIGN §8): a quantity field, then one trailing control, the swap button in the
+// meal editor and the Ingredients sheet. quantity: a numberField with no label of its own; the
+// food's name is its visible label, so tapping the name focuses it.
 // setNumbers(numbers) shows new totals, e.g. while typing.
 export function ingredientRow({ emoji, title, numbers, quantity, trailing }) {
   const row = document.createElement('li');
@@ -194,4 +198,23 @@ export function rowList(rows) {
   list.className = 'row-list';
   list.append(...rows);
   return list;
+}
+
+// Rows that belong together, as one card under an eyebrow, like a locked day's slot (DESIGN §8):
+// the rows share the card's outline, with a divider between them. rows: listRows with no eyebrow
+// of their own, since the group's names them. card: false leaves each row its own outline and
+// fill, for a group of one row that keeps its own look, like a Today or Plan slot (solid, dashed
+// or muted), with no second outline around it.
+export function rowGroup({ eyebrow, rows, card = true }) {
+  const heading = document.createElement('h2');
+  heading.className = 'row__eyebrow';
+  heading.id = uniqueId('row-group');
+  heading.textContent = eyebrow;
+  const list = rowList(rows);
+  if (card) list.classList.add('row-group__card');
+  const group = document.createElement('section');
+  group.className = 'row-group';
+  group.setAttribute('aria-labelledby', heading.id);
+  group.append(heading, list);
+  return group;
 }

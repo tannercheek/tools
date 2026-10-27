@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { ftInToCm, goalAdjustment, lbToKg, profileTargets, targets } from '../js/calc.js';
 import { createCoreDoc } from '../js/data.js';
 import {
+  ageText,
   heightCmText,
   heightFtInText,
   rateOption,
   rateOptions,
   readAmount,
+  readBirthDate,
   readHeightFtIn,
   readHeightPart,
   readPercent,
@@ -94,10 +96,10 @@ test('setUnits with no rate yet keeps none', () => {
 });
 
 test('setUnits keeps the doc’s other settings and profile fields', () => {
-  const doc = { ...setProfileField(createCoreDoc('2026-10-18'), 'age', 30), settings: { units: 'metric', other: 1 } };
+  const doc = { ...setProfileField(createCoreDoc('2026-10-18'), 'birthDate', '1990-04-12'), settings: { units: 'metric', other: 1 } };
   const next = setUnits(doc, 'imperial');
   assert.deepEqual(next.settings, { units: 'imperial', other: 1 });
-  assert.equal(next.profile.age, 30);
+  assert.equal(next.profile.birthDate, '1990-04-12');
   assert.equal(next.meals, doc.meals);
 });
 
@@ -105,7 +107,7 @@ test('setProfileField changes one field and leaves the doc passed in alone', () 
   const doc = createCoreDoc('2026-10-18');
   const next = setProfileField(doc, 'sex', 'female');
   assert.equal(next.profile.sex, 'female');
-  assert.equal(next.profile.age, null);
+  assert.equal(next.profile.birthDate, null);
   assert.equal(doc.profile.sex, null);
   assert.equal(next.foods, doc.foods);
 });
@@ -199,10 +201,23 @@ test('a height needs both parts to be numbers, and to come to something', () => 
   }
 });
 
-test('ages and heights in cm must be amounts above 0', () => {
+test('heights in cm must be amounts above 0', () => {
   assert.equal(readAmount('30'), 30);
   assert.equal(readAmount(' 178.5 '), 178.5);
   for (const text of ['', '0', '-1', '30 years', 'abc']) assert.equal(readAmount(text), null, JSON.stringify(text));
+});
+
+test('a birthday must be a date, today or earlier', () => {
+  assert.equal(readBirthDate('1990-04-12', '2026-10-25'), '1990-04-12');
+  assert.equal(readBirthDate('2026-10-25', '2026-10-25'), '2026-10-25');
+  for (const text of ['', '2026-10-26', '12/04/1990', '1990-4-12', null, undefined]) {
+    assert.equal(readBirthDate(text, '2026-10-25'), null, JSON.stringify(text));
+  }
+});
+
+test('the age under the birthday reads as years old', () => {
+  assert.equal(ageText(35), '35 years old');
+  assert.equal(ageText(1), '1 year old');
 });
 
 // --- Targets ---

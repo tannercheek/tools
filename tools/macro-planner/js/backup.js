@@ -81,6 +81,7 @@ function isCoreDoc(doc) {
     doc.schemaVersion === 1 &&
     DATE_PATTERN.test(doc.startedOn) &&
     [doc.profile, doc.overrides, doc.settings, doc.template].every(isObject) &&
+    (doc.profile.birthDate == null || DATE_PATTERN.test(doc.profile.birthDate)) &&
     [doc.slots, doc.foods, doc.meals].every(Array.isArray) &&
     isMacroSplit(doc.macroSplit)
   );

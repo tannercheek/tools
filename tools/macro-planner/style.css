@@ -392,6 +392,15 @@ html:has(.tabbar:not([hidden])) {
   color: var(--color-text-2);
 }
 
+/* Under the birthday: the age it gives today ("35 years old"). */
+.settings__age {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  color: var(--color-text-2);
+  font-variant-numeric: var(--numeric);
+}
+
 /* Macro split by percent (DESIGN §10): Protein, Fat and Carbs side by side, then one line with
    their total, which becomes the error message (.field__error) when it isn't 100. */
 .settings__split {
@@ -494,7 +503,7 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--space-2);
 }
 
-/* A locked day's entries, then its Add. */
+/* The day's slots, each a card under its name, or a locked day's slot cards, then its Add. */
 .today__slots {
   display: flex;
   flex-direction: column;
@@ -508,6 +517,18 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--inline-gap);
 }
 
+/* What's been added, under its heading, then Add to this slot: spaced like Portion's label and
+   control, so the three read as one group. */
+.slot-actions__added {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.slot-actions__heading {
+  margin: 0;
+}
+
 /* Ingredients sheet (DESIGN §8): the only ingredient rows in a sheet. A portion makes amounts
    like 262.5 g, which the meal editor's field has no room for. */
 .sheet__panel .row--ingredient .input {
@@ -516,7 +537,9 @@ html:has(.tabbar:not([hidden])) {
 
 /* ---------- Plan (SPEC §3.4) ---------- */
 
+/* The totals card, then the slots, each a card under its name. */
 .plan,
+.plan__slots,
 .meal-picker {
   display: flex;
   flex-direction: column;
