@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal, ingredientsTotals, mealTotals } from '../js/calc.js';
+import { dayPlanTotal, ingredientsTotals, mealTotals } from '../js/calc.js';
 import {
   addEntry,
   createCoreDoc,
@@ -12,8 +12,9 @@ import {
   repeatEntry,
   resetEntryIngredients,
   setEntryIngredients,
+  setEntryPortion,
 } from '../js/data.js';
-import { addIngredient, mealIngredients, setIngredientQty, swapIngredient } from '../js/ingredients.js';
+import { addIngredient, mealIngredients, scaleIngredients, setIngredientQty, swapIngredient } from '../js/ingredients.js';
 import { lockPastDays } from '../js/lock-in.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
 
@@ -90,7 +91,7 @@ test('an edit makes the new list’s total the entry’s numbers and keeps the l
   );
 
   // The day's total moves with it, and nothing else does.
-  assertTotals(dayTotal(edited, [], getFood), { kcal: 300 + 442, protein: 40 + 24, fat: 5 + 25, carbs: 20 + 31.5 });
+  assertTotals(dayPlanTotal(edited, []), { kcal: 300 + 442, protein: 40 + 24, fat: 5 + 25, carbs: 20 + 31.5 });
   assert.equal(shake, day.entries[0]);
   assert.equal(day.entries[1], sandwich, 'the day passed in is left as it was');
   assert.equal(Object.hasOwn(sandwich, 'originalIngredients'), false);
@@ -113,7 +114,7 @@ test('reset gives back the ingredients and numbers exactly as added, and drops t
   // The whole entry, as it was added: not within a hair, but the same numbers.
   assert.deepEqual(reset.entries[1], sandwich);
   assert.equal(Object.hasOwn(reset.entries[1], 'originalIngredients'), false);
-  assert.deepEqual(dayTotal(reset, [], getFood), dayTotal(day, [], getFood));
+  assert.deepEqual(dayPlanTotal(reset, []), dayPlanTotal(day, []));
 
   // An entry that was never edited has nothing to reset.
   assert.deepEqual(resetEntryIngredients(day, sandwich.id).entries, day.entries);
@@ -168,4 +169,97 @@ test('food and quick numbers added again have no ingredients', () => {
   for (const entry of [foodEntry(DINNER, RYE, 2), quickEntry(DINNER, SHAKE, 'Shake')]) {
     assert.equal(Object.hasOwn(repeatEntry(LUNCH, entry), 'ingredients'), false, entry.source);
   }
+});
+
+// --- Portion ---
+
+test('a portion makes the entry’s numbers its ingredients’ total at the portion, the ingredients left at 1×', () => {
+  const { day, sandwich } = dayWithSandwich();
+  const portioned = setEntryPortion(day, sandwich.id, 1.5);
+  const [shake, entry] = portioned.entries;
+
+  assert.equal(entry.portion, 1.5);
+  assert.deepEqual(entry.ingredients, sandwich.ingredients);
+  assertTotals(entry, { kcal: 678, protein: 30, fat: 30, carbs: 70.5 });
+  assert.equal(Object.hasOwn(entry, 'originalIngredients'), false, 'a portion isn’t an edit');
+  assert.equal(entry.id, sandwich.id);
+  assert.equal(entry.slotId, 'dinner-id');
+
+  // The rings move with it, and nothing else does.
+  assertTotals(dayPlanTotal(portioned, []), { kcal: 300 + 678, protein: 40 + 30, fat: 5 + 30, carbs: 20 + 70.5 });
+  assert.equal(shake, day.entries[0]);
+  assert.equal(day.entries[1], sandwich, 'the day passed in is left as it was');
+
+  // Back to 1× is the meal as added.
+  assert.deepEqual(numbersOf(setEntryPortion(portioned, sandwich.id, 1).entries[1]), numbersOf(sandwich));
+  // A second portion replaces the first rather than multiplying it.
+  assertTotals(setEntryPortion(portioned, sandwich.id, 0.5).entries[1], { kcal: 226, protein: 10, fat: 10, carbs: 23.5 });
+});
+
+test('a portion on an edited meal scales the edited list', () => {
+  const { day, sandwich } = dayWithSandwich();
+  const [, entry] = setEntryPortion(setEntryIngredients(day, sandwich.id, EDITED), sandwich.id, 2).entries;
+  assert.deepEqual(entry.ingredients, EDITED);
+  assert.deepEqual(entry.originalIngredients, sandwich.ingredients);
+  assertTotals(entry, { kcal: 884, protein: 48, fat: 50, carbs: 63 });
+});
+
+test('editing a portioned meal keeps the amounts as eaten and sets it back to 1×', () => {
+  const { day, sandwich } = dayWithSandwich();
+  const portioned = setEntryPortion(day, sandwich.id, 1.5);
+  // The Ingredients sheet opens at the portion: 3 eggs, 3 slices, 15 g butter.
+  const shown = scaleIngredients(portioned.entries[1].ingredients, 1.5);
+  assert.deepEqual(shown.map(({ qty }) => qty), [3, 3, 15]);
+
+  const edited = setEntryIngredients(portioned, sandwich.id, setIngredientQty(shown, 'egg', 4));
+  const [, entry] = edited.entries;
+  assert.equal(Object.hasOwn(entry, 'portion'), false, 'back to 1×');
+  assert.deepEqual(entry.ingredients.map(({ qty }) => qty), [4, 3, 15]);
+  // 4 eggs (280 / 24 / 20 / 2) + 3 slices (360 / 12 / 3 / 69) + 15 g butter (108 / 0 / 12 / 0).
+  assertTotals(entry, { kcal: 748, protein: 36, fat: 35, carbs: 71 });
+  assert.deepEqual(entry.originalIngredients, sandwich.ingredients, 'the list as added, at 1×');
+});
+
+test('reset goes back to the meal as added, at 1×', () => {
+  const { day, sandwich } = dayWithSandwich();
+  // A portion alone.
+  const portioned = setEntryPortion(day, sandwich.id, 1.5);
+  assert.deepEqual(resetEntryIngredients(portioned, sandwich.id).entries[1], sandwich);
+  // An edit, then a portion on top.
+  const both = setEntryPortion(setEntryIngredients(day, sandwich.id, EDITED), sandwich.id, 2);
+  assert.deepEqual(resetEntryIngredients(both, sandwich.id).entries[1], sandwich);
+});
+
+test('a portion that isn’t above 0, or on an entry with no ingredients, is refused', () => {
+  const { day, sandwich } = dayWithSandwich();
+  for (const portion of [0, -1, Number.NaN, Infinity]) {
+    assert.throws(() => setEntryPortion(day, sandwich.id, portion), RangeError, String(portion));
+  }
+  const shake = day.entries[0];
+  assert.throws(() => setEntryPortion(day, shake.id, 1.5), RangeError, 'quick numbers');
+  const rye = foodEntry(DINNER, RYE, 2);
+  assert.throws(() => setEntryPortion(addEntry(day, rye), rye.id, 1.5), RangeError, 'a food');
+  const { ingredients, ...older } = sandwich;
+  const olderDay = { ...day, entries: [day.entries[0], older] };
+  assert.throws(() => setEntryPortion(olderDay, older.id, 1.5), RangeError, 'an older meal');
+  // One removed on another device leaves the day as it was.
+  assert.deepEqual(setEntryPortion(day, 'gone', 1.5).entries, day.entries);
+});
+
+test('Recent lists a portioned meal as added, and adding it again keeps its portion', () => {
+  const doc = createCoreDoc('2026-10-12');
+  const { day, sandwich } = dayWithSandwich();
+  const daysDoc = lockPastDays({ '2026-10-17': setEntryPortion(day, sandwich.id, 1.5) }, TODAY, doc, []);
+  const locked = daysDoc['2026-10-17'].entries.find((entry) => entry.id === sandwich.id);
+  assert.equal(locked.portion, 1.5, 'locked in as it was');
+  assert.equal(Object.hasOwn(locked, 'planned'), false);
+
+  const recent = recentEntries(daysDoc, TODAY).find(({ entry }) => entry.label === 'Breakfast sandwich');
+  assert.ok(recent, 'listed, since it was added');
+  const again = repeatEntry(LUNCH, recent.entry);
+  assert.equal(again.portion, 1.5);
+  assert.deepEqual(again.ingredients, sandwich.ingredients);
+  assert.deepEqual(numbersOf(again), numbersOf(locked));
+  // So its Ingredients sheet opens at 1.5×, and a new portion scales the meal as added.
+  assertTotals(setEntryPortion(addEntry(emptyDay(), again), again.id, 1).entries[0], SANDWICH_TOTALS);
 });

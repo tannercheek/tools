@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal } from '../js/calc.js';
+import { dayPlanTotal } from '../js/calc.js';
 import {
   OTHER,
   addEntry,
@@ -13,9 +13,9 @@ import {
   setEntryIngredients,
   swapDayEntry,
 } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { mealIngredients, setIngredientQty } from '../js/ingredients.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
-import { daySlots } from '../js/slots.js';
 
 // Float math: compare to within a hair, not exactly.
 function assertTotals(actual, expected, label = '') {
@@ -113,9 +113,9 @@ test('an edited added meal swapped for a food leaves none of its ingredients beh
 test('the day’s total moves by the difference', () => {
   const doc = createCoreDoc('2026-10-15');
   const { day, banana } = lunchDay();
-  const before = dayTotal(day, daySlots(doc, day), getFood);
+  const before = dayPlanTotal(day, dayPlan(doc, day, getFood));
   const swapped = swapDayEntry(day, banana.id, foodEntry(LUNCH, APPLE, 2));
-  const after = dayTotal(swapped, daySlots(doc, swapped), getFood);
+  const after = dayPlanTotal(swapped, dayPlan(doc, swapped, getFood));
   assertTotals(after, { kcal: before.kcal + 80, protein: before.protein - 1, fat: before.fat, carbs: before.carbs + 23 });
 });
 

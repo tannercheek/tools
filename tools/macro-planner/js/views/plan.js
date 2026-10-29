@@ -5,17 +5,16 @@
 // named and ordered in Settings.
 
 import { loadBundledFoods } from '../bundled-foods.js';
-import { dayTotal, leftForFlex, mealTotals, profileTargets } from '../calc.js';
-import { CoreDocUnavailableError, createWeightLog, currentWeight, emptyDay, localDate, updateCoreDoc } from '../data.js';
+import { foodTotals, leftForFlex, mealTotals, profileTargets, templateTotal } from '../calc.js';
+import { CoreDocUnavailableError, createWeightLog, currentWeight, localDate, updateCoreDoc } from '../data.js';
 import { miniRings } from '../rings.js';
 import { hashFor, mealRoute } from '../routes.js';
 import { foodLookup } from '../saved-meals.js';
-import { addSlotFood, daySlots, removeSlotFood, setSlotBudget, setSlotMeal } from '../slots.js';
+import { addPlannedFood, addPlannedMeal, planSlots, removePlannedItem, setSlotBudget } from '../slots.js';
 import { CORE_DOC_ID } from '../store.js';
 import { textLink } from '../ui/buttons.js';
 import { formError } from '../ui/inputs.js';
 import { listRow, rowGroup } from '../ui/row.js';
-import { addFoodSheet } from './add-food-sheet.js';
 import { budgetSheet } from './budget-sheet.js';
 import { newMealSheet } from './new-meal-sheet.js';
 import { planSlotSheet } from './plan-slot-sheet.js';
@@ -112,17 +111,20 @@ export function render(container, { store }) {
     getFood = foodLookup(foods);
   }
 
-  // What a planned slot plans, as Today's slot rows list what a slot holds (SPEC §3.4, §3.6): the
-  // meal first, then its foods.
-  function plannedItems(plan) {
-    const meal = plan.meal ? [{ emoji: plan.meal.emoji, label: plan.meal.name, ...mealTotals(plan.meal, getFood) }] : [];
-    const planned = plan.foods.map(({ emoji, name, kcal, protein, fat, carbs }) => ({ emoji, label: name, kcal, protein, fat, carbs }));
-    return [...meal, ...planned];
+  // What a planned slot plans, as Today's slot rows list what a slot holds (SPEC §3.4, §3.6): its
+  // items in order, a meal at 1× and a food at its amount. items: slots.js's planSlots' items.
+  function plannedItems(items) {
+    return items.map((item) =>
+      item.meal
+        ? { emoji: item.meal.emoji, label: item.meal.name, ...mealTotals(item.meal, getFood) }
+        : { emoji: item.food.emoji, label: item.food.name, ...foodTotals(item.food, item.qty, item.unit) },
+    );
   }
 
   // A planned slot shows what it plans like a Today slot: one thing as itself, more than one as
-  // "N items". A flex slot is the dashed empty slot (DESIGN §8), showing its pinned budget if it
-  // has one. The row button keeps the name as hidden text, so it still says which slot it is.
+  // "N items", in order. A flex slot is the dashed empty slot (DESIGN §8), showing its pinned
+  // budget if it has one. The row button keeps the name as hidden text, so it still says which
+  // slot it is.
   function slotGroup(plan) {
     const onClick = () => choose(plan);
     const eyebrow = plan.flex ? `${plan.name} · Flex` : plan.name;
@@ -134,22 +136,16 @@ export function render(container, { store }) {
           numbers: plan.budget ?? undefined,
           onClick,
         })
-      : itemsRow(eyebrow, plannedItems(plan), onClick);
+      : itemsRow(eyebrow, plannedItems(plan.items), onClick);
     rows.set(plan.id, item.firstElementChild);
     return rowGroup({ eyebrow, rows: [item], card: false });
   }
 
-  // The template is a day with nothing changed or added.
-  function templatePlans() {
-    return daySlots(doc, emptyDay(), getFood);
-  }
-
-  // Redrawn on every change, so the totals follow a slot's new meal, foods or budget straight
-  // away: the template's meals, planned foods and pinned budgets.
+  // Redrawn on every change, so the totals follow a slot's new items or budget straight away.
   function show() {
     rows = new Map();
-    const plans = templatePlans();
-    totals.show(dayTotal(emptyDay(), plans, getFood), targets, plans.some((plan) => plan.flex));
+    const plans = planSlots(doc, getFood);
+    totals.show(templateTotal(plans, getFood), targets, plans.some((plan) => plan.flex));
     slotsArea.replaceChildren(...plans.map(slotGroup));
   }
 
@@ -158,15 +154,13 @@ export function render(container, { store }) {
     doc = change(doc);
     save(change);
     show();
-    return templatePlans().find((plan) => plan.id === slotId);
+    return planSlots(doc, getFood).find((plan) => plan.id === slotId);
   }
 
-  // Custom foods are read again after Add food, since one may have been made in its sheet.
-  async function addFood(slotId) {
-    const picked = await addFoodSheet({ foods, store, submitLabel: 'Add to slot' });
+  // Custom foods are read again after a pick, since one may have been made in the food picker.
+  async function addFood(slotId, food, qty, unit) {
     useFoods((await store.load(CORE_DOC_ID)).foods ?? []);
-    if (!picked) return null;
-    return apply(slotId, (d) => addSlotFood(d, slotId, picked.food, picked.qty, picked.unit));
+    return apply(slotId, (d) => addPlannedFood(d, slotId, food, qty, unit));
   }
 
   // Focus goes back to the slot's new row, once anything has changed.
@@ -175,15 +169,20 @@ export function render(container, { store }) {
     const result = await planSlotSheet({
       plan,
       meals: doc.meals ?? [],
+      foods,
       getFood,
-      addFood: async () => {
-        const next = await addFood(plan.id);
-        changed ||= Boolean(next);
-        return next;
-      },
-      removeFood: (foodId) => {
+      store,
+      addMeal: (mealId) => {
         changed = true;
-        return apply(plan.id, (d) => removeSlotFood(d, plan.id, foodId));
+        return apply(plan.id, (d) => addPlannedMeal(d, plan.id, mealId));
+      },
+      addFood: async (food, qty, unit) => {
+        changed = true;
+        return addFood(plan.id, food, qty, unit);
+      },
+      removeItem: (itemId) => {
+        changed = true;
+        return apply(plan.id, (d) => removePlannedItem(d, plan.id, itemId));
       },
     });
     if (result?.buildMeal) {
@@ -194,10 +193,12 @@ export function render(container, { store }) {
     if (result?.pinBudget) {
       const budget = doc.template?.[plan.id]?.budget ?? null;
       const pinned = await budgetSheet({ slot: plan, budget });
-      if (pinned) apply(plan.id, (d) => setSlotBudget(d, plan.id, pinned.budget));
-      else if (!changed) return;
-    } else if (result) apply(plan.id, (d) => setSlotMeal(d, plan.id, result.mealId));
-    else if (!changed) return;
+      if (pinned) {
+        apply(plan.id, (d) => setSlotBudget(d, plan.id, pinned.budget));
+        changed = true;
+      }
+    }
+    if (!changed) return;
     rows.get(plan.id).focus();
   }
 

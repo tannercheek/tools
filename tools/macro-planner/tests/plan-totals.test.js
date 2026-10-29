@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal, flexGap, leftForFlex } from '../js/calc.js';
+import { dayPlanFlexGap, leftForFlex, templateTotal as realTemplateTotal } from '../js/calc.js';
 import { createCoreDoc, emptyDay } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
-import { addSlot, createSlot, daySlots, setSlotBudget, setSlotMeal } from '../js/slots.js';
+import { addPlannedMeal, addSlot, createSlot, planSlots, replacePlannedItem, setSlotBudget, slotItems } from '../js/slots.js';
 
 // Float math: compare to within a hair, not exactly.
 function assertTotals(actual, expected) {
@@ -39,14 +40,14 @@ const BUDGET = { kcal: 700, protein: 50, fat: 20, carbs: 80 };
 function plannedDoc() {
   let doc = { ...createCoreDoc('2026-10-15'), meals: [OATS, RICE_BEEF, RICE_BOWL] };
   const [breakfast, lunch] = doc.slots;
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
-  return setSlotMeal(doc, lunch.id, RICE_BEEF.id);
+  doc = addPlannedMeal(doc, breakfast.id, OATS.id);
+  return addPlannedMeal(doc, lunch.id, RICE_BEEF.id);
 }
 
 const slotIds = (doc) => Object.fromEntries(doc.slots.map((slot) => [slot.name, slot.id]));
 
-// What Plan's card adds up: the template on a day with nothing changed or added.
-const templateTotal = (doc) => dayTotal(emptyDay(), daySlots(doc, emptyDay()), getFood);
+// What Plan's card adds up: the template's planned items and pinned budgets.
+const templateTotal = (doc) => realTemplateTotal(planSlots(doc, getFood), getFood);
 
 // The figure as it shows: { kcal: 1541, ... } when under, or { kcal: -259, ... } for 259 over.
 function leftFor(doc, targets = TARGETS) {
@@ -69,13 +70,15 @@ test('a pinned flex budget counts in the template’s total', () => {
 test('a budget left on a slot that now plans a meal doesn’t count', () => {
   const doc = plannedDoc();
   const { Dinner } = slotIds(doc);
-  const planned = setSlotMeal(setSlotBudget(doc, Dinner, BUDGET), Dinner, RICE_BOWL.id);
+  const planned = addPlannedMeal(setSlotBudget(doc, Dinner, BUDGET), Dinner, RICE_BOWL.id);
   assertTotals(templateTotal(planned), { kcal: 1449, protein: 85.9, fat: 31.1, carbs: 197.4 });
 });
 
 test('changing a slot’s meal changes the total', () => {
   const doc = plannedDoc();
-  const swapped = setSlotMeal(doc, slotIds(doc).Lunch, RICE_BOWL.id);
+  const lunchId = slotIds(doc).Lunch;
+  const [item] = slotItems(doc.template[lunchId]);
+  const swapped = replacePlannedItem(doc, lunchId, item.id, { mealId: RICE_BOWL.id });
   assertTotals(templateTotal(swapped), { kcal: 814, protein: 41.9, fat: 8, carbs: 141.4 });
 });
 
@@ -127,7 +130,7 @@ test('left for flex matches what an open flex slot shows on Today with no change
   const doc = addSlot(plannedDoc(), createSlot('Snack'));
   const withBudget = setSlotBudget(doc, slotIds(doc).Snack, BUDGET);
   const day = emptyDay();
-  const gap = flexGap(TARGETS, day, daySlots(withBudget, day), slotIds(withBudget).Dinner, getFood);
+  const gap = dayPlanFlexGap(TARGETS, day, dayPlan(withBudget, day, getFood), slotIds(withBudget).Dinner);
   assert.deepEqual(leftForFlex(TARGETS, templateTotal(withBudget)), gap);
 });
 

@@ -78,14 +78,16 @@ export function segmentedControl({ label, options, value = null, showLabel = fal
 
 // A segmented control over panes, one showing at a time, like the add and swap sheets' (DESIGN
 // §8). panes: { [option value]: () => element }. Each pane is built when first shown and kept, so
-// switching back finds it as it was left. value: the option to open on. Returns the control and
-// the area its panes show in, as { control, pane }, for the caller to lay out.
-export function segmentedPanes({ label, options, value, panes }) {
+// switching back finds it as it was left. value: the option to open on. onChange: called with
+// the option shown, on opening too. Returns the control and the area its panes show in, as
+// { control, pane }, for the caller to lay out.
+export function segmentedPanes({ label, options, value, panes, onChange }) {
   const built = new Map();
   const pane = document.createElement('div');
   function show(next) {
     if (!built.has(next)) built.set(next, panes[next]());
     pane.replaceChildren(built.get(next));
+    onChange?.(next);
   }
   const control = segmentedControl({ label, options, value, onChange: show });
   show(value);

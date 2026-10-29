@@ -1,7 +1,6 @@
 // The Ingredients sheet (SPEC §3.5, DESIGN §8): a slot's meal, or a meal added to a slot, changed
 // for that day only. The meal editor's totals card, a row per food with its amount, Add food, then
-// Reset to original meal once something has changed, and for an added meal, Swap meal and Remove
-// from slot.
+// Reset to original meal once something has changed.
 // Each change is passed on as it's made, so there's no Save button. A row's swap button opens a
 // sheet to swap its food for another, or to remove it, which the meal editor shares.
 
@@ -57,16 +56,14 @@ export async function swapIngredientSheet({ item, canRemove, foods, store }) {
   return picked;
 }
 
-// name: the meal's name, for the title. items: the ingredients the slot eats now, at its portion
-// (ingredients.js's slotIngredients). edited: whether they're already the day's own, so Reset
-// shows from the start. foods: bundled and custom foods together, for Add food and a swap's
-// search. getFood: saved-meals.js's foodLookup over them, for the units an ingredient's amount
-// can be switched to. store: the app's store, for a custom food made from either. onChange(items)
-// runs with the whole new list after each change, for the caller to save. added: a meal added to
-// a slot, which ends in Swap meal and Remove from slot. Resolves to { action: 'reset' } when Reset
-// to original meal is tapped, { action: 'swap' } for Swap meal, or { action: 'remove' } for
-// Remove from slot, for the caller to apply, open the swap sheet or confirm, or to null.
-export async function ingredientsSheet({ name, items, edited, foods, getFood, store, onChange, added = false }) {
+// name: the meal's name, for the title. items: the ingredients the slot eats now, at its portion.
+// edited: whether they're already the day's own, so Reset shows from the start. foods: bundled
+// and custom foods together, for Add food and a swap's search. getFood: saved-meals.js's
+// foodLookup over them, for the units an ingredient's amount can be switched to. store: the
+// app's store, for a custom food made from either. onChange(items)
+// runs with the whole new list after each change, for the caller to save. Resolves to
+// { action: 'reset' } when Reset to original meal is tapped, for the caller to apply, or to null.
+export async function ingredientsSheet({ name, items, edited, foods, getFood, store, onChange }) {
   let current = items;
   let picked = null;
   let sheet;
@@ -82,12 +79,6 @@ export async function ingredientsSheet({ name, items, edited, foods, getFood, st
   const addFood = secondaryButton('Add food', { block: true, onClick: add });
   const reset = secondaryButton('Reset to original meal', { block: true, onClick: () => choose('reset') });
   reset.hidden = !edited;
-  const entryActions = added
-    ? [
-        secondaryButton('Swap meal', { block: true, onClick: () => choose('swap') }),
-        secondaryButton('Remove from slot', { block: true, onClick: () => choose('remove') }),
-      ]
-    : [];
 
   // Shown straight away, then passed on to be saved.
   function change(next) {
@@ -173,7 +164,7 @@ export async function ingredientsSheet({ name, items, edited, foods, getFood, st
   }
 
   showList();
-  sheet = openSheet({ title: `${name} · Ingredients`, content: [totals.element, list, addFood, reset, ...entryActions] });
+  sheet = openSheet({ title: `${name} · Ingredients`, content: [totals.element, list, addFood, reset] });
   await sheet.closed;
   return picked;
 }

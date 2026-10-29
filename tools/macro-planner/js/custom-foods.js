@@ -1,7 +1,10 @@
 // Custom foods (SPEC §3.2): reading the form, and the core doc changes that add, edit
 // and delete them. Pure: no DOM, so it can be tested in Node.
 
+import { slotItems } from './slots.js';
+
 const NUMBER_KEYS = ['kcal', 'protein', 'fat', 'carbs'];
+const GRAMS = 'g';
 
 // An amount as typed: digits with an optional decimal point ("34", "34.5", ".5").
 // Anything else is null, including commas, signs and blanks.
@@ -42,9 +45,27 @@ export function readFoodForm(values) {
   return { fields: { name, serving: { qty, unit }, emoji: values.emoji, ...numbers }, errors };
 }
 
-// fields: readFoodForm's fields.
+// A custom food's units (SPEC §3.2): `grams`, the serving's weight, above 0, and `portions`,
+// each a unit named once and never "g" or the serving's own, since those already apply without
+// being added. A serving already counted in g needs no weight of its own, since it's already
+// known from the serving's quantity. Left alone unless the caller sets `grams` or `portions`
+// itself, so a food that's never had either keeps its old shape exactly.
+function sanitizeUnits(food) {
+  if (food.grams === undefined && food.portions === undefined) return food;
+  const grams = food.grams > 0 ? food.grams : food.serving.unit === GRAMS ? food.serving.qty : undefined;
+  if (!grams) return { ...food, grams: undefined, portions: [] };
+  const seen = new Set([GRAMS, food.serving.unit]);
+  const portions = (food.portions ?? []).filter((portion) => {
+    if (seen.has(portion.unit)) return false;
+    seen.add(portion.unit);
+    return true;
+  });
+  return { ...food, grams, portions };
+}
+
+// fields: readFoodForm's fields, plus optionally `grams` and `portions` (SPEC §3.2).
 export function createCustomFood(fields) {
-  return { id: `custom-${crypto.randomUUID()}`, ...fields, custom: true, archived: false };
+  return sanitizeUnits({ id: `custom-${crypto.randomUUID()}`, ...fields, custom: true, archived: false });
 }
 
 // Each change returns a new core doc and leaves the one passed in as it was.
@@ -55,15 +76,39 @@ export function addCustomFood(doc, food) {
 
 // The food keeps its id, so the meals that use it pick up the change.
 export function updateCustomFood(doc, id, fields) {
-  return { ...doc, foods: (doc.foods ?? []).map((food) => (food.id === id ? { ...food, ...fields } : food)) };
+  return {
+    ...doc,
+    foods: (doc.foods ?? []).map((food) => (food.id === id ? sanitizeUnits({ ...food, ...fields }) : food)),
+  };
 }
 
-// In use: in a saved meal, or planned in a slot (SPEC §3.4).
+// The units a custom food's saved meals' items and the template's planned foods (`slotItems`,
+// 14.11) are counted in (SPEC §3.2), so a unit a meal or a plan needs isn't removed from under it.
+export function unitsInUse(foodId, doc) {
+  const unitsOf = (items = []) =>
+    items.filter((item) => item.foodId === foodId && item.unit).map((item) => item.unit);
+  const mealUnits = (doc.meals ?? []).flatMap((meal) => unitsOf(meal.items));
+  const slotUnits = Object.values(doc.template ?? {}).flatMap((slot) => unitsOf(slotItems(slot)));
+  return [...new Set([...mealUnits, ...slotUnits])];
+}
+
+// The name of the first saved meal or slot that counts a food in a unit (SPEC §3.2), for the
+// custom food form's "can't remove, in use" line. null if nothing does.
+export function unitUsedBy(foodId, unit, doc) {
+  const uses = (items = []) => items.some((item) => item.foodId === foodId && item.unit === unit);
+  const meal = (doc.meals ?? []).find((meal) => uses(meal.items));
+  if (meal) return meal.name;
+  const slot = (doc.slots ?? []).find((slot) => uses(slotItems(doc.template?.[slot.id])));
+  return slot?.name ?? null;
+}
+
+// In use: in a saved meal, or planned in a slot (SPEC §3.4), as items or as a slot saved before
+// slots held items.
 export function isFoodInUse(doc, id) {
   const uses = (items = []) => items.some((item) => item.foodId === id);
   return (
     (doc.meals ?? []).some((meal) => uses(meal.items)) ||
-    Object.values(doc.template ?? {}).some((slot) => uses(slot.foods))
+    Object.values(doc.template ?? {}).some((slot) => uses(slotItems(slot)))
   );
 }
 

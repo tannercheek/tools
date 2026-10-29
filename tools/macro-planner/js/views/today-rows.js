@@ -1,29 +1,37 @@
-// Today's slot rows (DESIGN §8): a planned meal, an open flex slot and a filled one, each under
-// the slot's name and any change, its eyebrow, which today.js puts above the row. A slot swapped
-// to a food or quick numbers, and a planned slot with anything added, show like a filled one, and
-// so does Other, after the slots. A planned slot's planned foods are among what it holds (SPEC
-// §3.6). A row that's a button keeps its eyebrow as hidden text, so it still says which slot it
-// is. Plan's planned slots show what they plan with itemsRow too.
+// Today's slot rows (DESIGN §8): a planned slot, an open flex slot and a filled one, each under
+// the slot's name and any change, its eyebrow, which today.js puts above the row. Each slot is one
+// of day-plan.js's dayPlan: what it holds is its planned items after the day's changes, then
+// what's been added (SPEC §3.6). A filled flex slot shows what's in it the same way, and so does
+// Other, after the slots. A row that's a button keeps its eyebrow as hidden text, so it still says
+// which slot it is. Plan's planned slots show what they plan with itemsRow too.
 
-import { entriesTotals, slotMealTotals } from '../calc.js';
+import { entriesTotals } from '../calc.js';
 import { DEFAULT_EMOJI, OTHER } from '../data.js';
-import { amountText, slotIngredients } from '../ingredients.js';
+import { amountText, scaleIngredients } from '../ingredients.js';
 import { listRow, rowActionIcon } from '../ui/row.js';
 
 const portionFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 const integer = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
-// The slot's name and any change (DESIGN §8): "Lunch · Skipped", "Breakfast · Swapped · Edited · 1.5×".
-// A slot planning only foods isn't flex, so it's just its name.
-export function slotEyebrow(plan) {
-  const marks = [plan.name];
-  if (plan.flex) marks.push('Flex');
-  else if (plan.skipped) marks.push('Skipped');
-  else {
-    if (plan.swapped) marks.push('Swapped');
-    if (plan.edited) marks.push('Edited');
-    if (plan.portion !== 1) marks.push(`${portionFormat.format(plan.portion)}×`);
-  }
+// A planned item's changes for the day (SPEC §3.5), in the order swapped, edited, portion:
+// ["Swapped", "Edited", "1.5×"]. item: one of dayPlan's day items. The slot actions sheet's item
+// rows show them too.
+export function itemMarks(item) {
+  const marks = [];
+  if (item.swapped) marks.push('Swapped');
+  if (item.originalIngredients) marks.push('Edited');
+  if (item.source === 'meal' && item.portion !== 1) marks.push(`${portionFormat.format(item.portion)}×`);
+  return marks;
+}
+
+// The slot's name and any change (SPEC §3.6, DESIGN §8): "Lunch · Skipped", "Dinner · Flex", and,
+// while it plans one item, that item's: "Breakfast · Swapped · Edited · 1.5×". With several, each
+// item's line shows its own. slot: one of dayPlan's.
+export function slotEyebrow(slot) {
+  const marks = [slot.name];
+  if (slot.flex) marks.push('Flex');
+  else if (slot.skipped) marks.push('Skipped');
+  else if (slot.items.length === 1) marks.push(...itemMarks(slot.items[0]));
   return marks.join(' · ');
 }
 
@@ -35,27 +43,22 @@ function ingredientLines(items) {
 
 // Something added to a slot, as one of the things the slot holds: { emoji, label, kcal, protein,
 // fat, carbs, ingredients }, its line under the row and its share of the slot's total. An added
-// meal changed since it was added (it has originalIngredients) lists its ingredients as they are
-// in its Ingredients sheet (SPEC §3.6, DESIGN §8 edited extra). The rest stay one line.
-function entryItem({ emoji, label, kcal, protein, fat, carbs, ingredients, originalIngredients }) {
-  return { emoji, label, kcal, protein, fat, carbs, ingredients: originalIngredients ? ingredientLines(ingredients) : [] };
+// meal changed since it was added (it has originalIngredients) lists its ingredients at its
+// portion, as they are in its Ingredients sheet (SPEC §3.6, DESIGN §8 edited extra). The rest stay
+// one line.
+function entryItem({ emoji, label, kcal, protein, fat, carbs, ingredients, originalIngredients, portion = 1 }) {
+  const edited = originalIngredients ? ingredientLines(scaleIngredients(ingredients, portion)) : [];
+  return { emoji, label, kcal, protein, fat, carbs, ingredients: edited };
 }
 
-// A planned food (SPEC §3.4), an ingredient snapshot at its own amount, as one of the things the
-// slot holds. It's one line, like an added food.
-function foodItem({ emoji, name, kcal, protein, fat, carbs }) {
-  return { emoji, label: name, kcal, protein, fat, carbs, ingredients: [] };
-}
-
-// The slot's planned meal as one of the things it holds, like entryItem, at the slot's portion.
-// An edited one lists its ingredients at that portion, as its Ingredients sheet opens with them.
-function mealItem(plan, getFood) {
-  return {
-    emoji: plan.meal.emoji,
-    label: plan.meal.name,
-    ...slotMealTotals(plan, getFood),
-    ingredients: plan.edited ? ingredientLines(slotIngredients(plan, getFood)) : [],
-  };
+// A planned item as one of the things the slot holds, like entryItem: a meal at its portion, a
+// food at its amount, or quick numbers swapped in. An edited meal lists its ingredients at its
+// portion, as its Ingredients sheet opens with them. marks: whether its line shows its own changes,
+// as it does in a slot planning several items. item: one of dayPlan's day items.
+function plannedItem(item, marks) {
+  const { emoji, label, kcal, protein, fat, carbs, ingredients, originalIngredients, portion } = item;
+  const edited = originalIngredients ? ingredientLines(scaleIngredients(ingredients, portion)) : [];
+  return { emoji, label, kcal, protein, fat, carbs, ingredients: edited, marks: marks ? itemMarks(item) : [] };
 }
 
 // What a slot holds (SPEC §3.6, DESIGN §8): one thing as itself, an edited meal's ingredients
@@ -79,7 +82,7 @@ export function itemsRow(eyebrowText, items, onClick) {
 // An open flex slot (DESIGN §8): dashed, with its pinned budget, or else the gap to fill, the
 // targets minus the rest of the day, which never shows negative: a day already over shows "over"
 // and nothing left. With no targets, or on a day that's passed, it's just open (SPEC §3.4).
-// gap: calc.js's flexGap, or null. log: the Log button, on a day that takes changes, which names
+// gap: calc.js's dayPlanFlexGap, or null. log: the Log button, on a day that takes changes, which names
 // the slot itself ("Log to Snack").
 export function openFlexRow(plan, gap, log) {
   let title = 'Open';
@@ -94,17 +97,6 @@ export function openFlexRow(plan, gap, log) {
   return listRow({ placeholderIcon: 'plus', title, numbers, trailing: log });
 }
 
-// A flex slot with something in it is done, so it shows what's in it, like a planned meal
-// (DESIGN §8). A slot swapped to a food or quick numbers shows the same way, marked swapped, with
-// what was swapped in first, then its planned foods, then what's been added to it, as one list
-// (SPEC §3.6). A flex slot plans no foods. onClick: opens what's in it, or the swapped slot's
-// actions, on a day that takes changes.
-export function filledFlexRow(plan, onClick) {
-  const swapped = plan.swapEntry ? [entryItem(plan.swapEntry)] : [];
-  const items = [...swapped, ...plan.foods.map(foodItem), ...plan.entries.map(entryItem)];
-  return itemsRow(slotEyebrow(plan), items, onClick);
-}
-
 // Other (SPEC §3.6, DESIGN §8): what's eaten outside the slots, as a filled flex row with "Other"
 // as its whole eyebrow. entries: slots.js's otherEntries, not empty. onClick: opens the Other
 // sheet, on a day that takes changes.
@@ -112,26 +104,23 @@ export function otherRow(entries, onClick) {
   return itemsRow(OTHER.name, entries.map(entryItem), onClick);
 }
 
-// What a planned slot holds (SPEC §3.6): one thing as itself, its meal or its one planned food,
-// an edited meal with its ingredients under it, so the change shows without opening it. More than
-// one is "N items": the meal first, then its planned foods, then what's been added. A skipped
-// meal isn't one of the items, nor are its planned foods, which are skipped with it. A slot left
-// holding nothing stays, quietened, as what it plans: its meal, or else its planned foods, with
-// "Skipped", or "Removed for today" once the day's planned foods are all removed. Once anything is
-// added, the row shows that instead, not quietened, still marked skipped. plannedFoods: the
-// template's planned foods as ingredients, for that quiet row on a slot with no meal. onClick:
-// opens the slot's actions, on a day that takes changes.
-export function plannedRow(plan, getFood, onClick, plannedFoods = []) {
-  const meal = plan.meal && !plan.skipped ? [mealItem(plan, getFood)] : [];
-  const items = [...meal, ...plan.foods.map(foodItem), ...plan.entries.map(entryItem)];
-  if (items.length > 0) return itemsRow(slotEyebrow(plan), items, onClick);
-  const [first, ...more] = plannedFoods;
-  const several = more.length > 0;
+// What a slot holds (SPEC §3.6): its planned items after the day's changes, then what's been
+// added, one thing as itself or several as "N items". A flex slot plans nothing, so once filled
+// it shows what's been added. A skipped slot's planned items aren't among what it holds: with
+// anything added, it shows that, still marked skipped; with nothing, it stays, quietened, as what
+// it plans, its one item or "N items", with "Skipped". slot: one of dayPlan's. planned: the
+// template's items in the slot, planSlots' items, for that quiet row. onClick: opens the slot's
+// sheet, on a day that takes changes.
+export function slotRow(slot, onClick, planned = []) {
+  const several = slot.items.length > 1;
+  const items = [...slot.items.map((item) => plannedItem(item, several)), ...slot.entries.map(entryItem)];
+  if (items.length > 0) return itemsRow(slotEyebrow(slot), items, onClick);
+  const [first, ...more] = planned.map((item) => item.meal ?? item.food);
   return listRow({
-    emoji: plan.meal?.emoji ?? (several ? DEFAULT_EMOJI : first.emoji),
-    hiddenEyebrow: slotEyebrow(plan),
-    title: plan.meal?.name ?? (several ? `${plannedFoods.length} items` : first.name),
-    numbers: plan.skipped ? 'Skipped' : 'Removed for today',
+    emoji: more.length > 0 ? DEFAULT_EMOJI : first.emoji,
+    hiddenEyebrow: slotEyebrow(slot),
+    title: more.length > 0 ? `${planned.length} items` : first.name,
+    numbers: 'Skipped',
     muted: true,
     trailing: onClick ? rowActionIcon('chevron-right') : undefined,
     onClick,

@@ -213,7 +213,7 @@ export function mealTotals(meal, getFood) {
 }
 
 // Entries carry their own snapshot numbers, so they add up alone. No entries total zero. For a
-// day's whole total, plan included, use dayTotal.
+// day's whole total, plan included, use dayPlanTotal.
 export function entriesTotals(entries = []) {
   return sumTotals(entries);
 }
@@ -224,51 +224,6 @@ export function ingredientsTotals(ingredients) {
   return sumTotals(ingredients);
 }
 
-// What a slot's meal adds (SPEC §3.5): the day's ingredients for it, or else the meal's, at the
-// slot's portion. Its planned foods aren't part of it. plan: one of slots.js's daySlots, with a
-// meal.
-export function slotMealTotals(plan, getFood) {
-  const meal = plan.ingredients ? ingredientsTotals(plan.ingredients) : mealTotals(plan.meal, getFood);
-  return scaleTotals(meal, plan.portion);
-}
-
-// What one slot adds to the day (SPEC §3.5): its meal at its portion, or a food or quick numbers
-// swapped in for it, and its planned foods at their own amounts; or an open flex slot's pinned
-// budget. A skipped slot, an open flex slot with no budget and a filled flex slot add nothing of
-// their own; what's added to a slot counts in dayTotal. plan: one of slots.js's daySlots.
-export function slotTotals(plan, getFood) {
-  if (plan.skipped) return sumTotals([]);
-  const foods = ingredientsTotals(plan.foods);
-  if (plan.swapEntry) return sumTotals([plan.swapEntry, foods]);
-  if (plan.meal) return sumTotals([slotMealTotals(plan, getFood), foods]);
-  if (!plan.flex) return foods;
-  const open = plan.entries.length === 0;
-  return open && plan.budget ? sumTotals([plan.budget]) : sumTotals([]);
-}
-
-// The day's total (SPEC §3.5): the planned meals after swaps, skips, portions and ingredient
-// changes, the planned foods after the day's changes, the pinned budgets of open flex slots, and
-// every added entry, Other's and any whose slot is gone too. Off plan, the plan is ignored;
-// locked, it's already written into the entries. Either way only the entries count. plans:
-// slots.js's daySlots for the same day.
-export function dayTotal(day, plans, getFood) {
-  const entries = entriesTotals(day.entries);
-  if (day.offPlan || day.locked) return entries;
-  return sumTotals([...plans.map((plan) => slotTotals(plan, getFood)), entries]);
-}
-
-// The gap a flex slot shows (SPEC §3.4): the targets minus the rest of the day, which is the
-// day's total without what the slot adds itself, its pinned budget or its own entries. Every
-// flex slot shows the whole gap, so nothing is split between them. Each key is
-// displayRemaining's { amount, over }, so it agrees with the rings. null with no targets.
-export function flexGap(targetValues, day, plans, slotId, getFood) {
-  if (!targetValues) return null;
-  const others = plans.filter((plan) => plan.id !== slotId);
-  const entries = (day.entries ?? []).filter((entry) => entry.slotId !== slotId);
-  const rest = dayTotal({ ...day, entries }, others, getFood);
-  return displayRemainingTotals(targetValues, rest);
-}
-
 // Plan's "left for flex" (SPEC §3.4): the targets minus what the template adds up to, its meals,
 // planned foods and pinned budgets. One figure for every flex slot together, never split between
 // them. Each key is displayRemaining's { amount, over }, so a plan over target shows "over", never
@@ -276,6 +231,47 @@ export function flexGap(targetValues, day, plans, slotId, getFood) {
 export function leftForFlex(targetValues, templateTotals) {
   if (!targetValues) return null;
   return displayRemainingTotals(targetValues, templateTotals);
+}
+
+// --- Totals over slot items (SPEC §3.4, §3.5) ---
+// Totals over day-plan.js's dayPlan and slots.js's planSlots. A day item carries its own numbers,
+// a meal's at its portion and a food's for its amount, so a day adds up with no food lookup.
+
+// What one slot adds to the day: its planned items after the day's changes, or an open flex slot's
+// pinned budget. A skipped slot has no items, and a filled flex slot adds nothing of its own; what's
+// added to a slot counts in dayPlanTotal. slot: one of dayPlan's.
+export function dayPlanSlotTotals(slot) {
+  if (!slot.flex) return sumTotals(slot.items);
+  return slot.budget && slot.entries.length === 0 ? sumTotals([slot.budget]) : sumTotals([]);
+}
+
+// The day's total (SPEC §3.5): the slots' planned items and open budgets, and every added entry.
+// Off plan or locked, only the entries count. slots: dayPlan's for the same day.
+export function dayPlanTotal(day, slots) {
+  const entries = entriesTotals(day.entries);
+  if (day.offPlan || day.locked) return entries;
+  return sumTotals([...slots.map(dayPlanSlotTotals), entries]);
+}
+
+// The gap a flex slot shows (SPEC §3.4): the targets minus the day's total without what the slot
+// adds itself. null with no targets.
+export function dayPlanFlexGap(targetValues, day, slots, slotId) {
+  if (!targetValues) return null;
+  const others = slots.filter((slot) => slot.id !== slotId);
+  const entries = (day.entries ?? []).filter((entry) => entry.slotId !== slotId);
+  return displayRemainingTotals(targetValues, dayPlanTotal({ ...day, entries }, others));
+}
+
+// What the template adds up to (SPEC §3.4), for Plan's totals and leftForFlex: each planned meal
+// at 1×, each planned food at its amount, and the pinned budgets of flex slots. A day's changes
+// never reach it. slots: planSlots; getFood as mealTotals'.
+export function templateTotal(slots, getFood) {
+  return sumTotals(
+    slots.flatMap((slot) => {
+      if (slot.flex) return slot.budget ? [slot.budget] : [];
+      return slot.items.map((item) => (item.meal ? mealTotals(item.meal, getFood) : foodTotals(item.food, item.qty, item.unit)));
+    }),
+  );
 }
 
 // Negative means over target. targets is the result of targets().

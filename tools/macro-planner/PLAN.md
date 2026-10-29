@@ -16,6 +16,8 @@ next step.
 
 Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you its changes, ending with a suggested commit message (`Macro Planner: <step id> — <step title>`). You review them, then commit and push the step yourself. Phases 0–13 are done; new work goes in Phase 14, which stays open.
 
+**Model and effort:** each open step ends with a suggested model and effort (`_Model:_`), matched to how much it touches and how much care it needs. Set both before handing the step over.
+
 **Design:** `DESIGN.md` and `tokens.css` are final and apply from step 0.1. Every UI step builds to them with the base components from step 0.3, so there's no restyle pass at the end.
 
 **Targets:** the profile starts empty (SPEC §5), so there are no targets until it's filled in. Step 5.0 builds the profile form before the rest of Phase 5, so rings, flex remaining and Plan totals can be checked against your real profile.
@@ -70,7 +72,7 @@ Claude finishes the step, ticks its box here (`- [ ]` → `- [x]`) and shows you
       _Done when:_ tests cover save/load round-trip, remove, and prefix listing.
 
 - [x] **2.2 Personal adapter**
-      **Ask before editing `shared/persist.js`.** Add `remove` and `list` there if feasible (otherwise use the fallback in SPEC §4.1). Wrap it as the store adapter, with a localStorage fallback if the import fails. Expose sync status and show it as the header sync icon (SPEC §4.1, DESIGN §11). This is the only UI in Phase 2.
+      **Ask before editing `shared/persist.js`.** AVdd `remove` and `list` there if feasible (otherwise use the fallback in SPEC §4.1). Wrap it as the store adapter, with a localStorage fallback if the import fails. Expose sync status and show it as the header sync icon (SPEC §4.1, DESIGN §11). This is the only UI in Phase 2.
       Call `gate('#app')` before first render.
       _Done when:_ data syncs between two browsers; the sync icon shows synced after a save and offline with the network turned off in DevTools; tests still pass.
 
@@ -617,11 +619,155 @@ One open-ended phase: steps are added here as they come up, in the order they sh
   - the next day, the banana is in the locked day as a food entry, and not in Recent
   - it works at 360px and 390px in light and dark
 
-- [ ] **14.11 Custom food units: logic**
+- [x] **14.11 Slot items: the template**
+      First of the slot rework (SPEC §3.4, §3.5, §3.6): a slot becomes a container of planned meals and foods. 14.11–14.13 add the new logic beside the old, with tests that check both agree on the same data, so nothing on screen changes until 14.14 switches Today over. The old functions stay until 14.19. Pure logic, no UI.
+  - In `slots.js`, a pure `slotItems(templateSlot)`: its `items`, or for a slot saved before, its `mealId` then its `foods`, with ids made from what they plan (`meal-<mealId>`, `food-<foodId>`), so they're the same on every read without using positions. A slot with `items` ignores `mealId` and `foods`.
+  - Template changes, each returning a new doc that writes `items` and drops `mealId` and `foods`: `addPlannedMeal` (a meal already in the slot isn't added twice), `addPlannedFood` (adding to the amount of a food already there, like `addItem`), `removePlannedItem`, and `replacePlannedItem` for Make this the default, with SPEC §3.4's rule for a meal or food already elsewhere in the slot. New items get `crypto.randomUUID()` ids.
+  - A pure `planSlots(doc, getFood)`, the new `templateSlots`: each slot with its items resolved, a meal that's since been deleted left out, and `flex` when nothing's left.
+  - In `custom-foods.js`: archiving checks `slotItems`, so it works on both shapes. Export and import carry `items`.
+
+  _Done when:_ tests cover:
+  - a slot saved as `mealId` and `foods` reading as items, the meal first, with the same ids every time
+  - adding a meal twice leaving it once, and adding a food twice adding up its amount in its unit
+  - removing the last item making the slot flex, its budget kept
+  - `replacePlannedItem` keeping the item's place, and the meal-already-there and food-already-there cases
+  - a written slot having `items` and no `mealId` or `foods`; a slot with both ignoring the old fields
+  - a deleted meal left out; deleting a custom food planned in either shape archiving it
+  - an old backup importing and reading as before
+  - every existing test still passing, untouched
+
+  _Model:_ Opus 5.5, high effort. It sets the shape everything after builds on, and has to read live data saved in the old shape.
+
+- [x] **14.12 Slot items: the day's version**
+      What each slot holds on a day, and the day's changes to it (SPEC §3.5), as pure logic beside the old. slots.js is near 300 lines, so this goes in a new `js/day-plan.js`. No UI.
+  - A pure `dayPlan(doc, day, getFood)`, the new `daySlots`: each slot `{ id, name, flex, budget, skipped, items, ownVersion, entries }`. `items` are what the day eats, as day items (SPEC §3.5): the template's, live, until the day has its own version, then the day's snapshots. Off plan, every slot is flex with no items. A skipped slot has none.
+  - Old-shape changes (`mealId`, `portion`, `ingredients`, `entry`, `foods`) read as the day's version they describe, meal first, then the planned foods.
+  - In `data.js`, day item builders for a meal (with its ingredients, at 1×), a food and quick numbers, and `swapped`.
+  - Day changes, each returning a new day: `swapPlannedItem` (the new item takes the old one's place and id, marked swapped), `setItemPortion`, `setItemIngredients`, `resetItemIngredients`, `removePlannedItem` (the last one becomes a skip), `skipPlannedSlot`. The first change copies the slot's whole list as snapshots. `clearSlotChange` works on both shapes. An empty list is stored as a skip.
+  - Agreement tests: for a set of days in the old shape (a swap to a meal, a swap to a food and to quick numbers, a skip, a portion, an ingredient change, a planned foods change, and combinations), `dayPlan` gives the same items, amounts and numbers as `daySlots`.
+
+  _Done when:_ tests cover:
+  - every old-shape change reading as before (the agreement tests)
+  - a template change reaching a day with no version of its own, and not one that has one
+  - a swap keeping its place and id, marked swapped; quick numbers swapped in
+  - a portion and an ingredient change on one of two meals in a slot leaving the other alone; reset going back to the meal as planned at 1×
+  - removing the last planned item skipping the slot; As planned bringing the template back with the added entries kept
+  - off plan ignoring everything; a flex slot ignoring a leftover change
+
+  _Model:_ Opus 5.5, extra-high effort. The hardest step: every combination of old changes has to read exactly as it does now, or today's or a future day's plan changes without you touching it.
+
+- [x] **14.13 Slot items: totals and lock-in**
+      The day's total, flex remaining, Plan totals and lock-in, worked out from 14.11 and 14.12. Lock-in only reads, so it switches to the new logic here; the rest is switched over by the screens in 14.14–14.16.
+  - In `calc.js`: new versions of `slotTotals`, `dayTotal`, `flexGap` and the Plan totals over `dayPlan` and `planSlots`: each meal at its own portion, each food at its amount.
+  - In `lock-in.js`: each slot's day items in order, meals as `meal` entries with their ingredients and portion, foods as `food` entries, planned ones marked `planned: true` (a portion or ingredient change included) and swapped-in ones unmarked; then pinned budgets, as now.
+  - Agreement tests: on the old-shape days and templates from 14.12, the new totals, flex gaps, Plan totals and `lockDay` give exactly what the old ones do.
+
+  _Done when:_ tests cover:
+  - the agreement tests
+  - a slot with two meals and a food, one meal at 1.5×, totalling right
+  - lock-in writing a swapped-in meal unmarked and a portioned planned meal marked; Recent listing the first and not the second
+  - a pinned budget counting only while its slot is open flex
+  - your real data, imported into a headless browser, locking in yesterday exactly as the old lock-in does
+
+  _You'll need to:_ export your data from Settings and give me the file.
+
+  _Model:_ Opus 5.5, high effort. Lock-in writes past days for good, so it has to be right before it's switched on.
+
+- [x] **14.14 Slot items: Today's slots**
+      Today's rows, rings and flex remaining read 14.12 and 14.13 (SPEC §3.6). The sheets still act through the old changes, which the new logic reads, so they keep working until 14.15.
+  - Before any change, screenshots of Today for a set of seeded days (each kind of change, a filled flex slot, Other, off plan, a locked day) at 390px, light and dark, to compare against after.
+  - Rows show planned items in order, then what's been added. A slot planning one item shows its changes in the name ("Breakfast · 1.5×"); with several, each item's line shows its own. A skipped slot with nothing added shows what it plans, muted.
+  - Update DESIGN §8's Today slot rows.
+
+  _Done when:_
+  - the seeded days look the same as their before screenshots, apart from where SPEC §3.6 changes them
+  - a slot seeded with two meals and a food shows "3 items" in order, with the right total, and a 1.5× on one meal shows on its line
+  - the rings and flex remaining match the before screenshots
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Opus 5.5, high effort. Today is the screen you use every day, and every row variant has to match.
+
+- [x] **14.15 Slot items: Today's slot actions**
+      The slot actions sheet on the new model (SPEC §3.6), writing only the new day shape.
+  - One planned item: its actions first, as now (Swap, Skip, Edit, then Portion for a meal; Edit off and no Portion for a food or quick numbers). Several: Skip, then a row per planned item opening its item sheet: Swap, Portion and Edit for a meal, and Remove for today.
+  - Swap on any planned item opens the swap sheet (Meal · Food · Quick). A food starts at the old amount when the unit matches. No Make this the default yet: it needs 14.11's `replacePlannedItem`, which writes the new items shape, and Plan can't read that until 14.16 — using it here would make the slot go blind on Plan. Comes back once 14.16 lands.
+  - Edit opens the Ingredients sheet for that meal. Remove for today has no confirm sheet; removing the last one skips the slot. As planned shows once the slot has a change.
+  - "Added to this slot", Add to this slot, the filled flex sheet and Other are unchanged. 14.10's "Removed for today" row goes.
+  - Update DESIGN §8's slot actions sheet and item sheet.
+
+  _Done when:_
+  - Oats & whey at 1.5×, swapped for another meal, then As planned, all work as now, in two taps
+  - a banana planned alone swaps for a saved meal and for quick numbers; tomorrow it's a banana again
+  - a slot with two meals: each opens its own Portion and Edit, and changing one leaves the other
+  - removing the last planned item shows the slot skipped; As planned brings it all back, added items kept
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Opus 5.5, high effort. The busiest sheet in the app, with two layouts and many paths through it. If it grows past one session, split the several-items layout into its own step.
+
+- [x] **14.16 Slot items: Plan**
+      Plan on the new model (SPEC §3.4): rows and totals from `planSlots`, and the slot sheet writing `items`.
+  - The slot sheet lists the planned items, each with its amount and remove, then a Meal · Food picker laid out like the add sheet's, without Recent and Quick. Picking adds to the slot and the sheet stays open; a meal already planned shows checked and isn't added twice. A flex slot keeps Pin a budget.
+  - Rows show one item as itself, several as "N items" in order. The totals card counts every item.
+  - Update DESIGN §8's Plan slot rows and slot sheet.
+
+  _Done when:_
+  - a Lunch slot planning two meals and a banana shows "3 items", and Today shows the same
+  - adding a second banana makes it 2 banana; picking the same meal again doesn't add it
+  - removing every item makes the slot flex again
+  - a template saved before this step shows as before, and is saved as `items` after its first change
+  - it survives a reload and syncs between browsers
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Sonnet 5, high effort. One screen with clear rules, reusing the add sheet's picker.
+
+- [x] **14.17 Make this the default**
+      "Make this the default" on the swap sheet (SPEC §3.4, PLAN 14.15), now that 14.16 has Plan reading and writing the same `items` shape as Today: a meal or a food swapped for a planned item can also replace it in the template, not just for the day. Quick numbers still can't, since the template plans meals and foods, not numbers.
+  - In `slots.js`, 14.11's `replacePlannedItem` gains an optional `id` for the new item, defaulting to a uuid: a caller that applies the change twice, to the doc it shows and to the one it saves, passes the same id to both, so they agree.
+  - A new `swapPlannedItemToDefault(doc, day, slotId, itemId, item, placedId, getFood)` in `day-plan.js`: doc is the core doc with the template already changed by `replacePlannedItem`, which put the pick in itemId's place under placedId. A day with no version of its own reads the new template as it is, so only a skip goes, since picking something means eating it. One with its own version takes the template's new item in itemId's place, unmarked, so a day whose only change was to that item has none left. Where the template has no new item there, since the pick was already in the slot (`replacePlannedItem`'s own merge rules: a meal already elsewhere stays once, a food already elsewhere gets the amount added there), the day goes the same way: a meal it still has elsewhere just leaves, and a food or its own meal is swapped in, as by `swapPlannedItem`.
+  - The swap sheet's Meal and Food panes gain "Make this the default" as a switch above them, off each time the sheet opens.
+  - In `today.js`, Swap on a planned item: without the switch, swaps for the day only, as now (14.15); with it, changes the template through `replacePlannedItem` and the day through `swapPlannedItemToDefault`, with one id made once and passed to both.
+  - Update DESIGN §8's swap sheet.
+
+  _Done when:_
+  - tests cover `swapPlannedItemToDefault` for a day with no version of its own, one with its own version, a pick already in the slot (a meal already elsewhere stays once, a food already elsewhere merges), and the item's own meal or food changing nothing
+  - making a planned food the default for another food changes Plan and today straight away, and tomorrow starts from it without a swap of its own
+  - a swap with the switch off still only changes today; Quick has no switch
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Opus 5.5, medium effort. Small, but touches the swap sheet, Today and Plan's shared reading of the template together.
+
+- [x] **14.18 Portion on added meals**
+      Any meal in a slot has a portion, planned or added (SPEC §3.5).
+  - In `data.js`, `setEntryPortion(day, entryId, portion)`: an added meal's numbers become its ingredients' total at the portion; editing its ingredients sets it back to 1×, as for a planned meal.
+  - An added meal with its ingredients opens the same item sheet as a planned meal: Swap, Portion, Edit, then Remove from slot (confirm sheet). Other added entries open Swap and Remove as now.
+  - Update DESIGN §8's added entry row and item sheet.
+
+  _Done when:_
+  - tests cover a portion's numbers, editing setting it back to 1×, reset, and Recent listing the meal as added
+  - a meal added to Dinner at 1.5× moves the rings, and its ingredients show at 1.5×
+  - Remove from slot still asks first
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Opus 5.5, medium effort. Small, but it changes how added meals open, which 14.7 built.
+
+- [x] **14.19 Slot items: retire the old model**
+      Remove what nothing uses any more: the old `templateSlots`, `daySlots`, slot change helpers and totals, and their tests. The agreement tests' old-shape data stays, as tests that it reads as SPEC §3.5 says, so old data keeps working. No behaviour changes.
+  - Before removing anything, list each function with what still calls it; remove only the ones with no callers left.
+  - A last headless pass over Today, Plan, a locked day and off plan, against 14.14's screenshots.
+
+  _Done when:_
+  - nothing imports a removed function, and every remaining test passes
+  - the old-shape reading tests still pass
+  - Today, Plan and a locked day look as they did after 14.18
+  - you've opened the app on your phone with your real data and it looks as it did
+
+  _Model:_ Sonnet 5, high effort. Mostly removal, but wide, and anything removed by mistake breaks the app.
+
+- [x] **14.20 Custom food units: logic**
       The pure logic for SPEC §3.2's units on custom foods, with no UI.
   - In `custom-foods.js`: a custom food can have `grams` (its serving's weight, above 0) and `portions` (`[{ unit, grams }]`), each unit named once and never "g" or the serving's unit. A serving in g gives `grams` from its quantity.
   - In `portions.js`: a custom food with `grams` has units like a bundled food's: its serving's, then grams, then its portions; without `grams`, only its serving's.
-  - A pure `unitsInUse(foodId, doc)`: the units its saved meals' items and the template's planned foods are in, so the form can keep those from being removed.
+  - A pure `unitsInUse(foodId, doc)`: the units its saved meals' items and the template's planned foods (`slotItems`, 14.11) are in, so the form can keep those from being removed.
   - Duplicating a bundled food keeps its `grams` and `portions`. Export and import carry them.
 
   _Done when:_ tests cover:
@@ -633,10 +779,12 @@ One open-ended phase: steps are added here as they come up, in the order they sh
   - a duplicate keeping its portions
   - custom foods saved before this step unchanged
 
-- [ ] **14.12 Custom food units: form**
-      The custom food form gains the serving's weight and other units, using 14.11.
+  _Model:_ Sonnet 5, high effort. Small and pure, but unit conversion is easy to get subtly wrong.
+
+- [x] **14.21 Custom food units: form**
+      The custom food form gains the serving's weight and other units, using 14.20.
   - After Carbs: "Serving weight", a numeric field with a "g" suffix, hidden when the serving is in g. Then "Other units": a row per unit (its name, then its weight with a "g" suffix, "1 cup = 158 g"), each with a remove icon button, then "Add unit" as a secondary button. Other units need the serving weight, so they show once it's filled in.
-  - A unit in use can't be removed: its remove button is disabled, with one line saying which meal uses it.
+  - A unit in use can't be removed: its remove button is disabled, with one line saying which meal or slot uses it.
   - Search results and the Foods list show a custom food at its default amount, like a bundled food (DESIGN §8).
   - Update DESIGN §10's custom food form.
 
@@ -646,3 +794,5 @@ One open-ended phase: steps are added here as they come up, in the order they sh
   - a unit used in a meal can't be removed, and says where it's used
   - it survives a reload and syncs between browsers
   - it works at 360px and 390px in light and dark
+
+  _Model:_ Sonnet 5, medium effort. One form, built from existing components.

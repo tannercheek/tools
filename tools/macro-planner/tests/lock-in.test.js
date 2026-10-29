@@ -1,12 +1,29 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal } from '../js/calc.js';
+import { dayPlanTotal } from '../js/calc.js';
 import { DAYS_DOC_ID, DaysUnavailableError, createCoreDoc, createDays, emptyDay } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { createLockIn, lockDay, lockInPastDays, lockPastDays } from '../js/lock-in.js';
 import { createMeal, deleteMeal, foodLookup, updateItem, updateMeal } from '../js/saved-meals.js';
-import { daySlots, setSlotMeal, setSlotPortion, skipSlot } from '../js/slots.js';
 import { CORE_DOC_ID, createLocalPersist, createLocalStore, createPersonalStore } from '../js/store.js';
 import { createFakeStorage } from './fake-storage.js';
+
+// A slot planned the old way (SPEC §3.4), and a day's own old-shape changes (§3.5), for checking
+// lockDay still reads data saved before slots held items. See old-slot-model-reference.js.
+function planMeal(doc, slotId, mealId) {
+  return { ...doc, template: { ...doc.template, [slotId]: { ...doc.template[slotId], mealId } } };
+}
+
+function skipChange(day, slotId) {
+  return { ...day, changes: { ...day.changes, [slotId]: { mealId: null } } };
+}
+
+function portionChange(day, slotId, portion) {
+  const { mealId, entry, ...rest } = day.changes?.[slotId] ?? {};
+  const change = { ...rest, portion };
+  if (mealId) change.mealId = mealId;
+  return { ...day, changes: { ...day.changes, [slotId]: change } };
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -49,8 +66,8 @@ const BUDGET = { kcal: 700, protein: 50, fat: 20, carbs: 80 };
 function plannedDoc(startedOn = '2026-10-15') {
   let doc = { ...createCoreDoc(startedOn), meals: [OATS, RICE_BEEF, RICE_BOWL] };
   const [breakfast, lunch] = doc.slots;
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
-  return setSlotMeal(doc, lunch.id, RICE_BEEF.id);
+  doc = planMeal(doc, breakfast.id, OATS.id);
+  return planMeal(doc, lunch.id, RICE_BEEF.id);
 }
 
 const slotIds = (doc) => Object.fromEntries(doc.slots.map((slot) => [slot.name, slot.id]));
@@ -105,14 +122,14 @@ test('a swap locks in the swapped meal', () => {
 test('a skipped slot locks in nothing', () => {
   const doc = plannedDoc();
   const { Breakfast } = slotIds(doc);
-  const locked = lock(doc, skipSlot(emptyDay(), Breakfast));
+  const locked = lock(doc, skipChange(emptyDay(), Breakfast));
   assert.deepEqual(locked.entries.map((entry) => entry.label), ['Rice & beef']);
 });
 
 test('a 1.5× portion locks in the meal’s numbers at 1.5×', () => {
   const doc = plannedDoc();
   const { Lunch } = slotIds(doc);
-  const [, lunch] = lock(doc, setSlotPortion(emptyDay(), Lunch, 1.5)).entries;
+  const [, lunch] = lock(doc, portionChange(emptyDay(), Lunch, 1.5)).entries;
   assert.equal(lunch.label, 'Rice & beef');
   assertTotals(lunch, { kcal: 952.5, protein: 66, fat: 34.65, carbs: 84 });
 });
@@ -151,7 +168,7 @@ test('an extra added to a planned slot stays alongside its meal, after the plan'
   assert.deepEqual(locked.entries.map((entry) => entry.label), ['Oats & whey', 'Rice & beef', 'Egg']);
   // Only what lock-in wrote from the plan is marked planned; what was added isn't.
   assert.deepEqual(locked.entries.map((entry) => entry.planned ?? false), [true, true, false]);
-  assertTotals(dayTotal(locked, daySlots(doc, locked), foodLookup(FOODS)), {
+  assertTotals(dayPlanTotal(locked, dayPlan(doc, locked, foodLookup(FOODS))), {
     kcal: 1129,
     protein: 84.4,
     fat: 35.2,
@@ -178,9 +195,9 @@ test('the day’s total is the same before and after lock-in', () => {
   doc = withBudget(doc, Dinner, BUDGET);
   const getFood = foodLookup(FOODS);
   const extra = quick(Breakfast, 'Breakfast', { kcal: 70, protein: 6, fat: 5, carbs: 0.5 });
-  const open = setSlotPortion(day({ changes: { [Lunch]: { mealId: RICE_BOWL.id } }, entries: [extra] }), Lunch, 1.5);
+  const open = portionChange(day({ changes: { [Lunch]: { mealId: RICE_BOWL.id } }, entries: [extra] }), Lunch, 1.5);
   const locked = lock(doc, open);
-  assertTotals(dayTotal(locked, daySlots(doc, locked), getFood), dayTotal(open, daySlots(doc, open), getFood));
+  assertTotals(dayPlanTotal(locked, dayPlan(doc, locked, getFood)), dayPlanTotal(open, dayPlan(doc, open, getFood)));
 });
 
 test('a day already locked comes back as it was', () => {
@@ -192,7 +209,7 @@ test('a day already locked comes back as it was', () => {
 test('lockDay leaves the day passed in as it was', () => {
   const doc = plannedDoc();
   const { Lunch } = slotIds(doc);
-  const open = setSlotPortion(emptyDay(), Lunch, 1.5);
+  const open = portionChange(emptyDay(), Lunch, 1.5);
   const before = structuredClone(open);
   lock(doc, open);
   assert.deepEqual(open, before);
@@ -210,23 +227,23 @@ test('editing a meal after its day is locked doesn’t change that day', () => {
   let doc = plannedDoc();
   const getFood = foodLookup(FOODS);
   const locked = lock(doc, emptyDay());
-  const before = dayTotal(locked, daySlots(doc, locked), getFood);
+  const before = dayPlanTotal(locked, dayPlan(doc, locked, getFood));
 
   doc = updateMeal(doc, RICE_BEEF.id, (m) => ({ ...updateItem(m, 'beef', 400), name: 'Big beef', emoji: '🥩' }));
   assert.equal(lock(doc, locked), locked);
   assert.equal(locked.entries[1].label, 'Rice & beef');
   assert.equal(locked.entries[1].emoji, '🍚');
-  assertTotals(dayTotal(locked, daySlots(doc, locked), getFood), before);
+  assertTotals(dayPlanTotal(locked, dayPlan(doc, locked, getFood)), before);
 });
 
 test('deleting a meal or changing the template after lock-in doesn’t change that day', () => {
   let doc = plannedDoc();
   const getFood = foodLookup(FOODS);
   const locked = lock(doc, emptyDay());
-  const before = dayTotal(locked, daySlots(doc, locked), getFood);
+  const before = dayPlanTotal(locked, dayPlan(doc, locked, getFood));
 
-  doc = setSlotMeal(deleteMeal(doc, OATS.id), slotIds(doc).Dinner, RICE_BOWL.id);
-  assertTotals(dayTotal(locked, daySlots(doc, locked), getFood), before);
+  doc = planMeal(deleteMeal(doc, OATS.id), slotIds(doc).Dinner, RICE_BOWL.id);
+  assertTotals(dayPlanTotal(locked, dayPlan(doc, locked, getFood)), before);
 });
 
 // --- lockPastDays ---
@@ -237,7 +254,7 @@ const TODAY = '2026-10-20';
 test('every past day in the window from startedOn on is locked, and a day never opened counts as on plan', () => {
   const doc = plannedDoc('2026-10-17');
   const { Lunch } = slotIds(doc);
-  const daysDoc = { '2026-10-18': skipSlot(emptyDay(), Lunch) };
+  const daysDoc = { '2026-10-18': skipChange(emptyDay(), Lunch) };
   const next = lockPastDays(daysDoc, TODAY, doc, FOODS);
   assert.deepEqual(Object.keys(next).sort(), ['2026-10-17', '2026-10-18', '2026-10-19']);
   for (const date of Object.keys(next)) assert.equal(next[date].locked, true, date);
@@ -304,7 +321,7 @@ test('lockInPastDays finds custom foods in the core doc', async () => {
   const custom = { ...per100g('custom-1', 100, 10, 1, 10), custom: true };
   const shake = meal('Shake', '🥤', [['custom-1', 300]]);
   let doc = { ...plannedDoc('2026-10-19'), foods: [custom], meals: [shake] };
-  doc = setSlotMeal(doc, doc.slots[0].id, shake.id);
+  doc = planMeal(doc, doc.slots[0].id, shake.id);
   const store = await seededStore(doc);
   await lockInPastDays(store, TODAY, []);
   assertTotals((await createDays(store).getDay('2026-10-19')).entries[0], { kcal: 300, protein: 30, fat: 3, carbs: 30 });

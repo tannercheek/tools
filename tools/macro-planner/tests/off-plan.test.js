@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal, flexGap } from '../js/calc.js';
+import { dayPlanFlexGap, dayPlanTotal } from '../js/calc.js';
 import {
   addEntry,
   backOnPlan,
@@ -12,10 +12,17 @@ import {
   quickEntry,
   setOffPlan,
 } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
-import { daySlots, setSlotBudget, setSlotMeal, setSlotPortion, skipSlot, swapSlot } from '../js/slots.js';
+import { addPlannedMeal, setSlotBudget } from '../js/slots.js';
 import { createLocalStore } from '../js/store.js';
 import { createFakeStorage } from './fake-storage.js';
+
+// Old-shape day changes (SPEC §3.5), for checking dayPlan still reads data saved before slots
+// held items. See old-slot-model-reference.js.
+const swapChange = (day, slotId, mealId) => ({ ...day, changes: { ...day.changes, [slotId]: { mealId } } });
+const skipChange = (day, slotId) => ({ ...day, changes: { ...day.changes, [slotId]: { mealId: null } } });
+const portionChange = (day, slotId, portion) => ({ ...day, changes: { ...day.changes, [slotId]: { portion } } });
 
 // Test fixtures with made-up round numbers, not real nutrition data.
 const per100g = (id, kcal, protein, fat, carbs) => ({ id, serving: { qty: 100, unit: 'g' }, kcal, protein, fat, carbs });
@@ -38,8 +45,8 @@ const ZERO = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
 function plannedDoc() {
   let doc = { ...createCoreDoc('2026-10-01'), meals: [OATS, RICE] };
   const [breakfast, lunch, dinner] = doc.slots;
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
-  doc = setSlotMeal(doc, lunch.id, RICE.id);
+  doc = addPlannedMeal(doc, breakfast.id, OATS.id);
+  doc = addPlannedMeal(doc, lunch.id, RICE.id);
   return setSlotBudget(doc, dinner.id, BUDGET);
 }
 
@@ -47,7 +54,7 @@ const slotNamed = (doc, name) => doc.slots.find((slot) => slot.name === name);
 
 // The gap as it shows: { kcal: 2000, ... } when under, or { kcal: -120, ... } for 120 over.
 function gapFor(doc, day, slotName) {
-  const gap = flexGap(TARGETS, day, daySlots(doc, day), slotNamed(doc, slotName).id, getFood);
+  const gap = dayPlanFlexGap(TARGETS, day, dayPlan(doc, day, getFood), slotNamed(doc, slotName).id);
   return Object.fromEntries(Object.entries(gap).map(([key, { amount, over }]) => [key, over ? -amount : amount]));
 }
 
@@ -60,32 +67,32 @@ function offPlanDay(fields = {}) {
 test('off plan, every slot is open flex with no budget, and the template is unchanged', () => {
   const doc = plannedDoc();
   const before = structuredClone(doc);
-  const plans = daySlots(doc, offPlanDay());
+  const plans = dayPlan(doc, offPlanDay(), getFood);
   assert.deepEqual(
-    plans.map(({ name, meal, budget, skipped, swapped, portion }) => ({ name, meal, budget, skipped, swapped, portion })),
-    ['Breakfast', 'Lunch', 'Dinner'].map((name) => ({ name, meal: null, budget: null, skipped: false, swapped: false, portion: 1 })),
+    plans.map(({ name, flex, budget, skipped, items }) => ({ name, flex, budget, skipped, items })),
+    ['Breakfast', 'Lunch', 'Dinner'].map((name) => ({ name, flex: true, budget: null, skipped: false, items: [] })),
   );
   assert.deepEqual(doc, before);
-  assert.equal(daySlots(doc, emptyDay())[0].meal.id, OATS.id);
+  assert.equal(dayPlan(doc, emptyDay(), getFood)[0].items[0].mealId, OATS.id);
 });
 
 test('off plan ignores the day’s swaps, skips and portions', () => {
   const doc = plannedDoc();
   const breakfast = slotNamed(doc, 'Breakfast').id;
   const lunch = slotNamed(doc, 'Lunch').id;
-  let day = swapSlot(emptyDay(), breakfast, RICE.id, OATS.id);
-  day = setSlotPortion(day, breakfast, 1.5);
-  day = skipSlot(day, lunch);
-  const plans = daySlots(doc, { ...day, offPlan: true });
-  assert.ok(plans.every((plan) => plan.meal === null && plan.portion === 1 && !plan.skipped && !plan.swapped));
-  assert.deepEqual(dayTotal({ ...day, offPlan: true }, plans, getFood), ZERO);
+  let day = swapChange(emptyDay(), breakfast, RICE.id);
+  day = portionChange(day, breakfast, 1.5);
+  day = skipChange(day, lunch);
+  const plans = dayPlan(doc, { ...day, offPlan: true }, getFood);
+  assert.ok(plans.every((plan) => plan.flex === true && plan.items.length === 0 && !plan.skipped));
+  assert.deepEqual(dayPlanTotal({ ...day, offPlan: true }, plans), ZERO);
 });
 
 test('off plan, each slot keeps its own entries', () => {
   const doc = plannedDoc();
   const lunch = slotNamed(doc, 'Lunch');
   const entry = quickEntry(lunch, LUNCH_NUMBERS, 'Tacos');
-  const plans = daySlots(doc, addEntry(offPlanDay(), entry));
+  const plans = dayPlan(doc, addEntry(offPlanDay(), entry), getFood);
   assert.deepEqual(
     plans.map((plan) => plan.entries.map((e) => e.label)),
     [[], ['Tacos'], []],
@@ -106,7 +113,7 @@ test('off plan, logging into one slot updates what the others show', () => {
   const left = { kcal: 2000, protein: 140, fat: 50, carbs: 240 };
   assert.deepEqual(gapFor(doc, day, 'Breakfast'), left);
   assert.deepEqual(gapFor(doc, day, 'Dinner'), left);
-  assert.deepEqual(dayTotal(day, daySlots(doc, day), getFood), LUNCH_NUMBERS);
+  assert.deepEqual(dayPlanTotal(day, dayPlan(doc, day, getFood)), LUNCH_NUMBERS);
 });
 
 // --- Going off plan ---
@@ -124,7 +131,7 @@ test('today only is a range of one day', () => {
 
 test('going off plan keeps a day’s changes and entries, and leaves other days alone', () => {
   const doc = plannedDoc();
-  const changes = skipSlot(emptyDay(), slotNamed(doc, 'Lunch').id).changes;
+  const changes = skipChange(emptyDay(), slotNamed(doc, 'Lunch').id).changes;
   const entry = quickEntry(slotNamed(doc, 'Dinner'), LUNCH_NUMBERS);
   const yesterday = { ...emptyDay(), locked: true };
   const daysDoc = { '2026-10-19': yesterday, [TODAY]: { ...emptyDay(), changes, entries: [entry] } };
@@ -175,10 +182,10 @@ test('back on plan clears a later off-plan stretch too', () => {
 test('back on plan restores the template, with the day’s own changes', () => {
   const doc = plannedDoc();
   const lunch = slotNamed(doc, 'Lunch').id;
-  const day = offPlanDay({ changes: skipSlot(emptyDay(), lunch).changes });
+  const day = offPlanDay({ changes: skipChange(emptyDay(), lunch).changes });
   const next = backOnPlan({ [TODAY]: day }, TODAY)[TODAY];
-  const plans = daySlots(doc, next);
-  assert.equal(plans[0].meal.id, OATS.id);
+  const plans = dayPlan(doc, next, getFood);
+  assert.equal(plans[0].items[0].mealId, OATS.id);
   assert.equal(plans[1].skipped, true);
   assert.deepEqual(plans[2].budget, BUDGET);
 });

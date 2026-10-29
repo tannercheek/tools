@@ -8,9 +8,12 @@ import {
   isFoodInUse,
   parseAmount,
   readFoodForm,
+  unitsInUse,
+  unitUsedBy,
   updateCustomFood,
 } from '../js/custom-foods.js';
 import { createCoreDoc } from '../js/data.js';
+import { foodUnits } from '../js/portions.js';
 import { searchFoods } from '../js/search.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -113,6 +116,109 @@ test('a duplicated bundled food becomes a new custom food with the same emoji an
   assert.equal(copy.custom, true);
   assert.notEqual(copy.id, bundled.id);
   assert.deepEqual({ ...copy, id: bundled.id, custom: false }, bundled);
+});
+
+// --- Units (SPEC §3.2) ---
+
+test('a serving weight and portions are kept when the weight is above 0, each unit its own', () => {
+  const fields = { ...readFoodForm(FORM).fields, grams: 150, portions: [{ unit: 'cup', grams: 240 }] };
+  const created = createCustomFood(fields);
+  assert.equal(created.grams, 150);
+  assert.deepEqual(created.portions, [{ unit: 'cup', grams: 240 }]);
+  assert.deepEqual(foodUnits(created), ['g', 'cup']);
+});
+
+test('a weight of 0 or less is dropped, and its portions with it, on a serving not in g', () => {
+  const base = { name: 'Protein bar', serving: { qty: 1, unit: 'bar' }, emoji: '🍫', kcal: 200, protein: 20, fat: 5, carbs: 15 };
+  const created = createCustomFood({ ...base, grams: 0, portions: [{ unit: 'g', grams: 1 }] });
+  assert.equal(created.grams, undefined);
+  assert.deepEqual(created.portions, []);
+  assert.deepEqual(foodUnits(created), ['bar']);
+});
+
+test('a serving already counted in g keeps its portions with no weight of its own entered', () => {
+  // FORM’s serving is 150 g; the form never shows a weight field for it (14.21), so no grams is
+  // passed at all, only the portions picked in the form.
+  const fields = { ...readFoodForm(FORM).fields, portions: [{ unit: 'tub', grams: 450 }] };
+  assert.equal('grams' in fields, false);
+  const created = createCustomFood(fields);
+  assert.equal(created.grams, 150);
+  assert.deepEqual(created.portions, [{ unit: 'tub', grams: 450 }]);
+  assert.deepEqual(foodUnits(created), ['g', 'tub']);
+});
+
+test('a portion can’t repeat a unit, or name "g" or the serving’s own unit', () => {
+  const fields = {
+    ...readFoodForm(FORM).fields,
+    grams: 150,
+    portions: [{ unit: 'cup', grams: 240 }, { unit: 'g', grams: 1 }, { unit: 'g', grams: 150 }, { unit: 'cup', grams: 250 }],
+  };
+  const created = createCustomFood(fields);
+  assert.deepEqual(created.portions, [{ unit: 'cup', grams: 240 }]);
+});
+
+test('a food never given a weight or portions keeps its old shape exactly', () => {
+  const doc = docWith([food('custom-a', 'A')]);
+  const next = updateCustomFood(doc, 'custom-a', { name: 'A, renamed' });
+  assert.equal('grams' in next.foods[0], false);
+  assert.equal('portions' in next.foods[0], false);
+});
+
+test('updating a food keeps its weight and portions when the update doesn’t touch them', () => {
+  const doc = docWith([{ ...food('custom-a', 'A'), grams: 150, portions: [{ unit: 'cup', grams: 240 }] }]);
+  const next = updateCustomFood(doc, 'custom-a', { name: 'A, renamed' });
+  assert.equal(next.foods[0].grams, 150);
+  assert.deepEqual(next.foods[0].portions, [{ unit: 'cup', grams: 240 }]);
+});
+
+test('duplicating a bundled food into a custom one keeps its weight and portions', () => {
+  const bundled = { ...food('usda-1', 'Rice, white, cooked'), grams: 100, portions: [{ unit: 'cup', grams: 158 }], custom: false };
+  const fields = { ...readFoodForm(FORM).fields, grams: bundled.grams, portions: bundled.portions };
+  const copy = createCustomFood(fields);
+  assert.equal(copy.grams, 100);
+  assert.deepEqual(copy.portions, [{ unit: 'cup', grams: 158 }]);
+  assert.deepEqual(foodUnits(copy), foodUnits(bundled));
+});
+
+test('a unit used in a meal or planned in a slot is found by unitsInUse', () => {
+  const meal = { id: 'm1', name: 'Bowl', emoji: '🍚', items: [{ foodId: 'custom-a', qty: 1, unit: 'cup' }] };
+  const withMeal = docWith([food('custom-a', 'A')], [meal]);
+  assert.deepEqual(unitsInUse('custom-a', withMeal), ['cup']);
+
+  const bare = { ...createCoreDoc('2026-10-15'), foods: [food('custom-b', 'B')] };
+  const slotId = bare.slots[0].id;
+  const planned = {
+    ...bare,
+    template: { ...bare.template, [slotId]: { items: [{ id: 'food-custom-b', foodId: 'custom-b', qty: 1, unit: 'scoop' }] } },
+  };
+  assert.deepEqual(unitsInUse('custom-b', planned), ['scoop']);
+  assert.deepEqual(unitsInUse('custom-a', planned), []);
+});
+
+test('unitsInUse leaves out items with no unit and other foods', () => {
+  const meal = {
+    id: 'm1', name: 'Bowl', emoji: '🍚',
+    items: [{ foodId: 'custom-a', qty: 100 }, { foodId: 'custom-b', qty: 1, unit: 'cup' }],
+  };
+  const doc = docWith([food('custom-a', 'A'), food('custom-b', 'B')], [meal]);
+  assert.deepEqual(unitsInUse('custom-a', doc), []);
+  assert.deepEqual(unitsInUse('custom-b', doc), ['cup']);
+});
+
+test('unitUsedBy names the meal or slot a unit is counted in, meals checked first', () => {
+  const meal = { id: 'm1', name: 'Smoothie', emoji: '🥤', items: [{ foodId: 'custom-a', qty: 1, unit: 'scoop' }] };
+  const withMeal = docWith([food('custom-a', 'A')], [meal]);
+  assert.equal(unitUsedBy('custom-a', 'scoop', withMeal), 'Smoothie');
+  assert.equal(unitUsedBy('custom-a', 'cup', withMeal), null);
+
+  const bare = { ...createCoreDoc('2026-10-15'), foods: [food('custom-b', 'B')] };
+  const slotId = bare.slots[0].id;
+  const planned = {
+    ...bare,
+    template: { ...bare.template, [slotId]: { items: [{ id: 'food-custom-b', foodId: 'custom-b', qty: 1, unit: 'tub' }] } },
+  };
+  assert.equal(unitUsedBy('custom-b', 'tub', planned), bare.slots[0].name);
+  assert.equal(unitUsedBy('custom-b', 'g', planned), null);
 });
 
 // --- Core doc changes ---

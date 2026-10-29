@@ -7,7 +7,7 @@
 // (SPEC §3.4).
 
 import { loadBundledFoods } from '../bundled-foods.js';
-import { addDays, dayTotal, flexGap, profileTargets } from '../calc.js';
+import { addDays, dayPlanFlexGap, dayPlanTotal, profileTargets } from '../calc.js';
 import {
   CoreDocUnavailableError,
   DaysUnavailableError,
@@ -22,27 +22,26 @@ import {
   removeEntry,
   resetEntryIngredients,
   setEntryIngredients,
+  setEntryPortion,
   swapDayEntry,
   updateCoreDoc,
 } from '../data.js';
-import { amountText, itemIngredients, removeIngredient, slotIngredients, swapIngredient } from '../ingredients.js';
+import {
+  dayPlan,
+  plannedDayItems,
+  removePlannedItem,
+  resetItemIngredients,
+  setItemIngredients,
+  setItemPortion,
+  skipPlannedSlot,
+  swapPlannedItem,
+  swapPlannedItemToDefault,
+} from '../day-plan.js';
+import { scaleIngredients } from '../ingredients.js';
 import { rings } from '../rings.js';
 import { hashFor } from '../routes.js';
 import { foodLookup } from '../saved-meals.js';
-import {
-  clearSlotChange,
-  daySlots,
-  lockedDayGroups,
-  otherEntries,
-  resetSlotIngredients,
-  setSlotFoods,
-  setSlotIngredients,
-  setSlotMeal,
-  setSlotPortion,
-  skipSlot,
-  swapSlot,
-  swapSlotToEntry,
-} from '../slots.js';
+import { clearSlotChange, lockedDayGroups, otherEntries, planSlots, replacePlannedItem } from '../slots.js';
 import { CORE_DOC_ID } from '../store.js';
 import { iconButton, secondaryButton } from '../ui/buttons.js';
 import { emptyState } from '../ui/empty-state.js';
@@ -50,14 +49,13 @@ import { formError } from '../ui/inputs.js';
 import { hopTile, listRow, rowGroup } from '../ui/row.js';
 import { confirmSheet } from '../ui/sheet.js';
 import { addEntrySheet } from './add-entry-sheet.js';
-import { addFoodSheet } from './add-food-sheet.js';
 import { chooseSlotSheet } from './choose-slot-sheet.js';
 import { ingredientsSheet } from './ingredients-sheet.js';
 import { offPlanLine, offPlanSheet } from './off-plan.js';
 import { quickActions } from './quick-actions.js';
-import { filledFlexSheet, itemSheet, otherSheet, slotActionsSheet } from './slot-actions-sheet.js';
+import { entrySheet, filledFlexSheet, otherSheet, plannedItemSheet, slotActionsSheet } from './slot-actions-sheet.js';
 import { swapEntrySheet, swapSheet } from './swap-sheet.js';
-import { filledFlexRow, openFlexRow, otherRow, plannedRow, slotEyebrow } from './today-rows.js';
+import { openFlexRow, otherRow, slotEyebrow, slotRow } from './today-rows.js';
 import { logWeighInSheet } from './weigh-ins.js';
 
 function note(text) {
@@ -67,9 +65,10 @@ function note(text) {
   return element;
 }
 
-// Nothing planned: every slot is flex with no pinned budget, and nothing's been added.
-function nothingPlanned(plans, day) {
-  return plans.every((plan) => plan.flex && !plan.budget) && (day.entries ?? []).length === 0;
+// Nothing planned: every slot is flex with no pinned budget, and nothing's been added. slots:
+// day-plan.js's dayPlan.
+function nothingPlanned(slots, day) {
+  return slots.every((slot) => slot.flex && !slot.budget) && (day.entries ?? []).length === 0;
 }
 
 // store: the app's store. dateSwitcher: the header's previous / date / next (js/shell.js).
@@ -89,6 +88,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   // The last day of the off-plan stretch this day is in, or null when it isn't off plan.
   let offPlanEnd = null;
   let doc;
+  let bundled;
   let foods;
   let getFood;
   // The weight log, oldest first. Its latest weigh-in is the profile's weight, so it sets the
@@ -150,100 +150,106 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     queueWrite('the day', async () => days.saveDay(savedDate, edit(await days.getDay(savedDate)), today()));
   }
 
-  // Like change, for the core doc: edit takes the doc and returns the changed one.
-  function changeDoc(edit) {
-    doc = edit(doc);
-    queueWrite('the plan', () => updateCoreDoc(store, edit));
+  // A slot as the day has it now, and one of its planned items, read again after a change.
+  const slotNow = (slotId) => dayPlan(doc, day, getFood).find(({ id }) => id === slotId);
+  const itemNow = (slotId, itemId) => slotNow(slotId)?.items.find(({ id }) => id === itemId);
+
+  function useFoods(custom) {
+    foods = [...custom, ...bundled];
+    getFood = foodLookup(foods);
   }
 
-  // For this day only, unless made the default: then the template plans the meal on every day
-  // not yet locked, this one included, which then needs no swap of its own (SPEC §3.4). A food or
-  // quick numbers is for the day only, kept in the slot's change (SPEC §3.5).
-  async function swap(plan) {
-    const picked = await swapSheet({ plan, meals: doc.meals ?? [], foods, getFood, store });
+  // A planned item swapped for this day only (SPEC §3.5), or with Make this the default, in the
+  // template too (SPEC §3.4). item: the day item as the slot eats it.
+  async function swap(slot, item, title) {
+    const picked = await swapSheet({ title, slot, item, meals: doc.meals ?? [], foods, getFood, store });
     if (!picked) return;
-    if (picked.entry) {
-      change((d) => swapSlotToEntry(d, plan.id, picked.entry));
+    const current = doc;
+    if (!picked.plan) {
+      change((d) => swapPlannedItem(current, d, slot.id, item.id, picked.item, getFood));
       return;
     }
-    const { mealId, makeDefault } = picked;
-    if (makeDefault) changeDoc((d) => setSlotMeal(d, plan.id, mealId));
-    const planned = doc.template?.[plan.id]?.mealId;
-    change((d) => swapSlot(d, plan.id, mealId, planned));
+    // Custom foods are read again, since a food picked may have been made in the food picker, and
+    // the template needs to find it.
+    if (picked.plan.food) useFoods((await store.load(CORE_DOC_ID)).foods ?? []);
+    // One id for the placed item, so the template shown, the one saved and the day all agree.
+    const placedId = crypto.randomUUID();
+    const replace = (d) => replacePlannedItem(d, slot.id, item.id, picked.plan, placedId);
+    const next = replace(current);
+    doc = next;
+    queueWrite('the plan', () => updateCoreDoc(store, replace));
+    // Swapped against the template it was made on first, so a change saved before slots held
+    // items is in the new shape before it's read against the new template.
+    change((d) => {
+      const swapped = swapPlannedItem(current, d, slot.id, item.id, picked.item, getFood);
+      return swapPlannedItemToDefault(next, swapped, slot.id, item.id, picked.item, placedId, getFood);
+    });
   }
 
-  // The day's own version of the slot's meal (SPEC §3.5), opened from the slot as it is now, so a
-  // portion just picked in its actions sheet is folded into the amounts. Each change saves
-  // straight away, so the rings move behind the sheet. Reset applies as it closes, like As planned.
-  async function editIngredients(slotId) {
-    const plan = daySlots(doc, day, getFood).find(({ id }) => id === slotId);
-    const mealId = plan.meal.id;
+  // The day's own version of a meal in the slot (SPEC §3.5), opened from the meal as it is now, so
+  // a portion just picked is folded into the amounts. Each change saves straight away, so the
+  // rings move behind the sheet. Reset applies as it closes, like As planned.
+  async function editIngredients(slotId, itemId) {
+    const item = itemNow(slotId, itemId);
+    if (!item) return;
+    const current = doc;
     const picked = await ingredientsSheet({
-      name: plan.meal.name,
-      items: slotIngredients(plan, getFood),
-      edited: plan.edited,
+      name: item.label,
+      items: scaleIngredients(item.ingredients, item.portion),
+      edited: Boolean(item.originalIngredients),
       foods,
       getFood,
       store,
-      onChange: (items) => change((d) => setSlotIngredients(d, slotId, mealId, items)),
+      onChange: (items) => change((d) => setItemIngredients(current, d, slotId, itemId, items, getFood)),
     });
-    if (picked?.action === 'reset') change((d) => resetSlotIngredients(d, slotId));
+    if (picked?.action === 'reset') change((d) => resetItemIngredients(current, d, slotId, itemId, getFood));
   }
 
-  // A meal added to a slot, changed for the day in the same sheet (SPEC §3.5), which ends in
-  // Swap meal and Remove from slot. Reset goes back to the meal as it was added.
+  // A meal added to a slot, changed for the day in the same sheet (SPEC §3.5), opened from the meal
+  // as it is now, at its portion. Reset goes back to the meal as it was added, at 1×.
   async function editEntryIngredients(entryId) {
     const entry = (day.entries ?? []).find(({ id }) => id === entryId);
     if (!entry) return;
     const picked = await ingredientsSheet({
       name: entry.label,
-      items: entry.ingredients,
+      items: scaleIngredients(entry.ingredients, entry.portion ?? 1),
       edited: Boolean(entry.originalIngredients),
       foods,
       getFood,
       store,
       onChange: (items) => change((d) => setEntryIngredients(d, entryId, items)),
-      added: true,
     });
     if (picked?.action === 'reset') change((d) => resetEntryIngredients(d, entryId));
-    if (picked?.action === 'swap') await swapEntry(entry);
-    if (picked?.action === 'remove') await remove(entry);
   }
 
-  // Anything added, other than a meal with its ingredients: its item sheet, Swap or Remove from
-  // slot (SPEC §3.6).
+  // Anything added: its item sheet (SPEC §3.6). A meal with its ingredients has Swap, Portion, Edit
+  // ingredients and Remove from slot, as a planned meal; anything else, Swap and Remove from slot.
   async function openEntry(entry) {
-    const picked = await itemSheet({ title: entry.label });
+    const onPortion = (portion) => change((d) => setEntryPortion(d, entry.id, portion));
+    const picked = await entrySheet({ entry, onPortion });
     if (picked?.action === 'swap') await swapEntry(entry);
+    if (picked?.action === 'ingredients') await editEntryIngredients(entry.id);
     if (picked?.action === 'remove') await remove(entry);
   }
 
-  // The day's version of a slot's planned foods (SPEC §3.5), made by edit from the foods the slot
-  // eats on the day it's applied to, so it builds on what's stored.
-  function changePlannedFoods(slotId, edit) {
-    change((d) => {
-      const { foods: current } = daySlots(doc, d, getFood).find(({ id }) => id === slotId);
-      return setSlotFoods(d, slotId, edit(current));
-    });
+  // A portion for a meal in the slot (SPEC §3.5), shown and saved straight away.
+  function setPortion(slotId, itemId, portion) {
+    const current = doc;
+    change((d) => setItemPortion(current, d, slotId, itemId, portion, getFood));
   }
 
-  // A planned food's item sheet (SPEC §3.6): Swap, for another food from search, starting at the
-  // old amount when it has the same unit, or Remove for today. Neither asks first, since As
-  // planned undoes either. item: the planned food's ingredient.
-  async function openPlannedFood(slotId, item) {
-    const picked = await itemSheet({ title: item.name, removeLabel: 'Remove for today' });
-    if (picked?.action === 'remove') changePlannedFoods(slotId, (current) => removeIngredient(current, item.foodId));
-    if (picked?.action !== 'swap') return;
-    const swapped = await addFoodSheet({
-      foods,
-      store,
-      title: `${item.name} · Swap`,
-      submitLabel: 'Swap food',
-      startAmount: { qty: Number(amountText(item.qty)), unit: item.unit },
-    });
-    if (!swapped) return;
-    const { food, qty, unit } = swapped;
-    changePlannedFoods(slotId, (current) => swapIngredient(current, item.foodId, food, qty, unit));
+  // One of several planned items in a slot (SPEC §3.6): its item sheet, with Swap, Portion and
+  // Edit for a meal, and Remove for today, which doesn't ask first, since As planned undoes it.
+  // Removing the slot's last planned item skips it.
+  async function openPlannedItem(slot, item) {
+    const picked = await plannedItemSheet({ item, onPortion: (portion) => setPortion(slot.id, item.id, portion) });
+    const now = itemNow(slot.id, item.id) ?? item;
+    if (picked?.action === 'swap') await swap(slot, now, `${now.label} · Swap`);
+    if (picked?.action === 'ingredients') await editIngredients(slot.id, item.id);
+    if (picked?.action === 'remove') {
+      const current = doc;
+      change((d) => removePlannedItem(current, d, slot.id, item.id, getFood));
+    }
   }
 
   // What's picked takes the entry's place, in its slot, as a new snapshot (SPEC §3.5). It isn't
@@ -298,34 +304,38 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     if (confirmed) change((d) => removeEntry(d, entry.id));
   }
 
-  // What a slot's sheet picked: slot-actions-sheet.js's { action, entry }. plan: the slot, or
-  // OTHER. Focus goes back to the slot: its row, or the Log button of a flex slot that's open
-  // again. Other's row goes once it's empty, so focus goes to the last slot's, where it was.
-  async function act(plan, picked) {
-    const { action, entry } = picked ?? {};
-    if (action === 'swap') await swap(plan);
-    if (action === 'skip') change((d) => skipSlot(d, plan.id));
-    if (action === 'ingredients') await editIngredients(plan.id);
-    if (action === 'as-planned') change((d) => clearSlotChange(d, plan.id));
-    if (action === 'add') await add(plan);
-    if (action === 'planned-food') await openPlannedFood(plan.id, entry);
-    if (action === 'entry-ingredients') await editEntryIngredients(entry.id);
+  // What a slot's sheet picked: slot-actions-sheet.js's { action, item, entry }. slot: one of
+  // dayPlan's, or OTHER. Focus goes back to the slot: its row, or the Log button of a flex slot
+  // that's open again. Other's row goes once it's empty, so focus goes to the last slot's, where
+  // it was.
+  async function act(slot, picked) {
+    const { action, item, entry } = picked ?? {};
+    if (action === 'swap') await swap(slot, item, `${slot.name} · Swap`);
+    if (action === 'skip') change((d) => skipPlannedSlot(d, slot.id));
+    if (action === 'ingredients') await editIngredients(slot.id, item.id);
+    if (action === 'as-planned') change((d) => clearSlotChange(d, slot.id));
+    if (action === 'add') await add(slot);
+    if (action === 'item') await openPlannedItem(slot, item);
     if (action === 'entry') await openEntry(entry);
-    (slotButtons.get(plan.id) ?? [...slotButtons.values()].at(-1))?.focus();
+    (slotButtons.get(slot.id) ?? [...slotButtons.values()].at(-1))?.focus();
   }
 
-  async function openActions(plan) {
+  // A preset portion keeps the sheet open, so it's handed the slot as it is after each one.
+  async function openActions(slot) {
     const picked = await slotActionsSheet({
-      plan,
-      foodsChanged: Object.hasOwn(day.changes?.[plan.id] ?? {}, 'foods'),
+      slot,
+      planned: plannedDayItems(doc, slot.id, getFood),
       getFood,
-      onPortion: (portion) => change((d) => setSlotPortion(d, plan.id, portion)),
+      onPortion: (itemId, portion) => {
+        setPortion(slot.id, itemId, portion);
+        return slotNow(slot.id);
+      },
     });
-    await act(plan, picked);
+    await act(slot, picked);
   }
 
-  async function openFilled(plan) {
-    await act(plan, await filledFlexSheet({ plan }));
+  async function openFilled(slot) {
+    await act(slot, await filledFlexSheet({ plan: slot }));
   }
 
   // Other's sheet acts like a filled flex slot's, with OTHER as its slot, so Add to Other adds
@@ -396,8 +406,8 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   // Other's row after the slots, once it holds something (SPEC §3.6): what was added outside the
   // slots, and anything whose slot has since been removed. Kept under Other's id like a slot's
   // row, so the hop and focus find it.
-  function otherGroups(plans, takesChanges) {
-    const entries = otherEntries(day, plans);
+  function otherGroups(slots, takesChanges) {
+    const entries = otherEntries(day, slots);
     if (entries.length === 0) return [];
     const onClick = takesChanges ? () => openOther(entries) : undefined;
     const item = otherRow(entries, onClick);
@@ -406,39 +416,38 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     return [underName(OTHER.name, item)];
   }
 
-  function slotGroups(plans) {
+  // Each slot as day-plan.js's dayPlan has it (SPEC §3.6), and its sheets change it through
+  // day-plan.js's day changes.
+  function slotGroups(slots) {
     // Only today and later take changes: a past day is locked, or from before the app was used.
     const takesChanges = !day.locked && date >= today();
-    const groups = plans.map((plan) => {
+    const planned = new Map(planSlots(doc, getFood).map(({ id, items }) => [id, items]));
+    const groups = slots.map((slot) => {
       let item;
       let button;
-      if (!plan.flex || plan.entries.length > 0) {
-        const open = plan.flex ? openFilled : openActions;
-        const onClick = takesChanges ? () => open(plan) : undefined;
-        // A slot swapped to a food or quick numbers shows like a filled flex slot (DESIGN §8).
-        item =
-          plan.flex || plan.swapEntry
-            ? filledFlexRow(plan, onClick)
-            : plannedRow(plan, getFood, onClick, itemIngredients(doc.template?.[plan.id]?.foods ?? [], getFood));
+      if (!slot.flex || slot.entries.length > 0) {
+        const open = slot.flex ? openFilled : openActions;
+        const onClick = takesChanges ? () => open(slot) : undefined;
+        item = slotRow(slot, onClick, planned.get(slot.id));
         if (onClick) button = item.firstElementChild;
       } else {
-        const gap = takesChanges ? flexGap(targets, day, plans, plan.id, getFood) : null;
+        const gap = takesChanges ? dayPlanFlexGap(targets, day, slots, slot.id) : null;
         if (takesChanges) {
-          button = secondaryButton('Log', { onClick: () => add(plan).then(() => slotButtons.get(plan.id)?.focus()) });
-          button.setAttribute('aria-label', `Log to ${plan.name}`);
+          button = secondaryButton('Log', { onClick: () => add(slot).then(() => slotButtons.get(slot.id)?.focus()) });
+          button.setAttribute('aria-label', `Log to ${slot.name}`);
         }
-        item = openFlexRow(plan, gap, button);
+        item = openFlexRow(slot, gap, button);
       }
-      slotRows.set(plan.id, item);
-      if (button) slotButtons.set(plan.id, button);
-      return underName(slotEyebrow(plan), item);
+      slotRows.set(slot.id, item);
+      if (button) slotButtons.set(slot.id, button);
+      return underName(slotEyebrow(slot), item);
     });
-    return [...groups, ...otherGroups(plans, takesChanges)];
+    return [...groups, ...otherGroups(slots, takesChanges)];
   }
 
   function show() {
-    const plans = daySlots(doc, day, getFood);
-    const totals = dayTotal(day, plans, getFood);
+    const slots = dayPlan(doc, day, getFood);
+    const totals = dayPlanTotal(day, slots);
     if (dayRings) {
       dayRings.show({ totals, targets });
     } else {
@@ -462,8 +471,8 @@ export function render(container, { store, dateSwitcher, lockIn }) {
       slotsArea.replaceChildren(...entries, addToDay);
     } else if (day.offPlan && date >= today()) {
       const line = offPlanLine({ until: offPlanEnd ?? date, today: today(), backOnPlan: backOnPlanButton });
-      slotsArea.replaceChildren(line, ...slotGroups(plans));
-    } else if (nothingPlanned(plans, day)) {
+      slotsArea.replaceChildren(line, ...slotGroups(slots));
+    } else if (nothingPlanned(slots, day)) {
       slotsArea.replaceChildren(
         emptyState({
           iconName: 'calendar',
@@ -473,7 +482,7 @@ export function render(container, { store, dateSwitcher, lockIn }) {
         }),
       );
     } else {
-      slotsArea.replaceChildren(...slotGroups(plans));
+      slotsArea.replaceChildren(...slotGroups(slots));
     }
   }
 
@@ -508,11 +517,11 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   // Meal totals and the add sheet's search need every food, bundled ones included. Targets need
   // the latest weigh-in.
   Promise.all([loadBundledFoods(), store.load(CORE_DOC_ID), weightLog.list()]).then(
-    ([bundled, loaded, log]) => {
+    ([loadedBundled, loaded, log]) => {
       if (!screen.isConnected) return;
       doc = loaded;
-      foods = [...(doc.foods ?? []), ...bundled];
-      getFood = foodLookup(foods);
+      bundled = loadedBundled;
+      useFoods(doc.foods ?? []);
       weighIns = log;
       updateTargets();
       showDay();

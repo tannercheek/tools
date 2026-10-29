@@ -372,6 +372,44 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--stack-gap);
 }
 
+/* A custom food's other units (DESIGN §10): a row per unit, its name and weight in the same
+   2-column grid as the serving, with a trailing remove button. */
+.food-form__units-section,
+.food-form__units {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+.food-form__units {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.food-form__unit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.food-form__unit-line {
+  display: flex;
+  align-items: center;
+  gap: var(--inline-gap);
+}
+
+.food-form__unit-line > .food-form__grid {
+  flex: 1;
+}
+
+.food-form__unit-hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-sm);
+  color: var(--color-text-2);
+}
+
 /* ---------- Settings: profile and targets (SPEC §3.1) ---------- */
 
 .settings {
@@ -603,7 +641,7 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--stack-gap);
 }
 
-/* ---------- Add and swap sheets (Today: a flex slot's Log, a planned slot's Swap) ---------- */
+/* ---------- Add and swap sheets (Today: a flex slot's Log, a planned item's Swap) ---------- */
 
 /* Full height like the add food sheet, so switching between meal, food and numbers doesn't
    resize the sheet. */
@@ -613,8 +651,21 @@ html:has(.tabbar:not([hidden])) {
 }
 
 .add-entry,
-.swap,
-.swap__meal {
+.swap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+/* ---------- Plan's slot sheet (DESIGN §8) ---------- */
+
+/* Full height like the add and swap sheets, so switching between meal and food doesn't resize
+   the sheet. */
+.sheet__panel:has(> .plan-slot) {
+  height: calc(100% - var(--header-h));
+}
+
+.plan-slot {
   display: flex;
   flex-direction: column;
   gap: var(--stack-gap);

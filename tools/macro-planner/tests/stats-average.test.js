@@ -4,7 +4,13 @@ import { lastSevenDaysAverage } from '../js/calc.js';
 import { addEntry, createCoreDoc, emptyDay, foodEntry, quickEntry } from '../js/data.js';
 import { lockPastDays } from '../js/lock-in.js';
 import { createMeal } from '../js/saved-meals.js';
-import { setSlotBudget, setSlotMeal, setSlotPortion, skipSlot, swapSlot } from '../js/slots.js';
+import { addPlannedMeal, setSlotBudget } from '../js/slots.js';
+
+// Old-shape day changes (SPEC §3.5), for checking lock-in still reads data saved before slots
+// held items. See old-slot-model-reference.js.
+const swapChange = (day, slotId, mealId) => ({ ...day, changes: { ...day.changes, [slotId]: { mealId } } });
+const skipChange = (day, slotId) => ({ ...day, changes: { ...day.changes, [slotId]: { mealId: null } } });
+const portionChange = (day, slotId, portion) => ({ ...day, changes: { ...day.changes, [slotId]: { portion } } });
 
 // Float math: compare to within a hair, not exactly.
 function assertTotals(actual, expected, label = '') {
@@ -50,8 +56,8 @@ const TODAY = '2026-10-15';
 function plannedDoc(startedOn = '2026-10-01') {
   let doc = { ...createCoreDoc(startedOn), meals: [OATS, RICE_BEEF, RICE_BOWL] };
   const [breakfast, lunch, dinner] = doc.slots;
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
-  doc = setSlotMeal(doc, lunch.id, RICE_BEEF.id);
+  doc = addPlannedMeal(doc, breakfast.id, OATS.id);
+  doc = addPlannedMeal(doc, lunch.id, RICE_BEEF.id);
   return setSlotBudget(doc, dinner.id, DINNER_BUDGET);
 }
 
@@ -65,13 +71,13 @@ function weekOfDays(doc) {
     '2026-10-07': addEntry(emptyDay(), quick(dinner, 5000, 300, 200, 500, 'Feast')),
     // 2026-10-08 has no record: never opened, so on plan. 1600 / 84 / 50 / 180.
     // Lunch swapped for the rice bowl: 1500 / 66 / 40 / 200.
-    '2026-10-09': swapSlot(emptyDay(), lunch.id, RICE_BOWL.id, RICE_BEEF.id),
+    '2026-10-09': swapChange(emptyDay(), lunch.id, RICE_BOWL.id),
     // Breakfast skipped, a bar added at lunch: 1400 / 84 / 45 / 145.
-    '2026-10-10': addEntry(skipSlot(emptyDay(), breakfast.id), quick(lunch, 200, 10, 5, 25, 'Bar')),
+    '2026-10-10': addEntry(skipChange(emptyDay(), breakfast.id), quick(lunch, 200, 10, 5, 25, 'Bar')),
     // Off plan with nothing added: no entries, so it doesn't count.
     '2026-10-11': { ...emptyDay(), offPlan: true },
     // A 1.5× breakfast: 1800 / 89 / 55 / 210.
-    '2026-10-12': setSlotPortion(emptyDay(), breakfast.id, 1.5),
+    '2026-10-12': portionChange(emptyDay(), breakfast.id, 1.5),
     // Dinner filled with 250 g of rice, so its budget no longer counts: 1050 / 39 / 20 / 150.
     '2026-10-13': addEntry(emptyDay(), foodEntry(dinner, RICE, 250)),
     // Off plan with a restaurant meal, which is all that counts: 1650 / 100 / 60 / 195.
@@ -122,7 +128,7 @@ test('a day with every slot skipped or open doesn’t count', () => {
   const [breakfast, lunch, dinner] = doc.slots;
   // Dinner open, with no budget: a plain day is 800 / 34 / 20 / 100.
   doc = setSlotBudget(doc, dinner.id, null);
-  const allSkipped = skipSlot(skipSlot(emptyDay(), breakfast.id), lunch.id);
+  const allSkipped = skipChange(skipChange(emptyDay(), breakfast.id), lunch.id);
   const locked = lockIn({ '2026-10-12': allSkipped }, doc);
   assert.deepEqual(locked['2026-10-12'].entries, []);
   const { average, loggedDays } = lastSevenDaysAverage(locked, TODAY);

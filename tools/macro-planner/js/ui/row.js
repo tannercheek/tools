@@ -71,13 +71,14 @@ function iconTile(iconName) {
 
 // Plain lines under a row's numbers (DESIGN §8): a line each of emoji, label and kcal, like the
 // things a slot holds, or with an amount in place of kcal, like an edited meal's ingredients.
-// items: [{ emoji, label, kcal, ingredients }] or [{ emoji, label, amount }], amount as text
-// ("3 egg"). ingredients, if any: lines of the second kind, indented under that line's label,
-// like an edited meal that's one of a slot's items.
+// items: [{ emoji, label, kcal, ingredients, marks }] or [{ emoji, label, amount }], amount as
+// text ("3 egg"). ingredients, if any: lines of the second kind, indented under that line's label,
+// like an edited meal that's one of a slot's items. marks, if any: that line's changes for the
+// day after its label (["Swapped", "1.5×"]), like a slot's eyebrow, so they show when it truncates.
 function extrasLines(items) {
   const lines = document.createElement('span');
   lines.className = 'row__extras';
-  for (const { emoji, label, kcal, amount, ingredients = [] } of items) {
+  for (const { emoji, label, kcal, amount, ingredients = [], marks = [] } of items) {
     const line = document.createElement('span');
     line.className = 'row__extra';
     const emojiText = textLine('row__extra-emoji', emoji);
@@ -86,7 +87,16 @@ function extrasLines(items) {
     const main = document.createElement('span');
     main.className = 'row__extra-main';
     const end = amount === undefined ? textLine('row__extra-kcal', `${integer.format(kcal)} kcal`) : textLine('row__extra-amount', amount);
-    main.append(textLine('row__extra-label', label), end);
+    const name = textLine('row__extra-label', label);
+    if (marks.length > 0) {
+      // Together, a space apart like the eyebrow's "·", so the label truncates before them.
+      const named = document.createElement('span');
+      named.className = 'row__extra-name';
+      named.append(name, textLine('row__extra-marks', `· ${marks.join(' · ')}`));
+      main.append(named, end);
+    } else {
+      main.append(name, end);
+    }
     line.append(emojiText, main);
     if (ingredients.length > 0) {
       const nested = extrasLines(ingredients);

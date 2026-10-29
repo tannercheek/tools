@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { OTHER, addEntry, createCoreDoc, emptyDay, foodEntry, quickEntry } from '../js/data.js';
 import { lockDay } from '../js/lock-in.js';
 import { createMeal } from '../js/saved-meals.js';
-import { addSlot, createSlot, lockedDayGroups, moveSlot, removeSlot, renameSlot, setSlotMeal } from '../js/slots.js';
+import { addPlannedMeal, addSlot, createSlot, lockedDayGroups, moveSlot, removeSlot, renameSlot } from '../js/slots.js';
 
 // Test fixtures with made-up round numbers, not real nutrition data.
 const OATS_FOOD = { id: 'oats', name: 'Oats', emoji: '🌾', serving: { qty: 100, unit: 'g' }, kcal: 380, protein: 13, fat: 7, carbs: 68 };
@@ -82,7 +82,7 @@ test('Other comes last, after a removed slot’s group, under "Other"', () => {
 test('a planned breakfast with a banana added locks in as one Breakfast group, the meal first', () => {
   let doc = { ...freshDoc(), meals: [OATS] };
   const breakfast = slotNamed(doc, 'Breakfast');
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
+  doc = addPlannedMeal(doc, breakfast.id, OATS.id);
   const day = lockDay(addEntry(emptyDay(), foodEntry(breakfast, BANANA, 120)), doc, doc.meals, [OATS_FOOD, BANANA]);
   assert.deepEqual(summary(lockedDayGroups(day.entries, doc.slots)), [['Breakfast', ['Oats', 'Banana']]]);
 });

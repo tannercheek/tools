@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal, foodTotals, mealTotals } from '../js/calc.js';
+import { dayPlanTotal, foodTotals, mealTotals } from '../js/calc.js';
 import { createCoreDoc, emptyDay, foodEntry, mealEntry, repeatEntry } from '../js/data.js';
+import { dayPlan, resetItemIngredients, setItemIngredients } from '../js/day-plan.js';
 import {
   addIngredient,
   ingredient,
@@ -9,13 +10,12 @@ import {
   scaleIngredients,
   setIngredientQty,
   setIngredientUnit,
-  slotIngredients,
   swapIngredient,
 } from '../js/ingredients.js';
 import { lockDay } from '../js/lock-in.js';
 import { amountLabel, convertAmount, defaultAmount, foodUnits, toServings } from '../js/portions.js';
 import { addItem, createMeal, foodLookup, updateItem } from '../js/saved-meals.js';
-import { daySlots, resetSlotIngredients, setSlotIngredients, setSlotMeal } from '../js/slots.js';
+import { addPlannedMeal, slotItems } from '../js/slots.js';
 
 // Float math: compare to within a hair, not exactly.
 function assertClose(actual, expected, label = '') {
@@ -37,6 +37,18 @@ const PEANUT_BUTTER = bundled('pb', 'Peanut butter, smooth', '🥜', { qty: 2, u
 const OLIVE_OIL = bundled('oil', 'Olive oil', '🫒', { qty: 1, unit: 'tbsp' }, 13.5, [{ unit: 'tsp', grams: 4.5 }], 120, 0, 14, 0);
 const CHICKEN = bundled('chicken', 'Chicken breast, roasted', '🍗', { qty: 100, unit: 'g' }, 100, [{ unit: 'oz', grams: 28.349523125 }], 160, 30, 4, 0);
 const JAM = { id: 'custom-jam', name: 'Jam', emoji: '🍓', serving: { qty: 1, unit: 'tbsp' }, kcal: 50, protein: 0, fat: 0, carbs: 13, custom: true, archived: false };
+// A custom food with a weight and a portion, like a bundled food (14.20).
+const PROTEIN_POWDER = {
+  id: 'custom-powder', name: 'Protein powder', emoji: '🥤', serving: { qty: 1, unit: 'scoop' },
+  grams: 31, portions: [{ unit: 'tbsp', grams: 10 }], kcal: 120, protein: 24, fat: 1, carbs: 3,
+  custom: true, archived: false,
+};
+// A custom food whose serving is already in grams, with a portion but no stored `grams`.
+const OVERNIGHT_OATS = {
+  id: 'custom-oats', name: 'Overnight oats', emoji: '🥣', serving: { qty: 100, unit: 'g' },
+  portions: [{ unit: 'cup', grams: 240 }], kcal: 140, protein: 5, fat: 3, carbs: 24,
+  custom: true, archived: false,
+};
 const FOODS = [RICE, EGG, PEANUT_BUTTER, OLIVE_OIL, JAM];
 const getFood = foodLookup(FOODS);
 
@@ -63,6 +75,19 @@ test('a custom food offers only its own unit', () => {
   assert.throws(() => foodTotals(JAM, 20, 'g'), RangeError);
   assert.throws(() => ingredient(JAM, 20, 'g'), RangeError);
   assert.throws(() => addItem(createMeal({ name: 'Toast' }), JAM, 20, 'g'), RangeError);
+});
+
+test('a custom food with a serving weight offers grams and its units, like a bundled food', () => {
+  assert.deepEqual(foodUnits(PROTEIN_POWDER), ['scoop', 'g', 'tbsp']);
+  assertClose(toServings(PROTEIN_POWDER, 1, 'tbsp'), 10 / 31);
+  assertClose(convertAmount(PROTEIN_POWDER, 1, 'scoop', 'g'), 31);
+});
+
+test('a custom food serving already counted in g gets its weight from its quantity, with no grams stored', () => {
+  assert.equal(OVERNIGHT_OATS.grams, undefined);
+  assert.deepEqual(foodUnits(OVERNIGHT_OATS), ['g', 'cup']);
+  assertClose(toServings(OVERNIGHT_OATS, 1, 'cup'), 2.4);
+  assertClose(convertAmount(OVERNIGHT_OATS, 1, 'cup', 'g'), 240);
 });
 
 test("a unit the food doesn't have is refused", () => {
@@ -247,13 +272,14 @@ test("an ingredient's numbers rescale from its own snapshot when its unit is swi
 test('a unit switched in the day’s ingredients moves the day’s total, and reset brings back the meal', () => {
   const planned = { ...createCoreDoc('2026-10-15'), meals: [RICE_BOWL] };
   const slotId = planned.slots[0].id;
-  const doc = setSlotMeal(planned, slotId, RICE_BOWL.id);
-  const plan = daySlots(doc, emptyDay())[0];
-  const items = setIngredientUnit(slotIngredients(plan, getFood), RICE, 200, 'g');
-  const edited = setSlotIngredients(emptyDay(), slotId, RICE_BOWL.id, items);
-  assertTotals(dayTotal(edited, daySlots(doc, edited), getFood), foodTotals(RICE, 200));
-  const reset = resetSlotIngredients(edited, slotId);
-  assertTotals(dayTotal(reset, daySlots(doc, reset), getFood), CUP_OF_RICE);
+  const doc = addPlannedMeal(planned, slotId, RICE_BOWL.id);
+  const [item] = slotItems(doc.template[slotId]);
+  const plan = dayPlan(doc, emptyDay(), getFood)[0];
+  const items = setIngredientUnit(plan.items[0].ingredients, RICE, 200, 'g');
+  const edited = setItemIngredients(doc, emptyDay(), slotId, item.id, items, getFood);
+  assertTotals(dayPlanTotal(edited, dayPlan(doc, edited, getFood)), foodTotals(RICE, 200));
+  const reset = resetItemIngredients(doc, edited, slotId, item.id, getFood);
+  assertTotals(dayPlanTotal(reset, dayPlan(doc, reset, getFood)), CUP_OF_RICE);
   // The saved meal is still 1 cup.
   assert.deepEqual(doc.meals[0].items, [{ foodId: 'rice', qty: 1, unit: 'cup' }]);
 });
@@ -288,12 +314,11 @@ test('Recent adds the rice again as it was added, in cups', () => {
 
 test('lock-in writes an item in cups at its grams, and the locked day keeps its numbers after', () => {
   const planned = { ...createCoreDoc('2026-10-15'), meals: [RICE_BOWL] };
-  const doc = setSlotMeal(planned, planned.slots[0].id, RICE_BOWL.id);
+  const doc = addPlannedMeal(planned, planned.slots[0].id, RICE_BOWL.id);
   const locked = lockDay(emptyDay(), doc, doc.meals, FOODS);
   assert.equal(locked.entries.length, 1);
   assertTotals(locked.entries[0], CUP_OF_RICE);
   assert.equal(lockDay(locked, doc, doc.meals, FOODS), locked);
   // The meal switched to 100 g afterwards doesn't change the locked day.
-  const changed = { ...doc, meals: [{ ...RICE_BOWL, items: [{ foodId: 'rice', qty: 100, unit: 'g' }] }] };
-  assertTotals(dayTotal(locked, daySlots(changed, locked), getFood), CUP_OF_RICE);
+  assertTotals(dayPlanTotal(locked, []), CUP_OF_RICE);
 });

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal } from '../js/calc.js';
+import { dayPlanTotal } from '../js/calc.js';
 import {
   addEntry,
   createCoreDoc,
@@ -13,9 +13,10 @@ import {
   removeEntry,
   repeatEntry,
 } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { lockDay, lockPastDays } from '../js/lock-in.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
-import { daySlots, setSlotBudget, setSlotMeal } from '../js/slots.js';
+import { addPlannedMeal, setSlotBudget } from '../js/slots.js';
 import { createLocalStore } from '../js/store.js';
 import { createFakeStorage } from './fake-storage.js';
 
@@ -61,7 +62,7 @@ test('Recent lists the 7 days before today, newest day first', () => {
 function plannedDoc() {
   let doc = { ...createCoreDoc('2026-10-12'), meals: [BOWL] };
   const [, lunch, dinner] = doc.slots;
-  doc = setSlotMeal(doc, lunch.id, BOWL.id);
+  doc = addPlannedMeal(doc, lunch.id, BOWL.id);
   return setSlotBudget(doc, dinner.id, BURRITO);
 }
 
@@ -166,7 +167,7 @@ test('a meal added on a past day stays in Recent after it’s deleted, and count
   assert.equal(entry.source, 'meal');
 
   const today = addEntry(emptyDay(), repeatEntry(dinner, entry));
-  assert.equal(dayTotal(today, daySlots(deleted, today), getFood).kcal, 390);
+  assert.equal(dayPlanTotal(today, dayPlan(deleted, today, getFood)).kcal, 390);
 });
 
 test('a Recent entry added to a locked past day counts in that day, and is there when it’s read again', async () => {
@@ -182,5 +183,5 @@ test('a Recent entry added to a locked past day counts in that day, and is there
     reread.entries.map(({ label, slotName }) => `${slotName} ${label}`),
     ['Lunch Shake', 'Dinner Shake'],
   );
-  assert.equal(dayTotal(reread, [], () => undefined).kcal, 600);
+  assert.equal(dayPlanTotal(reread, []).kcal, 600);
 });

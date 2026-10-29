@@ -1,10 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal, flexGap } from '../js/calc.js';
+import { dayPlanFlexGap, dayPlanTotal } from '../js/calc.js';
 import { readNumbers } from '../js/custom-foods.js';
 import { DEFAULT_EMOJI, addEntry, createCoreDoc, emptyDay, foodEntry, mealEntry, quickEntry } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
-import { addSlot, createSlot, daySlots, setSlotBudget, setSlotMeal, setSlotPortion, skipSlot, swapSlot } from '../js/slots.js';
+import { addPlannedMeal, addSlot, createSlot, removePlannedItem, setSlotBudget, slotItems } from '../js/slots.js';
+
+// Old-shape day changes (SPEC §3.5), for checking dayPlan still reads data saved before slots
+// held items. See old-slot-model-reference.js.
+const swapChange = (day, slotId, mealId) => ({ ...day, changes: { ...day.changes, [slotId]: { mealId } } });
+const skipChange = (day, slotId) => ({ ...day, changes: { ...day.changes, [slotId]: { mealId: null } } });
+const portionChange = (day, slotId, portion) => ({ ...day, changes: { ...day.changes, [slotId]: { portion } } });
 
 // Test fixtures with made-up round numbers, not real nutrition data.
 const per100g = (id, kcal, protein, fat, carbs) => ({ id, serving: { qty: 100, unit: 'g' }, kcal, protein, fat, carbs });
@@ -34,8 +41,8 @@ const BUDGET = { kcal: 700, protein: 50, fat: 20, carbs: 80 };
 function plannedDoc() {
   let doc = { ...createCoreDoc('2026-10-15'), meals: [OATS, RICE_BEEF, RICE_BOWL] };
   const [breakfast, lunch] = doc.slots;
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
-  return setSlotMeal(doc, lunch.id, RICE_BEEF.id);
+  doc = addPlannedMeal(doc, breakfast.id, OATS.id);
+  return addPlannedMeal(doc, lunch.id, RICE_BEEF.id);
 }
 
 const slotIds = (doc) => Object.fromEntries(doc.slots.map((slot) => [slot.name, slot.id]));
@@ -43,7 +50,7 @@ const slotNamed = (doc, name) => doc.slots.find((slot) => slot.name === name);
 
 // The gap as it shows: { kcal: 1541, ... } when under, or { kcal: -120, ... } for 120 over.
 function gapFor(doc, day, slotName, targets = TARGETS) {
-  const gap = flexGap(targets, day, daySlots(doc, day), slotIds(doc)[slotName], getFood);
+  const gap = dayPlanFlexGap(targets, day, dayPlan(doc, day, getFood), slotIds(doc)[slotName]);
   return gap && Object.fromEntries(Object.entries(gap).map(([key, { amount, over }]) => [key, over ? -amount : amount]));
 }
 
@@ -58,11 +65,11 @@ test('the gap moves when another slot is swapped, skipped or re-portioned', () =
   const doc = plannedDoc();
   const { Breakfast, Lunch } = slotIds(doc);
   // Rice bowl for Rice & beef: 2600 − (424 + 390).
-  assert.equal(gapFor(doc, swapSlot(emptyDay(), Lunch, RICE_BOWL.id, RICE_BEEF.id), 'Dinner').kcal, 1786);
+  assert.equal(gapFor(doc, swapChange(emptyDay(), Lunch, RICE_BOWL.id), 'Dinner').kcal, 1786);
   // Breakfast skipped: 2600 − 635.
-  assert.equal(gapFor(doc, skipSlot(emptyDay(), Breakfast), 'Dinner').kcal, 1965);
+  assert.equal(gapFor(doc, skipChange(emptyDay(), Breakfast), 'Dinner').kcal, 1965);
   // Lunch at 1.5×: 2600 − (424 + 952.5), the rest shown as 1377 (952.5 + 424 = 1376.5 rounds up).
-  assert.equal(gapFor(doc, setSlotPortion(emptyDay(), Lunch, 1.5), 'Dinner').kcal, 1223);
+  assert.equal(gapFor(doc, portionChange(emptyDay(), Lunch, 1.5), 'Dinner').kcal, 1223);
 });
 
 test('with two flex slots, each shows the whole gap, and adding to one shrinks only the other’s', () => {
@@ -107,7 +114,7 @@ test('a day already past its targets shows over, and every flex slot agrees with
   assert.deepEqual(gapFor(doc, emptyDay(), 'Dinner', small), { kcal: -159, protein: -18, fat: 10, carbs: -13 });
   // With nothing added to Dinner, its gap is what the rings show as left.
   const day = emptyDay();
-  const total = dayTotal(day, daySlots(doc, day), getFood);
+  const total = dayPlanTotal(day, dayPlan(doc, day, getFood));
   assert.equal(Math.round(TARGETS.kcal) - Math.round(total.kcal), gapFor(doc, day, 'Dinner').kcal);
 });
 
@@ -122,7 +129,7 @@ test('a pinned budget goes on the template slot, and null takes it off', () => {
   const { Dinner } = slotIds(doc);
   const pinned = setSlotBudget(doc, Dinner, { ...BUDGET, extra: 1 });
   assert.deepEqual(pinned.template[Dinner], { mealId: null, budget: BUDGET });
-  assert.deepEqual(daySlots(pinned, emptyDay())[2].budget, BUDGET);
+  assert.deepEqual(dayPlan(pinned, emptyDay(), getFood)[2].budget, BUDGET);
   assert.deepEqual(setSlotBudget(pinned, Dinner, null).template[Dinner], { mealId: null, budget: null });
   // Left as it was.
   assert.equal(doc.template[Dinner].budget, null);
@@ -131,9 +138,10 @@ test('a pinned budget goes on the template slot, and null takes it off', () => {
 test('a budget stays on a slot that plans a meal, and counts again once it’s flex', () => {
   const doc = plannedDoc();
   const { Dinner } = slotIds(doc);
-  const planned = setSlotMeal(setSlotBudget(doc, Dinner, BUDGET), Dinner, RICE_BOWL.id);
-  assert.equal(daySlots(planned, emptyDay())[2].budget, null);
-  assert.deepEqual(daySlots(setSlotMeal(planned, Dinner, null), emptyDay())[2].budget, BUDGET);
+  const planned = addPlannedMeal(setSlotBudget(doc, Dinner, BUDGET), Dinner, RICE_BOWL.id);
+  assert.equal(dayPlan(planned, emptyDay(), getFood)[2].budget, null);
+  const [item] = slotItems(planned.template[Dinner]);
+  assert.deepEqual(dayPlan(removePlannedItem(planned, Dinner, item.id), emptyDay(), getFood)[2].budget, BUDGET);
 });
 
 test('a budget needs four numbers of 0 or more; 0 is fine', () => {
@@ -180,7 +188,7 @@ test('entries are snapshots: editing or deleting the meal later doesn’t change
   const day = addEntry(emptyDay(), mealEntry(slotNamed(doc, 'Dinner'), RICE_BOWL, getFood));
   const edited = { ...doc, meals: doc.meals.filter((m) => m !== RICE_BOWL) };
   assert.equal(day.entries[0].label, 'Rice bowl');
-  assert.equal(dayTotal(day, daySlots(edited, day), getFood).kcal, 424 + 635 + 390);
+  assert.equal(dayPlanTotal(day, dayPlan(edited, day, getFood)).kcal, 424 + 635 + 390);
 });
 
 test('addEntry adds last and leaves the day passed in as it was', () => {

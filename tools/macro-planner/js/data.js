@@ -1,8 +1,8 @@
 // Doc shapes, defaults, and the day and weigh-in helpers. Pure: the store is passed in,
 // so this never touches window and runs in Node.
 
-import { addDays, foodTotals, ingredientsTotals, lastSevenDates, roundTotals } from './calc.js';
-import { mealIngredients } from './ingredients.js';
+import { addDays, foodTotals, ingredientsTotals, lastSevenDates, roundTotals, scaleTotals } from './calc.js';
+import { ingredient, mealIngredients } from './ingredients.js';
 import { CORE_DOC_ID } from './store.js';
 
 export const DAYS_DOC_ID = 'macro-planner-days';
@@ -149,11 +149,11 @@ export function quickEntry(slot, numbers, label = '') {
 }
 
 // A Recent entry added again: its label, emoji, numbers and source, as a new entry in this slot.
-// An added meal's ingredients come too, as they are, but not the list it was first added with:
-// this is a new add, so the meal as added is the meal as it is now.
-export function repeatEntry(slot, { label, emoji, source, kcal, protein, fat, carbs, ingredients }) {
+// An added meal's ingredients and portion come too, as they are, but not the list it was first
+// added with: this is a new add, so the meal as added is the meal as it is now.
+export function repeatEntry(slot, { label, emoji, source, kcal, protein, fat, carbs, ingredients, portion }) {
   const entry = createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs });
-  return ingredients ? { ...entry, ingredients } : entry;
+  return ingredients ? { ...entry, ingredients, ...(portion !== undefined && { portion }) } : entry;
 }
 
 // The add sheet's Recent (SPEC §3.5): what was added in the 7 days before today, each as
@@ -202,25 +202,82 @@ export function swapDayEntry(day, entryId, entry) {
   return withEntry(day, entryId, ({ slotId, slotName }) => ({ ...entry, slotId, slotName }));
 }
 
-// An added meal changed for the day (SPEC §3.5): items, ingredients.js's list, become its
-// ingredients and its numbers their total. The list as added is kept the first time, as
-// originalIngredients, for reset. Only a meal added with its ingredients has a list to change, and
-// it keeps at least one: removing the entry is for eating none of it.
+// Portion (SPEC §3.5) on an added meal, as on a planned one: its numbers become its ingredients'
+// total at portion, and the ingredients stay at 1×. An entry with no portion is at 1×. Only a meal
+// added with its ingredients has a total to scale.
+export function setEntryPortion(day, entryId, portion) {
+  if (!Number.isFinite(portion) || portion <= 0) throw new RangeError(`Not a portion above 0: ${portion}`);
+  return withEntry(day, entryId, (entry) => {
+    if (!entry.ingredients) throw new RangeError(`No ingredients to portion: ${entry.label}`);
+    return { ...entry, ...scaleTotals(ingredientsTotals(entry.ingredients), portion), portion };
+  });
+}
+
+// An added meal changed for the day (SPEC §3.5): items, ingredients.js's list, are what's eaten,
+// any portion already folded in, so the portion goes back to 1×, and its numbers are their total.
+// The list as added is kept the first time, as originalIngredients, for reset. Only a meal added
+// with its ingredients has a list to change, and it keeps at least one: removing the entry is for
+// eating none of it.
 export function setEntryIngredients(day, entryId, items) {
   if (!items?.length) throw new RangeError('A meal keeps at least one ingredient');
-  return withEntry(day, entryId, (entry) => {
+  return withEntry(day, entryId, ({ portion, ...entry }) => {
     if (!entry.ingredients) throw new RangeError(`No ingredients to change: ${entry.label}`);
     const originalIngredients = entry.originalIngredients ?? entry.ingredients;
     return { ...entry, ...ingredientsTotals(items), ingredients: items, originalIngredients };
   });
 }
 
-// Reset to original meal, for an added meal: the ingredients and numbers as added. The kept list
-// goes with it, so an entry counts as edited only while it has one.
+// Reset to original meal, for an added meal: the ingredients and numbers as added, at 1×. The
+// kept list goes with it, so an entry counts as edited only while it has one.
 export function resetEntryIngredients(day, entryId) {
-  return withEntry(day, entryId, ({ originalIngredients, ...entry }) =>
-    originalIngredients ? { ...entry, ...ingredientsTotals(originalIngredients), ingredients: originalIngredients } : entry,
-  );
+  return withEntry(day, entryId, ({ originalIngredients, portion, ...entry }) => {
+    const ingredients = originalIngredients ?? entry.ingredients;
+    return ingredients ? { ...entry, ...ingredientsTotals(ingredients), ingredients } : entry;
+  });
+}
+
+// --- Day items (SPEC §3.5) ---
+// A planned item as a day eats it: a snapshot shaped like an entry, without slotId and slotName,
+// under the id of the template item it stands for (day-plan.js). Each is built as planned, unmarked;
+// swappedIn marks one swapped in for a planned item.
+
+// A saved meal at 1×, with its ingredients, its numbers their total. getFood: saved-meals.js's
+// foodLookup over every food it uses.
+export function mealDayItem(id, meal, getFood) {
+  const ingredients = mealIngredients(meal, getFood);
+  return {
+    id,
+    label: meal.name,
+    emoji: meal.emoji,
+    ...ingredientsTotals(ingredients),
+    source: 'meal',
+    mealId: meal.id,
+    portion: 1,
+    ingredients,
+  };
+}
+
+// A food's ingredient snapshot (ingredients.js) as a food day item, its numbers for its amount.
+// The day's planned foods saved before slots held items are ingredients, so they read through this.
+export function ingredientDayItem(id, { foodId, name, emoji, unit, qty, kcal, protein, fat, carbs }) {
+  return { id, label: name, emoji, kcal, protein, fat, carbs, source: 'food', foodId, qty, unit };
+}
+
+// qty of food in unit, one of portions.js's foodUnits, or in the serving's unit without one.
+export function foodDayItem(id, food, qty, unit) {
+  return ingredientDayItem(id, ingredient(food, qty, unit));
+}
+
+// Quick numbers are only ever swapped in, since the template plans meals and foods. With no label
+// they take the slot's name, like quickEntry.
+export function quickDayItem(id, slot, numbers, label = '') {
+  const { slotId, slotName, ...item } = quickEntry(slot, numbers, label);
+  return { ...item, id };
+}
+
+// item swapped in for the planned item itemId: it keeps that item's id, so it stays in its place.
+export function swappedIn(itemId, item) {
+  return { ...item, id: itemId, swapped: true };
 }
 
 // --- Off plan (SPEC §3.4) ---

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayTotal, flexGap } from '../js/calc.js';
+import { dayPlanFlexGap, dayPlanTotal } from '../js/calc.js';
 import {
   OTHER,
   addEntry,
@@ -12,9 +12,10 @@ import {
   recentEntries,
   repeatEntry,
 } from '../js/data.js';
+import { dayPlan } from '../js/day-plan.js';
 import { lockDay } from '../js/lock-in.js';
 import { createMeal, foodLookup } from '../js/saved-meals.js';
-import { addSlot, createSlot, daySlots, otherEntries, removeSlot, setSlotMeal } from '../js/slots.js';
+import { addPlannedMeal, addSlot, createSlot, otherEntries, removeSlot } from '../js/slots.js';
 
 // Float math: compare to within a hair, not exactly.
 function assertTotals(actual, expected, label = '') {
@@ -56,13 +57,13 @@ const TARGETS = { kcal: 2600, protein: 180, fat: 70, carbs: 300, warnings: [] };
 function plannedDoc() {
   let doc = { ...createCoreDoc('2026-10-15'), meals: [OATS, RICE_BEEF] };
   const [breakfast, lunch] = doc.slots;
-  doc = setSlotMeal(doc, breakfast.id, OATS.id);
-  return setSlotMeal(doc, lunch.id, RICE_BEEF.id);
+  doc = addPlannedMeal(doc, breakfast.id, OATS.id);
+  return addPlannedMeal(doc, lunch.id, RICE_BEEF.id);
 }
 
 const slotIds = (doc) => Object.fromEntries(doc.slots.map((slot) => [slot.name, slot.id]));
 const slotNamed = (doc, name) => doc.slots.find((slot) => slot.name === name);
-const total = (doc, day) => dayTotal(day, daySlots(doc, day), getFood);
+const total = (doc, day) => dayPlanTotal(day, dayPlan(doc, day, getFood));
 
 // 120 g banana eaten outside the slots.
 const otherBanana = () => foodEntry(OTHER, BANANA, 120);
@@ -91,7 +92,7 @@ test('the entry helpers take Other in place of a slot: no slot id, and "Other" a
 
 // --- The day's total and the gap ---
 
-test("an Other entry counts in dayTotal and in an open flex slot's flexGap, without filling it", () => {
+test("an Other entry counts in the day's total and in an open flex slot's gap, without filling it", () => {
   const doc = plannedDoc();
   const { Dinner } = slotIds(doc);
   const plain = emptyDay();
@@ -100,8 +101,8 @@ test("an Other entry counts in dayTotal and in an open flex slot's flexGap, with
   assertTotals(total(doc, day), plus(total(doc, plain), BANANA_TOTALS));
 
   // It's in no slot, so Dinner is still open, and shows 2,600 − 380 − 635, then less the banana.
-  assert.ok(daySlots(doc, day).every((plan) => plan.entries.length === 0));
-  const gap = (d) => flexGap(TARGETS, d, daySlots(doc, d), Dinner, getFood);
+  assert.ok(dayPlan(doc, day, getFood).every((plan) => plan.entries.length === 0));
+  const gap = (d) => dayPlanFlexGap(TARGETS, d, dayPlan(doc, d, getFood), Dinner);
   assert.equal(gap(plain).kcal.amount, 1585);
   assert.equal(gap(day).kcal.amount, 1477);
 });
@@ -123,7 +124,7 @@ test('otherEntries picks up an entry whose slot was removed, and leaves out entr
   // Once it's removed, the shake joins Other in the order added, and still counts in the day.
   const removed = removeSlot(doc, preWorkout.id);
   assert.deepEqual(otherEntries(day, removed.slots), [first, shake, last]);
-  assert.deepEqual(otherEntries(day, daySlots(removed, day)), [first, shake, last]);
+  assert.deepEqual(otherEntries(day, dayPlan(removed, day, getFood)), [first, shake, last]);
   assertTotals(total(removed, day), total(doc, day));
 
   assert.deepEqual(otherEntries(emptyDay(), doc.slots), []);
@@ -141,7 +142,7 @@ test('lockDay keeps an Other entry as it is, and recentEntries lists it', () => 
   // The plan in slot order, then the banana as it was added.
   assert.deepEqual(locked.entries.map((e) => e.slotId), [Breakfast, Lunch, null]);
   assert.deepEqual(locked.entries[2], banana);
-  assertTotals(dayTotal(locked, [], getFood), total(doc, day));
+  assertTotals(dayPlanTotal(locked, []), total(doc, day));
 
   const recent = recentEntries({ '2026-10-20': locked }, '2026-10-21');
   assert.deepEqual(recent.map(({ entry }) => entry), [banana]);
@@ -159,7 +160,7 @@ test('an off-plan day counts it', () => {
 
   assertTotals(total(doc, day), BANANA_TOTALS);
   // Every slot is open flex off plan, and shows 2,600 less the banana.
-  assert.equal(flexGap(TARGETS, day, daySlots(doc, day), Breakfast, getFood).kcal.amount, 2492);
+  assert.equal(dayPlanFlexGap(TARGETS, day, dayPlan(doc, day, getFood), Breakfast).kcal.amount, 2492);
   assert.deepEqual(otherEntries(day, doc.slots), [banana]);
   assert.deepEqual(lockDay(day, doc, doc.meals, FOODS).entries, [banana]);
 });

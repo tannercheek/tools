@@ -3,8 +3,7 @@
 // day. Pure: no DOM, so it can be tested in Node. The template is keyed by slot id, so reordering
 // slots never touches it.
 
-import { itemIngredients } from './ingredients.js';
-import { addItem, removeItem, updateItem } from './saved-meals.js';
+import { addItem } from './saved-meals.js';
 
 export const MIN_SLOTS = 3;
 export const MAX_SLOTS = 6;
@@ -58,13 +57,6 @@ export function moveSlot(doc, slotId, offset) {
   return { ...doc, slots };
 }
 
-// mealId: the meal to plan in the slot, or null for none, which is flex unless the slot plans
-// foods. A pinned budget stays on the slot, since it only counts while the slot is flex.
-export function setSlotMeal(doc, slotId, mealId) {
-  const slot = doc.template?.[slotId] ?? { mealId: null, budget: null };
-  return { ...doc, template: { ...doc.template, [slotId]: { ...slot, mealId } } };
-}
-
 // budget: { kcal, protein, fat, carbs } to pin on the slot, or null to take it off. Like the
 // meal, it's on the template, so it applies every day. It counts only while the slot is open flex.
 export function setSlotBudget(doc, slotId, budget) {
@@ -80,105 +72,108 @@ export function setSlotBudget(doc, slotId, budget) {
   return { ...doc, template: { ...doc.template, [slotId]: { ...slot, budget: pinned } } };
 }
 
-// A slot's planned foods are listed like a meal's items, [{ foodId, qty, unit }], each food once,
-// so saved-meals.js's item changes keep them. change takes and returns a meal-like { items }.
-function changeSlotFoods(doc, slotId, change) {
-  const slot = doc.template?.[slotId] ?? { mealId: null, budget: null };
-  const { items } = change({ items: slot.foods ?? [] });
-  return { ...doc, template: { ...doc.template, [slotId]: { ...slot, foods: items } } };
+// --- Slot items (SPEC §3.4) ---
+// A template slot holds its planned items, [{ id, mealId } | { id, foodId, qty, unit }], in the
+// order they were added.
+
+// A template slot's planned items, in order. A slot saved before slots held items reads as its
+// mealId, then its foods, with ids made from what they plan, so they're the same on every read
+// without using positions. A slot with items ignores mealId and foods, even when its list is empty.
+export function slotItems(templateSlot) {
+  if (Array.isArray(templateSlot?.items)) return templateSlot.items;
+  const { mealId, foods = [] } = templateSlot ?? {};
+  const meal = mealId ? [{ id: `meal-${mealId}`, mealId }] : [];
+  return [...meal, ...foods.map((food) => ({ id: `food-${food.foodId}`, ...food }))];
 }
 
-// Plans qty of food in the slot every day (SPEC §3.4), in unit, one of portions.js's foodUnits,
-// or in the serving's unit without one. A food already planned there gets the amount added to it,
-// converted into its unit, as in a meal.
-export function addSlotFood(doc, slotId, food, qty, unit) {
-  return changeSlotFoods(doc, slotId, (list) => addItem(list, food, qty, unit));
+// Each change below returns a new core doc with the slot's items written as `items`, and its
+// mealId and foods dropped, so a slot saved before is in the new shape once it's changed. Its
+// budget stays. Items read from the old fields keep their made-up ids; new ones get a uuid.
+function withSlotItems(doc, slotId, items) {
+  const { mealId, foods, ...slot } = doc.template?.[slotId] ?? { budget: null };
+  return { ...doc, template: { ...doc.template, [slotId]: { ...slot, items } } };
 }
 
-// unit: the one qty is in now, when the amount's unit is switched; without it, the food keeps its
-// unit.
-export function updateSlotFood(doc, slotId, foodId, qty, unit) {
-  return changeSlotFoods(doc, slotId, (list) => updateItem(list, foodId, qty, unit));
+// Plans the meal in the slot every day, at 1×, after what's there. A meal is planned in a slot
+// once, so one already there changes nothing.
+export function addPlannedMeal(doc, slotId, mealId) {
+  if (!mealId) throw new RangeError('A planned meal needs a meal');
+  const items = slotItems(doc.template?.[slotId]);
+  if (items.some((item) => item.mealId === mealId)) return doc;
+  return withSlotItems(doc, slotId, [...items, { id: crypto.randomUUID(), mealId }]);
 }
 
-// A slot left with no meal and no foods is flex again.
-export function removeSlotFood(doc, slotId, foodId) {
-  return changeSlotFoods(doc, slotId, (list) => removeItem(list, foodId));
+// Plans qty of food in the slot every day, in unit, one of portions.js's foodUnits, or in the
+// serving's unit without one. A food already planned there gets the amount added to it, converted
+// into its unit, as in a meal (saved-meals.js's addItem, which skips the meal items).
+export function addPlannedFood(doc, slotId, food, qty, unit) {
+  const { items } = addItem({ items: slotItems(doc.template?.[slotId]) }, food, qty, unit);
+  return withSlotItems(doc, slotId, items.map((item) => (item.id ? item : { id: crypto.randomUUID(), ...item })));
 }
 
-// The slots in order, each with its planned meal, or null, and its planned foods, the template's
-// [{ foodId, qty, unit }], or [] for a slot saved without them. flex: whether it plans neither
-// (SPEC §3.4). A meal that's no longer saved counts as none, so nothing points at a meal that's
-// gone.
-export function templateSlots(doc) {
+// A slot left with no items is flex again, with its pinned budget, if it had one.
+export function removePlannedItem(doc, slotId, itemId) {
+  const items = slotItems(doc.template?.[slotId]);
+  if (!items.some((item) => item.id === itemId)) return doc;
+  return withSlotItems(doc, slotId, items.filter((item) => item.id !== itemId));
+}
+
+// Make this the default (SPEC §3.4): what's planned takes itemId's place in the slot, as a new
+// item. plan: { mealId }, or { food, qty, unit } with unit as addPlannedFood's. A meal already
+// planned elsewhere in the slot stays once, and a food already planned elsewhere gets the amount
+// added to it there instead, so either way the item just leaves the slot. Picking the item's own
+// meal changes nothing; its own food takes the new amount. An item that isn't there changes nothing.
+// id: the placed item's, for a caller that applies the change twice, to the doc it shows and to
+// the one it saves, so both agree.
+export function replacePlannedItem(doc, slotId, itemId, plan, id = crypto.randomUUID()) {
+  const items = slotItems(doc.template?.[slotId]);
+  const replaced = items.find((item) => item.id === itemId);
+  if (!replaced) return doc;
+  const others = items.filter((item) => item !== replaced);
+  let item;
+  if (plan.mealId) {
+    if (replaced.mealId === plan.mealId) return doc;
+    if (others.some(({ mealId }) => mealId === plan.mealId)) return withSlotItems(doc, slotId, others);
+    item = { mealId: plan.mealId };
+  } else {
+    const { food, qty, unit } = plan;
+    if (others.some(({ foodId }) => foodId === food.id)) {
+      return withSlotItems(doc, slotId, addItem({ items: others }, food, qty, unit).items);
+    }
+    // Made by addItem, so the amount and unit are checked as when adding.
+    [item] = addItem({ items: [] }, food, qty, unit).items;
+  }
+  const placed = { id, ...item };
+  return withSlotItems(doc, slotId, items.map((each) => (each === replaced ? placed : each)));
+}
+
+// The slots in order, each with what the template plans in it (SPEC §3.4).
+// Each is { id, name, items, flex, budget }:
+// - items: slotItems, a meal as { id, mealId, meal } and a food as { id, foodId, qty, unit, food }.
+//   A meal that's since been deleted is left out, so nothing points at a meal that's gone. A food
+//   is always found, since deleting one that's planned archives it.
+// - flex: whether nothing's left in it.
+// - budget: a flex slot's pinned budget, or null. One on a planned slot stays on the template
+//   for when it's flex again, but doesn't count.
+// getFood: saved-meals.js's foodLookup, archived foods included.
+export function planSlots(doc, getFood) {
   const meals = new Map((doc.meals ?? []).map((meal) => [meal.id, meal]));
   return (doc.slots ?? []).map((slot) => {
-    const meal = meals.get(doc.template?.[slot.id]?.mealId) ?? null;
-    const foods = doc.template?.[slot.id]?.foods ?? [];
-    return { ...slot, meal, foods, flex: !meal && foods.length === 0 };
-  });
-}
-
-// What each slot plans on a day (SPEC §3.4, §3.5), in order: the template after the day's
-// changes. Each is { id, name, flex, meal, portion, swapped, skipped, edited, ingredients,
-// swapEntry, foods, budget, entries }:
-// - flex: whether the template plans neither a meal nor foods in the slot. Every slot is flex off
-//   plan. A planned slot stays planned whatever the day's changes leave in it.
-// - meal: the meal eaten there, swapped in or from the template, or null. A skipped slot keeps
-//   its meal, so it can still be shown, and counts as nothing.
-// - ingredients: the day's version of the meal (ingredients.js), at 1×, or null to eat the meal
-//   as saved. edited: whether there is one.
-// - swapEntry: a food or quick numbers swapped in, an entry snapshot eaten in place of the meal,
-//   or null. The slot keeps the template's meal as its meal, so it's still a planned slot.
-// - foods: the planned foods eaten there, as ingredients (ingredients.js) at their own amounts,
-//   since a portion is only the meal's: the day's version, or else the template's. A skipped slot
-//   eats none.
-// - budget: a flex slot's pinned budget, or null. It counts only while the slot is open.
-// - entries: the day's entries added to this slot. An entry in Other or for a slot that's gone
-//   isn't in any (otherEntries).
-// Changes are only on slots the template plans a meal or foods in: they're made on a planned
-// slot, so one left on a slot that has since become flex is ignored. A swap, portion or
-// ingredients are made on the meal, so they're ignored on a slot that plans only foods. A swap
-// to a meal that's since been deleted falls back to the template's meal. Ingredients are kept
-// with the meal they were made on, so they're ignored while the slot shows any other meal.
-// Off plan, every slot is flex with no budget, and the day's changes are ignored (SPEC §3.4).
-// getFood: saved-meals.js's foodLookup, archived foods included, for the template's planned foods.
-export function daySlots(doc, day, getFood) {
-  const meals = new Map((doc.meals ?? []).map((meal) => [meal.id, meal]));
-  const unchanged = { portion: 1, swapped: false, skipped: false, edited: false, ingredients: null, swapEntry: null };
-  return templateSlots(doc).map((slot) => {
-    const entries = (day.entries ?? []).filter((entry) => entry.slotId === slot.id);
-    if (day.offPlan) return { ...slot, ...unchanged, flex: true, meal: null, foods: [], budget: null, entries };
-    if (slot.flex) {
-      const budget = doc.template?.[slot.id]?.budget ?? null;
-      return { ...slot, ...unchanged, budget, entries };
-    }
-    const change = day.changes?.[slot.id] ?? {};
-    const skipped = Object.hasOwn(change, 'mealId') && change.mealId === null;
-    const foods = skipped ? [] : (change.foods ?? itemIngredients(slot.foods, getFood));
-    const planned = { ...slot, ...unchanged, skipped, foods, budget: null, entries };
-    if (!slot.meal) return planned;
-    if (change.entry) return { ...planned, swapped: true, swapEntry: change.entry };
-    const swap = meals.get(change.mealId);
-    const swapped = Boolean(swap) && swap.id !== slot.meal.id;
-    const meal = swapped ? swap : slot.meal;
-    const edit = change.ingredients;
-    const edited = !skipped && edit?.mealId === meal.id && edit.items?.length > 0;
-    return {
-      ...planned,
-      meal,
-      portion: change.portion ?? 1,
-      swapped,
-      edited,
-      ingredients: edited ? edit.items : null,
-    };
+    const items = slotItems(doc.template?.[slot.id]).flatMap((item) => {
+      if (item.mealId) return meals.has(item.mealId) ? [{ ...item, meal: meals.get(item.mealId) }] : [];
+      const food = getFood(item.foodId);
+      if (!food) throw new RangeError(`Unknown food: ${item.foodId}`);
+      return [{ ...item, food }];
+    });
+    const flex = items.length === 0;
+    return { ...slot, items, flex, budget: flex ? (doc.template?.[slot.id]?.budget ?? null) : null };
   });
 }
 
 // What Other holds on a day that isn't locked (SPEC §3.5, §3.6), in the order added: the entries
 // added outside the slots, and any whose slot has since been removed, since they have no slot to
-// show under. slots: the core doc's slots (daySlots' plans will do). A locked day lists every entry
-// under the slot name it saved instead.
+// show under. slots: the core doc's slots (day-plan.js's dayPlan plans will do). A locked day
+// lists every entry under the slot name it saved instead.
 export function otherEntries(day, slots) {
   const slotIds = new Set(slots.map((slot) => slot.id));
   return (day.entries ?? []).filter((entry) => !slotIds.has(entry.slotId));
@@ -212,83 +207,8 @@ function withChange(day, slotId, change) {
   return { ...day, changes };
 }
 
-// Skipping drops any swap, portion, ingredients or day's planned foods: it counts as nothing
-// whatever it was, its planned foods included.
-export function skipSlot(day, slotId) {
-  return withChange(day, slotId, { mealId: null });
-}
-
-// Keeps a swap and any ingredients, which are then eaten at this portion, and takes back a skip,
-// since a portion of nothing means eating the meal. A portion is of a meal, so it takes back a
-// swap to a food or quick numbers too. 1× is the template's own portion, so it isn't stored.
-export function setSlotPortion(day, slotId, portion) {
-  if (!Number.isFinite(portion) || portion <= 0) throw new RangeError(`Not a portion above 0: ${portion}`);
-  const { mealId, entry, ...rest } = day.changes?.[slotId] ?? {};
-  const change = { ...rest, portion };
-  if (mealId) change.mealId = mealId;
-  if (portion === 1) delete change.portion;
-  return withChange(day, slotId, change);
-}
-
-// Swap: mealId is eaten in the slot that day instead of the template's plannedMealId. Keeps a
-// portion and the day's planned foods, and takes back a skip, since picking a meal means eating
-// it. Drops any ingredients, since they were made on the meal it replaces, and any food or quick
-// numbers swapped in. Picking the template's own meal isn't stored as a swap, so a later change
-// to the template can't turn it into one.
-export function swapSlot(day, slotId, mealId, plannedMealId) {
-  if (!mealId) throw new RangeError('A swap needs a meal');
-  const change = { ...day.changes?.[slotId] };
-  delete change.mealId;
-  delete change.ingredients;
-  delete change.entry;
-  if (mealId !== plannedMealId) change.mealId = mealId;
-  return withChange(day, slotId, change);
-}
-
-// Swap to a food or quick numbers (SPEC §3.5): entry, data.js's foodEntry or quickEntry for the
-// slot, is eaten that day in place of its meal. It has no portion or ingredients, so any meal
-// swap, skip, portion and ingredients go. Like any swap of the meal, it keeps the day's planned
-// foods.
-export function swapSlotToEntry(day, slotId, entry) {
-  if (!entry) throw new RangeError('A swap needs a food or quick numbers');
-  const { foods } = day.changes?.[slotId] ?? {};
-  return withChange(day, slotId, foods ? { entry, foods } : { entry });
-}
-
-// The day's version of the slot's meal (SPEC §3.5): items, ingredients.js's list, kept with
-// mealId, the meal the slot shows, so it never carries over to another meal. The amounts are
-// what's eaten, any portion already folded in, so the portion goes back to 1×. Keeps a swap and
-// the day's planned foods, and takes back a skip, since editing a meal means eating it. A meal
-// keeps at least one ingredient: Skip is for eating none of it.
-export function setSlotIngredients(day, slotId, mealId, items) {
-  if (!mealId) throw new RangeError('Ingredients need the meal they were made on');
-  if (!items?.length) throw new RangeError('A meal keeps at least one ingredient');
-  const { mealId: swap, foods } = day.changes?.[slotId] ?? {};
-  const change = { ingredients: { mealId, items } };
-  if (swap) change.mealId = swap;
-  if (foods) change.foods = foods;
-  return withChange(day, slotId, change);
-}
-
-// The day's version of the slot's planned foods (SPEC §3.5): foods, ingredients.js's list, eaten
-// that day in place of the template's, so a later change to the template's foods doesn't reach
-// it. Made from daySlots' foods with ingredients.js's swapIngredient or removeIngredient. An empty
-// list is every planned food removed for the day. The rest of the slot's change stays, since a
-// swap, portion or ingredients are the meal's.
-export function setSlotFoods(day, slotId, foods) {
-  if (!Array.isArray(foods)) throw new RangeError('Planned foods for the day need a list');
-  return withChange(day, slotId, { ...day.changes?.[slotId], foods });
-}
-
-// Reset to original meal (SPEC §3.5): the saved meal at 1×, so the ingredients and portion go. A
-// swap and the day's planned foods stay.
-export function resetSlotIngredients(day, slotId) {
-  const { ingredients, portion, ...rest } = day.changes?.[slotId] ?? {};
-  return withChange(day, slotId, rest);
-}
-
-// As planned: undoes the slot's swap, a food or quick numbers included, skip, portion,
-// ingredients and planned foods for the day, so the template's foods are back.
+// As planned (SPEC §3.5): undoes the day's change to the slot, whatever shape it's stored in
+// (day-plan.js's items, or a change saved before them), so the template's items are back.
 export function clearSlotChange(day, slotId) {
   return withChange(day, slotId, {});
 }

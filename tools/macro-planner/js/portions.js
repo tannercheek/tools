@@ -10,10 +10,19 @@ const GRAMS = 'g';
 const quantityFormat = new Intl.NumberFormat();
 const gramsFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
+// The serving's weight in grams: a bundled food always has `grams`; a custom food has it only
+// once it's given one (SPEC §3.2), except a serving already counted in grams, whose weight is
+// its quantity, known without being stored.
+function servingGrams(food) {
+  if (food.grams) return food.grams;
+  return food.serving.unit === GRAMS ? food.serving.qty : undefined;
+}
+
 // The units a food's amounts can be in, each once, the default first: the serving's unit, then
-// grams if the serving isn't in grams, then the portions.
+// grams if the serving isn't in grams, then the portions. A custom food with no weight for its
+// serving has only its own unit (SPEC §3.2).
 export function foodUnits(food) {
-  if (food.custom) return [food.serving.unit];
+  if (!servingGrams(food)) return [food.serving.unit];
   const portionUnits = (food.portions ?? []).map((portion) => portion.unit);
   return [...new Set([food.serving.unit, GRAMS, ...portionUnits])];
 }
@@ -25,7 +34,7 @@ export function assertUnit(food, unit) {
 // The serving's unit weighs the serving over its qty: with a 2 tbsp, 32 g serving, 1 tbsp is 16 g.
 function gramsPerUnit(food, unit) {
   assertUnit(food, unit);
-  if (unit === food.serving.unit) return food.grams / food.serving.qty;
+  if (unit === food.serving.unit) return servingGrams(food) / food.serving.qty;
   if (unit === GRAMS) return 1;
   return food.portions.find((portion) => portion.unit === unit).grams;
 }
@@ -35,7 +44,7 @@ function gramsPerUnit(food, unit) {
 // serving's, which needs no grams, so a custom food works too.
 export function toServings(food, qty, unit = food.serving.unit) {
   if (unit === food.serving.unit) return qty / food.serving.qty;
-  return (qty * gramsPerUnit(food, unit)) / food.grams;
+  return (qty * gramsPerUnit(food, unit)) / servingGrams(food);
 }
 
 // qty of from, in to: 1 cup of cooked rice is 158 g.

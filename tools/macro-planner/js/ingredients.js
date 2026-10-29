@@ -84,12 +84,6 @@ export function swapIngredient(items, foodId, food, qty, unit = food.serving.uni
   return items.map((item) => (item.foodId === foodId ? ingredient(food, qty, unit) : item));
 }
 
-// What a slot eats (SPEC §3.5): the day's ingredients, or else its meal's, at its portion.
-// plan: one of slots.js's daySlots, with a meal.
-export function slotIngredients(plan, getFood) {
-  return scaleIngredients(plan.ingredients ?? mealIngredients(plan.meal, getFood), plan.portion);
-}
-
 // An amount as the Ingredients sheet's field and Today's slot row show it: as entered (SPEC
 // §5.2), but without the float noise a portion can leave (2 × 1.1 is 2.2000000000000002), and in
 // the plain digits custom-foods.js's parseAmount reads back.

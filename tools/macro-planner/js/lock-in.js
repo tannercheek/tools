@@ -2,33 +2,33 @@
 // and the day is locked, so editing a food, a meal or the template later never changes it.
 // No DOM: the store and foods are passed in, so this runs in Node.
 
-import { lastSevenDates, slotMealTotals } from './calc.js';
+import { lastSevenDates } from './calc.js';
 import { createDays, createEntry, emptyDay, quickEntry } from './data.js';
+import { dayPlan } from './day-plan.js';
 import { foodLookup } from './saved-meals.js';
-import { daySlots } from './slots.js';
 import { CORE_DOC_ID } from './store.js';
 
 // The plan is marked planned: true, so the add sheet's Recent can leave it out.
 const planned = (entry) => ({ ...entry, planned: true });
 
-// What a slot writes into the locked day, in order: its meal after swaps, portions and ingredient
-// changes, as a meal entry, then its planned foods after the day's changes, as food entries; or an
-// open flex slot's pinned budget, as quick numbers under the slot's name. A food or quick numbers
-// swapped in is written as it is in the meal's place, unmarked: it was chosen, not planned, so
-// Recent lists it like anything added. Nothing when the slot adds nothing of its own: skipped,
-// open with no budget, or a flex slot something was added to.
-function lockedEntries(plan, getFood) {
-  if (plan.skipped) return [];
-  const foods = plan.foods.map(({ name, emoji, ...numbers }) =>
-    planned(createEntry(plan, { label: name, emoji, source: 'food' }, numbers)),
-  );
-  if (plan.swapEntry) return [plan.swapEntry, ...foods];
-  if (plan.meal) {
-    const { name, emoji } = plan.meal;
-    return [planned(createEntry(plan, { label: name, emoji, source: 'meal' }, slotMealTotals(plan, getFood))), ...foods];
-  }
-  if (plan.flex && plan.budget && plan.entries.length === 0) return [planned(quickEntry(plan, plan.budget))];
-  return foods;
+// A day item (data.js) as the entry it's locked in as, in its slot: a meal keeps its portion and
+// ingredients, and the list it had before an ingredient change, for reset, as an added meal does.
+// Planned, a portion or an ingredient change included, it's marked planned. Swapped in, it's
+// unmarked: it was chosen, not planned, so Recent lists it like anything added.
+function itemEntry(slot, item) {
+  const { swapped, portion, ingredients, originalIngredients } = item;
+  const meal = ingredients ? { portion, ingredients, ...(originalIngredients && { originalIngredients }) } : {};
+  const entry = { ...createEntry(slot, item, item), ...meal };
+  return swapped ? entry : planned(entry);
+}
+
+// What a slot writes into the locked day, in order: its planned items after the day's changes, or
+// an open flex slot's pinned budget, as quick numbers under the slot's name. Nothing when the slot
+// adds nothing of its own: skipped, open with no budget, or a flex slot something was added to.
+// slot: one of day-plan.js's dayPlan.
+function lockedEntries(slot) {
+  if (!slot.flex) return slot.items.map((item) => itemEntry(slot, item));
+  return slot.budget && slot.entries.length === 0 ? [planned(quickEntry(slot, slot.budget))] : [];
 }
 
 // The day with its plan written into its entries and locked: { slots, template } is the core
@@ -39,9 +39,7 @@ function lockedEntries(plan, getFood) {
 export function lockDay(day, { slots, template }, meals, foods) {
   if (day.locked) return day;
   const getFood = foodLookup(foods);
-  const fromSlots = day.offPlan
-    ? []
-    : daySlots({ slots, template, meals }, day, getFood).flatMap((plan) => lockedEntries(plan, getFood));
+  const fromSlots = day.offPlan ? [] : dayPlan({ slots, template, meals }, day, getFood).flatMap(lockedEntries);
   return { ...day, changes: {}, entries: [...fromSlots, ...(day.entries ?? [])], locked: true };
 }
 

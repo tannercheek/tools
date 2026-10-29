@@ -7,11 +7,13 @@ import { tagFilterRow } from '../ui/controls.js';
 import { listRow, rowActionIcon, rowList } from '../ui/row.js';
 
 // meals: the saved meals, in their own order. getFood: saved-meals.js's foodLookup over every
-// food. selectedId: the meal picked now, marked with a check, or null. onPick(meal) runs on a tap.
-// The filter starts on All each time and is hidden while no meal has a tag.
-export function mealPicker({ meals, getFood, selectedId = null, onPick }) {
+// food. selectedId: the meal picked now, marked with a check, or null. selectedIds: a Set of
+// meal ids marked with a check instead, for a slot that can plan more than one meal (SPEC §3.4).
+// onPick(meal) runs on a tap. The filter starts on All each time and is hidden while no meal has
+// a tag.
+export function mealPicker({ meals, getFood, selectedId = null, selectedIds, onPick }) {
   function rowFor(meal) {
-    const selected = meal.id === selectedId;
+    const selected = selectedIds ? selectedIds.has(meal.id) : meal.id === selectedId;
     const item = listRow({
       emoji: meal.emoji,
       title: meal.name,
