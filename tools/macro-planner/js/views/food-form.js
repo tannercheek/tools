@@ -15,6 +15,7 @@ import { CoreDocUnavailableError, DEFAULT_EMOJI, updateCoreDoc } from '../data.j
 import { icon } from '../icons.js';
 import { CORE_DOC_ID } from '../store.js';
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
+import { categoryField } from '../ui/category-field.js';
 import { emojiField } from '../ui/emoji-picker.js';
 import { numberField, textField } from '../ui/inputs.js';
 import { confirmSheet, openSheet } from '../ui/sheet.js';
@@ -87,6 +88,8 @@ export async function foodFormSheet({ store, mode, food }) {
   let sheet;
 
   const emoji = emojiField({ value: food?.emoji ?? DEFAULT_EMOJI });
+  // A duplicate starts from the bundled food's category (SPEC §3.2).
+  const category = categoryField({ value: food?.category ?? null });
   // In DESIGN §10 order. The keys match readFoodForm's.
   const inputs = {
     name: textField({ label: 'Name', value: food?.name }),
@@ -255,7 +258,8 @@ export async function foodFormSheet({ store, mode, food }) {
 
     // Always sent, like a bundled food's own `grams` and `portions` (SPEC §3.2): a serving in g
     // needs no weight of its own, since sanitizeUnits works it out from the serving's quantity.
-    const allFields = { ...fields, grams: gramsServing ? undefined : grams, portions };
+    // category is undefined for None, same as grams for a serving already in g.
+    const allFields = { ...fields, grams: gramsServing ? undefined : grams, portions, category: category.value ?? undefined };
     if (mode === 'edit') {
       commit((doc) => updateCustomFood(doc, food.id, allFields), food.id);
     } else {
@@ -268,6 +272,7 @@ export async function foodFormSheet({ store, mode, food }) {
   save.type = 'submit';
   form.append(
     group('food-form__name', emoji.element, inputs.name.element),
+    category.element,
     group('food-form__grid', inputs.servingQty.element, inputs.servingUnit.element),
     group('food-form__grid', inputs.kcal.element, inputs.protein.element, inputs.fat.element, inputs.carbs.element),
     weight.element,

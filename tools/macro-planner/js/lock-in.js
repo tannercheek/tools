@@ -3,7 +3,7 @@
 // No DOM: the store and foods are passed in, so this runs in Node.
 
 import { lastSevenDates } from './calc.js';
-import { createDays, createEntry, emptyDay, quickEntry } from './data.js';
+import { WEIGHT_DOC_ID, createDays, createEntry, emptyDay, quickEntry, targetsOn } from './data.js';
 import { dayPlan } from './day-plan.js';
 import { foodLookup } from './saved-meals.js';
 import { CORE_DOC_ID } from './store.js';
@@ -12,13 +12,18 @@ import { CORE_DOC_ID } from './store.js';
 const planned = (entry) => ({ ...entry, planned: true });
 
 // A day item (data.js) as the entry it's locked in as, in its slot: a meal keeps its portion and
-// ingredients, and the list it had before an ingredient change, for reset, as an added meal does.
-// Planned, a portion or an ingredient change included, it's marked planned. Swapped in, it's
-// unmarked: it was chosen, not planned, so Recent lists it like anything added.
+// ingredients, and the list it had before an ingredient change, for reset, as an added meal does;
+// a food keeps its portion, with no ingredients to keep. Planned, at the template's portion or the
+// day's, or with an ingredient change, it's marked planned. Swapped in, it's unmarked: it was
+// chosen, not planned, so Recent lists it like anything added.
 function itemEntry(slot, item) {
   const { swapped, portion, ingredients, originalIngredients } = item;
-  const meal = ingredients ? { portion, ingredients, ...(originalIngredients && { originalIngredients }) } : {};
-  const entry = { ...createEntry(slot, item, item), ...meal };
+  const extra = ingredients
+    ? { portion, ingredients, ...(originalIngredients && { originalIngredients }) }
+    : portion !== undefined
+      ? { portion }
+      : {};
+  const entry = { ...createEntry(slot, item, item), ...extra };
   return swapped ? entry : planned(entry);
 }
 
@@ -46,11 +51,18 @@ export function lockDay(day, { slots, template }, meals, foods) {
 // The days doc with every past day in the window (SPEC §4.3) locked, from the core doc's
 // startedOn on. A day with no record was never opened and counts as on plan; days before
 // startedOn don't count, so they're left alone. With nothing to lock, the same doc comes back.
-export function lockPastDays(daysDoc, today, doc, foods) {
+// Each day keeps its kcal target on that date as kcalTarget, so a later weigh-in or profile change
+// doesn't change whether it was on target (SPEC §3.7). With no targets then, it keeps none, and
+// is judged by the current one. weighIns: the weight log's.
+export function lockPastDays(daysDoc, today, doc, foods, weighIns = []) {
   const dates = lastSevenDates(today).filter((date) => date >= doc.startedOn && !daysDoc[date]?.locked);
   if (dates.length === 0) return daysDoc;
   const next = { ...daysDoc };
-  for (const date of dates) next[date] = lockDay(daysDoc[date] ?? emptyDay(), doc, doc.meals ?? [], foods);
+  for (const date of dates) {
+    const locked = lockDay(daysDoc[date] ?? emptyDay(), doc, doc.meals ?? [], foods);
+    const kcalTarget = targetsOn(doc, weighIns, date)?.kcal;
+    next[date] = kcalTarget === undefined ? locked : { ...locked, kcalTarget };
+  }
   return next;
 }
 
@@ -58,8 +70,9 @@ export function lockPastDays(daysDoc, today, doc, foods) {
 // Rejects with data.js's DaysUnavailableError without saving when the days doc can't be trusted.
 export async function lockInPastDays(store, today, bundledFoods) {
   const doc = await store.load(CORE_DOC_ID);
+  const { weighIns = [] } = await store.load(WEIGHT_DOC_ID);
   const foods = [...(doc.foods ?? []), ...bundledFoods];
-  await createDays(store).updateDays((daysDoc) => lockPastDays(daysDoc, today, doc, foods), today);
+  await createDays(store).updateDays((daysDoc) => lockPastDays(daysDoc, today, doc, foods, weighIns), today);
 }
 
 // Lock-in at most once per date: call it with today's date on app load and whenever the date may

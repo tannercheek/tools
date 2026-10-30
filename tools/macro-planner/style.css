@@ -534,6 +534,19 @@ html:has(.tabbar:not([hidden])) {
   gap: var(--section-gap);
 }
 
+/* The streak (DESIGN §8): a flame and the streak, under the rings, shown only today and at 2+. */
+.streak-line {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.streak-line .icon {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
 /* Quick actions (DESIGN §8): four equal compact buttons on one line, about 76px each at 360px. */
 .today__actions {
   display: grid;
@@ -692,6 +705,87 @@ html:has(.tabbar:not([hidden])) {
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
+}
+
+/* ---------- Days on target (SPEC §3.7, DESIGN §7) ---------- */
+
+.days-on-target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+  padding: var(--card-pad);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.days-on-target__stat {
+  margin: 0;
+  color: var(--color-text-2);
+}
+
+.days-on-target__count {
+  font-family: var(--font-display);
+  font-size: var(--font-size-4xl);
+  line-height: var(--line-4xl);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+  font-variant-numeric: var(--numeric);
+}
+
+.days-on-target__markers {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.days-on-target__marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.days-on-target__marker-day {
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+}
+
+.days-on-target__marker-shape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--marker-size);
+  height: var(--marker-size);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.days-on-target__marker--hit .days-on-target__marker-shape {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+.days-on-target__marker--hit .days-on-target__marker-shape .icon {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  color: var(--color-on-ink);
+}
+
+.days-on-target__marker--uncounted .days-on-target__marker-shape {
+  border-style: dashed;
+}
+
+.days-on-target__streak {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
 }
 
 /* A weigh-in's title is its weight (DESIGN §8), so the figures line up down the list. */

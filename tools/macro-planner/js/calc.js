@@ -263,13 +263,16 @@ export function dayPlanFlexGap(targetValues, day, slots, slotId) {
 }
 
 // What the template adds up to (SPEC §3.4), for Plan's totals and leftForFlex: each planned meal
-// at 1×, each planned food at its amount, and the pinned budgets of flex slots. A day's changes
-// never reach it. slots: planSlots; getFood as mealTotals'.
+// and food at its portion, a food's at its amount, and the pinned budgets of flex slots. A day's
+// changes never reach it. slots: planSlots; getFood as mealTotals'.
 export function templateTotal(slots, getFood) {
   return sumTotals(
     slots.flatMap((slot) => {
       if (slot.flex) return slot.budget ? [slot.budget] : [];
-      return slot.items.map((item) => (item.meal ? mealTotals(item.meal, getFood) : foodTotals(item.food, item.qty, item.unit)));
+      return slot.items.map((item) => {
+        const totals = item.meal ? mealTotals(item.meal, getFood) : foodTotals(item.food, item.qty, item.unit);
+        return scaleTotals(totals, item.portion ?? 1);
+      });
     }),
   );
 }
@@ -328,6 +331,66 @@ export function averageDailyTotals(days) {
 // still in progress, doesn't count, and neither does an older day the doc hasn't pruned yet.
 export function lastSevenDaysAverage(daysDoc, today) {
   return averageDailyTotals(lastSevenDates(today).map((date) => daysDoc[date] ?? {}));
+}
+
+// --- Days on target (SPEC §3.7) ---
+
+const ON_TARGET_PERCENT = 10;
+
+// Whether a day's kcal lands within ±10% of its target: 2,250 to 2,750 against 2,500. Both are
+// compared as shown, in whole kcal, like a ring's numbers. The day's own kcalTarget, stored at
+// lock-in, comes first, so a later weigh-in or profile change doesn't move it; target, the current
+// kcal target, is for a day that has none.
+export function onTarget(day, target) {
+  const shownTarget = Math.round(day.kcalTarget ?? target);
+  const shownKcal = Math.round(entriesTotals(day.entries).kcal);
+  return Math.abs(shownKcal - shownTarget) * 100 <= shownTarget * ON_TARGET_PERCENT;
+}
+
+// 'hit', 'miss', or 'uncounted' for a day with no entries, as in the averages, or with no target
+// to judge it by. target: as onTarget's, or null with no targets.
+export function dayMark(day, target) {
+  if (!isLogged(day) || (day.kcalTarget ?? target) == null) return 'uncounted';
+  return onTarget(day, target) ? 'hit' : 'miss';
+}
+
+// Stats' markers: the 7 days before today, oldest first, each a dayMark. A date with no day is
+// uncounted. null with no targets, since nothing counts. targetValues: profileTargets' result.
+export function lastSevenDayMarks(daysDoc, today, targetValues) {
+  if (!targetValues) return null;
+  return lastSevenDates(today).map((date) => dayMark(daysDoc[date] ?? {}, targetValues.kcal));
+}
+
+// The run of days on target, carried on from streak, the core doc's { count, through }: count days
+// in a row up to through. Each of daysDoc's days after through, up to until, adds one when it's a
+// hit, starts it again from 0 when it's a miss, and leaves it when it's uncounted. A date with no
+// day starts it again too: it's a gap from not opening the app for more than a week, which lock-in
+// never filled. Without a streak, the run starts at daysDoc's first day. Days up to through are in
+// it already, so carrying it on over them again changes nothing. target: as dayMark's.
+export function continueStreak(streak, daysDoc, until, target) {
+  let count = streak?.count ?? 0;
+  let through = streak?.through ?? null;
+  if (through !== null && through >= until) return { count, through };
+  const dates = Object.keys(daysDoc)
+    .filter((date) => (through === null || date > through) && date <= until)
+    .sort();
+  for (const date of dates) {
+    if (through !== null && date !== addDays(through, 1)) count = 0;
+    const mark = dayMark(daysDoc[date], target);
+    if (mark === 'hit') count += 1;
+    else if (mark === 'miss') count = 0;
+    through = date;
+  }
+  if (through !== until) count = 0;
+  return { count, through: until };
+}
+
+// The streak shown: the days on target in a row up to yesterday, the core doc's streak carried on
+// through the kept days. Worked out each time, so removing or adding an entry on a locked day
+// moves it. 0 with no targets.
+export function currentStreak(streak, daysDoc, today, targetValues) {
+  if (!targetValues) return 0;
+  return continueStreak(streak, daysDoc, addDays(today, -1), targetValues.kcal).count;
 }
 
 // --- Dates ---

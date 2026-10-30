@@ -118,6 +118,21 @@ test('a duplicated bundled food becomes a new custom food with the same emoji an
   assert.deepEqual({ ...copy, id: bundled.id, custom: false }, bundled);
 });
 
+// --- Category (SPEC §3.2) ---
+
+test('a category passed in the fields is kept; a custom food without one has none', () => {
+  const withCategory = createCustomFood({ ...readFoodForm(FORM).fields, category: 'Dairy & eggs' });
+  assert.equal(withCategory.category, 'Dairy & eggs');
+  const withoutCategory = createCustomFood(readFoodForm(FORM).fields);
+  assert.equal('category' in withoutCategory, false);
+});
+
+test('duplicating a bundled food with a category keeps it', () => {
+  const bundled = { ...food('usda-1', 'Egg, large'), emoji: '🥚', category: 'Dairy & eggs', custom: false };
+  const copy = createCustomFood({ ...readFoodForm(FORM).fields, emoji: bundled.emoji, category: bundled.category });
+  assert.equal(copy.category, bundled.category);
+});
+
 // --- Units (SPEC §3.2) ---
 
 test('a serving weight and portions are kept when the weight is above 0, each unit its own', () => {

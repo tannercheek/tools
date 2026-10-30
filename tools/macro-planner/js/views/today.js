@@ -7,9 +7,10 @@
 // (SPEC §3.4).
 
 import { loadBundledFoods } from '../bundled-foods.js';
-import { addDays, dayPlanFlexGap, dayPlanTotal, profileTargets } from '../calc.js';
+import { addDays, currentStreak, dayPlanFlexGap, dayPlanTotal, profileTargets } from '../calc.js';
 import {
   CoreDocUnavailableError,
+  DAYS_DOC_ID,
   DaysUnavailableError,
   OTHER,
   addEntry,
@@ -38,6 +39,7 @@ import {
   swapPlannedItemToDefault,
 } from '../day-plan.js';
 import { scaleIngredients } from '../ingredients.js';
+import { icon } from '../icons.js';
 import { rings } from '../rings.js';
 import { hashFor } from '../routes.js';
 import { foodLookup } from '../saved-meals.js';
@@ -95,6 +97,9 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   // targets (SPEC §3.1).
   let weighIns;
   let targets;
+  // The whole days doc, for the streak (SPEC §3.7), which is carried on through every day, not
+  // just this one.
+  let daysDoc;
   let dayRings;
   let writes = Promise.resolve();
   // A slot's row and its button (the row itself, or an open flex slot's Log) by slot id, and a
@@ -116,6 +121,19 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     onWeighIn: () => weighIn(),
     onOffPlan: () => goOffPlan(),
   });
+  // The streak (SPEC §3.6, DESIGN §8), under the rings: shown only today, and only for 2 or more.
+  // Built once, like the rings and the quick actions, so it stays in place across rebuilds.
+  const streak = document.createElement('a');
+  streak.className = 'text-link streak-line';
+  streak.href = hashFor('stats');
+  streak.insertAdjacentHTML('beforeend', icon('flame'));
+  const streakLabel = document.createElement('span');
+  streak.append(streakLabel);
+  function showStreak() {
+    const count = targets ? currentStreak(doc.streak, daysDoc, today(), targets) : 0;
+    streak.hidden = date !== today() || count < 2;
+    streakLabel.textContent = `${count} day${count === 1 ? '' : 's'} in a row on target`;
+  }
   // The rings stay in place across dates, so their arcs move to the new day's totals.
   const slotsArea = document.createElement('div');
   slotsArea.className = 'today__slots';
@@ -223,7 +241,8 @@ export function render(container, { store, dateSwitcher, lockIn }) {
   }
 
   // Anything added: its item sheet (SPEC §3.6). A meal with its ingredients has Swap, Portion, Edit
-  // ingredients and Remove from slot, as a planned meal; anything else, Swap and Remove from slot.
+  // ingredients and Remove from slot, as a planned meal; a food has Swap, Portion and Remove from
+  // slot; anything else, Swap and Remove from slot.
   async function openEntry(entry) {
     const onPortion = (portion) => change((d) => setEntryPortion(d, entry.id, portion));
     const picked = await entrySheet({ entry, onPortion });
@@ -232,15 +251,15 @@ export function render(container, { store, dateSwitcher, lockIn }) {
     if (picked?.action === 'remove') await remove(entry);
   }
 
-  // A portion for a meal in the slot (SPEC §3.5), shown and saved straight away.
+  // A portion for a meal or a food in the slot (SPEC §3.5), shown and saved straight away.
   function setPortion(slotId, itemId, portion) {
     const current = doc;
     change((d) => setItemPortion(current, d, slotId, itemId, portion, getFood));
   }
 
-  // One of several planned items in a slot (SPEC §3.6): its item sheet, with Swap, Portion and
-  // Edit for a meal, and Remove for today, which doesn't ask first, since As planned undoes it.
-  // Removing the slot's last planned item skips it.
+  // One of several planned items in a slot (SPEC §3.6): its item sheet, with Swap, Portion for a
+  // meal or a food, Edit for a meal, and Remove for today, which doesn't ask first, since As
+  // planned undoes it. Removing the slot's last planned item skips it.
   async function openPlannedItem(slot, item) {
     const picked = await plannedItemSheet({ item, onPortion: (portion) => setPortion(slot.id, item.id, portion) });
     const now = itemNow(slot.id, item.id) ?? item;
@@ -452,8 +471,9 @@ export function render(container, { store, dateSwitcher, lockIn }) {
       dayRings.show({ totals, targets });
     } else {
       dayRings = rings({ totals, targets });
-      screen.replaceChildren(dayRings.element, actions.element, slotsArea, error.element);
+      screen.replaceChildren(dayRings.element, streak, actions.element, slotsArea, error.element);
     }
+    showStreak();
     // Only a locked day, or today and later, take entries (SPEC §3.6). Off plan can start on any
     // day from today up to 30 days ahead that isn't already off plan (SPEC §3.4).
     const now = today();
@@ -516,11 +536,12 @@ export function render(container, { store, dateSwitcher, lockIn }) {
 
   // Meal totals and the add sheet's search need every food, bundled ones included. Targets need
   // the latest weigh-in.
-  Promise.all([loadBundledFoods(), store.load(CORE_DOC_ID), weightLog.list()]).then(
-    ([loadedBundled, loaded, log]) => {
+  Promise.all([loadBundledFoods(), store.load(CORE_DOC_ID), store.load(DAYS_DOC_ID), weightLog.list()]).then(
+    ([loadedBundled, loaded, loadedDays, log]) => {
       if (!screen.isConnected) return;
       doc = loaded;
       bundled = loadedBundled;
+      daysDoc = loadedDays;
       useFoods(doc.foods ?? []);
       weighIns = log;
       updateTargets();

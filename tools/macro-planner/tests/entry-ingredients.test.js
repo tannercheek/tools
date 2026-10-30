@@ -230,20 +230,47 @@ test('reset goes back to the meal as added, at 1×', () => {
   assert.deepEqual(resetEntryIngredients(both, sandwich.id).entries[1], sandwich);
 });
 
-test('a portion that isn’t above 0, or on an entry with no ingredients, is refused', () => {
+test('a portion that isn’t above 0, or on a quick entry or an older meal with no ingredients, is refused', () => {
   const { day, sandwich } = dayWithSandwich();
   for (const portion of [0, -1, Number.NaN, Infinity]) {
     assert.throws(() => setEntryPortion(day, sandwich.id, portion), RangeError, String(portion));
   }
   const shake = day.entries[0];
   assert.throws(() => setEntryPortion(day, shake.id, 1.5), RangeError, 'quick numbers');
-  const rye = foodEntry(DINNER, RYE, 2);
-  assert.throws(() => setEntryPortion(addEntry(day, rye), rye.id, 1.5), RangeError, 'a food');
   const { ingredients, ...older } = sandwich;
   const olderDay = { ...day, entries: [day.entries[0], older] };
   assert.throws(() => setEntryPortion(olderDay, older.id, 1.5), RangeError, 'an older meal');
   // One removed on another device leaves the day as it was.
   assert.deepEqual(setEntryPortion(day, 'gone', 1.5).entries, day.entries);
+});
+
+test('a portion on a food rescales its own numbers, with no food lookup, and a new portion replaces the last one with no drift', () => {
+  const rye = foodEntry(DINNER, RYE, 2);
+  assert.equal(Object.hasOwn(rye, 'portion'), false, 'reads as 1×');
+
+  let day = setEntryPortion(addEntry(emptyDay(), rye), rye.id, 1.5);
+  assert.equal(day.entries[0].portion, 1.5);
+  assertTotals(day.entries[0], { kcal: 240, protein: 9, fat: 3, carbs: 45 });
+
+  // A second portion replaces the first rather than multiplying it.
+  day = setEntryPortion(day, rye.id, 0.5);
+  assert.equal(day.entries[0].portion, 0.5);
+  assertTotals(day.entries[0], { kcal: 80, protein: 3, fat: 1, carbs: 15 });
+});
+
+test('Recent lists a portioned food as added, and adding it again keeps its portion', () => {
+  const doc = createCoreDoc('2026-10-12');
+  const rye = foodEntry(DINNER, RYE, 2);
+  const day = setEntryPortion(addEntry(emptyDay(), rye), rye.id, 1.5);
+  const daysDoc = lockPastDays({ '2026-10-17': day }, TODAY, doc, []);
+  const locked = daysDoc['2026-10-17'].entries.find((entry) => entry.id === rye.id);
+  assert.equal(locked.portion, 1.5, 'locked in as it was');
+
+  const recent = recentEntries(daysDoc, TODAY).find(({ entry }) => entry.label === 'Bread, rye');
+  assert.ok(recent, 'listed, since it was added');
+  const again = repeatEntry(LUNCH, recent.entry);
+  assert.equal(again.portion, 1.5);
+  assertTotals(again, { kcal: 240, protein: 9, fat: 3, carbs: 45 });
 });
 
 test('Recent lists a portioned meal as added, and adding it again keeps its portion', () => {

@@ -74,7 +74,7 @@ export function setSlotBudget(doc, slotId, budget) {
 
 // --- Slot items (SPEC §3.4) ---
 // A template slot holds its planned items, [{ id, mealId } | { id, foodId, qty, unit }], in the
-// order they were added.
+// order they were added. Either can have a portion, eaten every day; none means 1×.
 
 // A template slot's planned items, in order. A slot saved before slots held items reads as its
 // mealId, then its foods, with ids made from what they plan, so they're the same on every read
@@ -95,7 +95,7 @@ function withSlotItems(doc, slotId, items) {
 }
 
 // Plans the meal in the slot every day, at 1×, after what's there. A meal is planned in a slot
-// once, so one already there changes nothing.
+// once, so one already there changes nothing, its portion included.
 export function addPlannedMeal(doc, slotId, mealId) {
   if (!mealId) throw new RangeError('A planned meal needs a meal');
   const items = slotItems(doc.template?.[slotId]);
@@ -105,7 +105,8 @@ export function addPlannedMeal(doc, slotId, mealId) {
 
 // Plans qty of food in the slot every day, in unit, one of portions.js's foodUnits, or in the
 // serving's unit without one. A food already planned there gets the amount added to it, converted
-// into its unit, as in a meal (saved-meals.js's addItem, which skips the meal items).
+// into its unit, as in a meal (saved-meals.js's addItem, which skips the meal items), and keeps
+// its portion.
 export function addPlannedFood(doc, slotId, food, qty, unit) {
   const { items } = addItem({ items: slotItems(doc.template?.[slotId]) }, food, qty, unit);
   return withSlotItems(doc, slotId, items.map((item) => (item.id ? item : { id: crypto.randomUUID(), ...item })));
@@ -119,10 +120,11 @@ export function removePlannedItem(doc, slotId, itemId) {
 }
 
 // Make this the default (SPEC §3.4): what's planned takes itemId's place in the slot, as a new
-// item. plan: { mealId }, or { food, qty, unit } with unit as addPlannedFood's. A meal already
-// planned elsewhere in the slot stays once, and a food already planned elsewhere gets the amount
-// added to it there instead, so either way the item just leaves the slot. Picking the item's own
-// meal changes nothing; its own food takes the new amount. An item that isn't there changes nothing.
+// item at 1×. plan: { mealId }, or { food, qty, unit } with unit as addPlannedFood's. A meal
+// already planned elsewhere in the slot stays once, and a food already planned elsewhere gets the
+// amount added to it there instead, at its own portion, so either way the item just leaves the
+// slot. Picking the item's own meal changes nothing at 1×, and puts it back to 1× at a portion;
+// its own food takes the new amount. An item that isn't there changes nothing.
 // id: the placed item's, for a caller that applies the change twice, to the doc it shows and to
 // the one it saves, so both agree.
 export function replacePlannedItem(doc, slotId, itemId, plan, id = crypto.randomUUID()) {
@@ -132,7 +134,7 @@ export function replacePlannedItem(doc, slotId, itemId, plan, id = crypto.random
   const others = items.filter((item) => item !== replaced);
   let item;
   if (plan.mealId) {
-    if (replaced.mealId === plan.mealId) return doc;
+    if (replaced.mealId === plan.mealId && (replaced.portion ?? 1) === 1) return doc;
     if (others.some(({ mealId }) => mealId === plan.mealId)) return withSlotItems(doc, slotId, others);
     item = { mealId: plan.mealId };
   } else {
@@ -147,9 +149,21 @@ export function replacePlannedItem(doc, slotId, itemId, plan, id = crypto.random
   return withSlotItems(doc, slotId, items.map((each) => (each === replaced ? placed : each)));
 }
 
+// A planned item's portion (SPEC §3.4), eaten every day the day has no version of its own
+// (day-plan.js). 1× is stored as no portion, as for an item planned before portions. An item
+// that isn't there changes nothing.
+export function setPlannedPortion(doc, slotId, itemId, portion) {
+  if (!Number.isFinite(portion) || portion <= 0) throw new RangeError(`Not a portion above 0: ${portion}`);
+  const items = slotItems(doc.template?.[slotId]);
+  if (!items.some((item) => item.id === itemId)) return doc;
+  const atPortion = ({ portion: old, ...item }) => (portion === 1 ? item : { ...item, portion });
+  return withSlotItems(doc, slotId, items.map((item) => (item.id === itemId ? atPortion(item) : item)));
+}
+
 // The slots in order, each with what the template plans in it (SPEC §3.4).
 // Each is { id, name, items, flex, budget }:
-// - items: slotItems, a meal as { id, mealId, meal } and a food as { id, foodId, qty, unit, food }.
+// - items: slotItems, a meal as { id, mealId, meal } and a food as { id, foodId, qty, unit, food },
+//   each with its portion, if it has one.
 //   A meal that's since been deleted is left out, so nothing points at a meal that's gone. A food
 //   is always found, since deleting one that's planned archives it.
 // - flex: whether nothing's left in it.

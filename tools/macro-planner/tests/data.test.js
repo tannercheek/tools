@@ -24,6 +24,13 @@ function freshStore() {
   return createLocalStore(createFakeStorage());
 }
 
+// A save that prunes days takes them into the core doc's streak first, so it needs a core doc.
+async function storeWithCoreDoc() {
+  const store = freshStore();
+  await loadCoreDoc(store, '2026-09-01');
+  return store;
+}
+
 // A day with something in it, so it's easy to tell apart from an empty one.
 function dayWith(label) {
   const entry = { id: label, slotId: 's1', label, emoji: '🍽️', kcal: 500, protein: 30, fat: 20, carbs: 50, source: 'quick' };
@@ -245,7 +252,7 @@ test('the prune returns a new object and leaves its input alone', () => {
 });
 
 test('every save drops days before 7 days ago and keeps future ones', async () => {
-  const store = freshStore();
+  const store = await storeWithCoreDoc();
   const days = createDays(store);
   await days.saveDay('2026-10-07', dayWith('8 days ago'), '2026-10-14');
   await days.saveDay('2026-10-20', dayWith('future'), '2026-10-14');
@@ -255,14 +262,14 @@ test('every save drops days before 7 days ago and keeps future ones', async () =
 });
 
 test('a device closed for weeks drops its stale days on its next save', async () => {
-  const store = freshStore();
+  const store = await storeWithCoreDoc();
   await store.save(DAYS_DOC_ID, { '2026-09-01': dayWith('old'), '2026-09-02': dayWith('old') });
   await createDays(store).saveDay('2026-10-15', dayWith('today'), '2026-10-15');
   assert.deepEqual(Object.keys(await store.load(DAYS_DOC_ID)), ['2026-10-15']);
 });
 
 test('a day older than 7 days ago isn’t kept, even when it’s the one being saved', async () => {
-  const store = freshStore();
+  const store = await storeWithCoreDoc();
   const days = createDays(store);
   await days.saveDay('2026-10-07', dayWith('too old'), '2026-10-15');
   assert.deepEqual(await store.load(DAYS_DOC_ID), {});
@@ -277,10 +284,17 @@ test('getDay and saveDay reject a date that isn’t YYYY-MM-DD', async () => {
 });
 
 test('updateDays saves the changed days doc, pruned', async () => {
-  const store = freshStore();
+  const store = await storeWithCoreDoc();
   const days = createDays(store);
   await days.updateDays(() => ({ '2026-10-01': dayWith('old'), '2026-10-14': dayWith('yesterday') }), '2026-10-15');
   assert.deepEqual(Object.keys(await store.load(DAYS_DOC_ID)), ['2026-10-14']);
+});
+
+test('a save that would drop days saves nothing when there’s no core doc to keep their streak', async () => {
+  const store = freshStore();
+  await store.save(DAYS_DOC_ID, { '2026-10-01': dayWith('old') });
+  await assert.rejects(createDays(store).saveDay('2026-10-15', dayWith('today'), '2026-10-15'), CoreDocUnavailableError);
+  assert.deepEqual(Object.keys(await store.load(DAYS_DOC_ID)), ['2026-10-01']);
 });
 
 test('updateDays saves nothing when the change returns the same doc', async () => {

@@ -3,11 +3,12 @@
 
 import { loadBundledFoods } from '../bundled-foods.js';
 import { foodTotals } from '../calc.js';
+import { categoriesInUse, filterFoods } from '../categories.js';
 import { amountLabel, defaultAmount } from '../portions.js';
 import { searchFoods } from '../search.js';
 import { CORE_DOC_ID } from '../store.js';
 import { secondaryButton } from '../ui/buttons.js';
-import { switchControl } from '../ui/controls.js';
+import { switchControl, tagFilterRow } from '../ui/controls.js';
 import { emptyState } from '../ui/empty-state.js';
 import { searchField } from '../ui/inputs.js';
 import { listRow, rowActionIcon, rowList } from '../ui/row.js';
@@ -63,15 +64,17 @@ export function render(container, { store }) {
   const search = searchField({ label: 'Search foods' });
   // Not saved, so it starts off on every visit (SPEC §3.2).
   const customOnly = switchControl({ label: 'Custom foods only' });
+  const filterSlot = document.createElement('div');
   const list = rowList([]);
   const results = document.createElement('div');
   const wrapper = document.createElement('div');
   wrapper.className = 'food-search';
-  wrapper.append(search.element, customOnly.element, results);
+  wrapper.append(search.element, customOnly.element, filterSlot, results);
   container.replaceChildren(addFood, wrapper);
 
   let bundled = null;
   let custom = [];
+  let category = null;
   // Each food's row is built once, so a keystroke only re-orders existing rows. Keyed by
   // record, so an edited food, which is saved as a new record, gets a new row.
   const rows = new WeakMap();
@@ -80,19 +83,43 @@ export function render(container, { store }) {
     return rows.get(food);
   }
 
+  // The foods "Custom foods only" leaves, before the category filter.
+  function visibleFoods() {
+    const foods = [...custom, ...bundled];
+    return customOnly.input.checked ? foods.filter((food) => food.custom) : foods;
+  }
+
+  // Works together with "Custom foods only" (SPEC §3.2): the categories offered are in
+  // whichever set it leaves. Rebuilt whenever that set changes, since a saved custom food can
+  // bring in a new category; a category that's since gone goes back to All, like the meal tag
+  // filter.
+  function syncFilter() {
+    const categories = categoriesInUse(visibleFoods().filter((food) => !food.archived));
+    if (!categories.includes(category)) category = null;
+    filterSlot.replaceChildren();
+    if (categories.length === 0) return;
+    const filter = tagFilterRow({
+      tags: categories,
+      label: 'Filter by category',
+      onChange: (next) => {
+        category = next;
+        update();
+      },
+    });
+    filterSlot.append(filter.element);
+  }
+
   // An empty query lists every food. A query with no words left after trimming
   // punctuation does too, so "No match" only shows for a real search. With custom
   // foods only and none to show, there's nothing to search, so that state wins.
   function update() {
-    const foods = [...custom, ...bundled];
-    const onlyCustom = customOnly.input.checked;
-    const shown = onlyCustom ? foods.filter((food) => food.custom) : foods;
+    const shown = filterFoods(visibleFoods(), category);
     const query = search.input.value.trim();
     const matches = searchFoods(shown, query);
     if (matches.length > 0) {
       list.replaceChildren(...matches.map(rowFor));
       results.replaceChildren(list);
-    } else if (onlyCustom && searchFoods(shown, '').length === 0) {
+    } else if (customOnly.input.checked && searchFoods(shown, '').length === 0) {
       results.replaceChildren(noCustomFoods(addNew));
     } else {
       results.replaceChildren(noMatch(query, addNew));
@@ -112,21 +139,30 @@ export function render(container, { store }) {
     const result = await foodFormSheet({ store, mode, food });
     if (!result) return;
     custom = result.doc.foods;
-    if (bundled) update();
+    if (bundled) {
+      syncFilter();
+      update();
+    }
     restoreFocus(result.foodId);
   }
 
-  const refresh = () => {
+  search.input.addEventListener('input', () => {
     if (bundled) update();
-  };
-  search.input.addEventListener('input', refresh);
-  customOnly.input.addEventListener('change', refresh);
+  });
+  // The categories "Custom foods only" leaves are its own in-use set (SPEC §3.2).
+  customOnly.input.addEventListener('change', () => {
+    if (bundled) {
+      syncFilter();
+      update();
+    }
+  });
 
   // Anything typed while the list loads is searched as soon as it arrives.
   Promise.all([loadBundledFoods(), store.load(CORE_DOC_ID)]).then(
     ([loaded, doc]) => {
       bundled = loaded;
       custom = doc.foods ?? [];
+      syncFilter();
       update();
     },
     (error) => {

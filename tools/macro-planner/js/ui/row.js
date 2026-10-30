@@ -108,6 +108,22 @@ function extrasLines(items) {
   return lines;
 }
 
+// The text stack shared by listRow and actionRow: an eyebrow, a hidden one for a row that's a
+// button or link, the title, then numbers and any lines under it. Returns the text span and
+// whether it got lines, for the caller to add row--lines.
+function rowText({ eyebrow, hiddenEyebrow, title, numbers, lines = [], hideEyebrow = false }) {
+  const text = document.createElement('span');
+  text.className = 'row__text';
+  if (eyebrow) text.append(textLine('row__eyebrow', eyebrow));
+  if (hiddenEyebrow && hideEyebrow) text.append(textLine('visually-hidden', hiddenEyebrow));
+  text.append(textLine('row__title', title));
+  if (typeof numbers === 'string') text.append(textLine('row__numbers', numbers));
+  else if (numbers) text.append(numbersLine(numbers));
+  const hasLines = lines.length > 0;
+  if (hasLines) text.append(extrasLines(lines));
+  return { text, hasLines };
+}
+
 // numbers: { kcal, protein, fat, carbs }, a word in their place (a skipped slot's "Skipped"), or
 // omitted. lines: listed under the numbers, as extrasLines takes them, or omitted: the things a
 // slot holds, or an edited meal's ingredients. trailing: one control element or omitted. onClick
@@ -123,17 +139,8 @@ export function listRow({ emoji, placeholderIcon, eyebrow, hiddenEyebrow, title,
   row.className = placeholderIcon ? 'row row--placeholder' : 'row';
   if (muted) row.classList.add('row--muted');
 
-  const text = document.createElement('span');
-  text.className = 'row__text';
-  if (eyebrow) text.append(textLine('row__eyebrow', eyebrow));
-  if (hiddenEyebrow && (onClick || href)) text.append(textLine('visually-hidden', hiddenEyebrow));
-  text.append(textLine('row__title', title));
-  if (typeof numbers === 'string') text.append(textLine('row__numbers', numbers));
-  else if (numbers) text.append(numbersLine(numbers));
-  if (lines.length > 0) {
-    text.append(extrasLines(lines));
-    row.classList.add('row--lines');
-  }
+  const { text, hasLines } = rowText({ eyebrow, hiddenEyebrow, title, numbers, lines, hideEyebrow: Boolean(onClick || href) });
+  if (hasLines) row.classList.add('row--lines');
 
   if (placeholderIcon) row.append(iconTile(placeholderIcon));
   else if (emoji) row.append(emojiTile(emoji));
@@ -148,6 +155,25 @@ export function listRow({ emoji, placeholderIcon, eyebrow, hiddenEyebrow, title,
   const item = document.createElement('li');
   item.append(row);
   return item;
+}
+
+// A row whose content opens something while trailing stays its own button, like Plan's planned
+// item row (SPEC §3.4): the remove icon button stays on the row, and tapping the rest of it opens
+// the item's portion sheet. listRow can't do this, since its trailing sits inside the row's own
+// button when onClick is given, and a button can't hold another one. Here the row itself is never
+// a button: a button wraps only the tile and text, with trailing beside it, so both stay tappable.
+export function actionRow({ emoji, eyebrow, title, numbers, trailing, onClick }) {
+  const row = document.createElement('li');
+  row.className = 'row';
+  const content = document.createElement('button');
+  content.type = 'button';
+  content.className = 'row__content';
+  const { text } = rowText({ eyebrow, title, numbers });
+  if (emoji) content.append(emojiTile(emoji));
+  content.append(text);
+  content.addEventListener('click', onClick);
+  row.append(content, trailing);
+  return row;
 }
 
 // Ingredient row (DESIGN §8): a quantity field, then one trailing control, the swap button in the

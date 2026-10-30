@@ -3,7 +3,7 @@
 // passed in, so this never touches window and runs in Node.
 
 import { validSplit } from './calc.js';
-import { DAYS_DOC_ID, WEIGHT_DOC_ID, createCoreDoc, pruneDays } from './data.js';
+import { DAYS_DOC_ID, WEIGHT_DOC_ID, createCoreDoc, foldPrunedDays, pruneDays } from './data.js';
 import { lockPastDays } from './lock-in.js';
 import { CORE_DOC_ID } from './store.js';
 
@@ -73,6 +73,12 @@ function isMacroSplit(split) {
   );
 }
 
+// The core doc's run of days on target (SPEC §3.7). A doc without one has no run yet.
+function isStreak(streak) {
+  if (streak == null) return true;
+  return isObject(streak) && Number.isInteger(streak.count) && streak.count >= 0 && DATE_PATTERN.test(streak.through);
+}
+
 // Enough of the shape that the app can open on it. The core doc's schemaVersion says which
 // shape it is; 1 is the only one so far.
 function isCoreDoc(doc) {
@@ -83,7 +89,8 @@ function isCoreDoc(doc) {
     [doc.profile, doc.overrides, doc.settings, doc.template].every(isObject) &&
     (doc.profile.birthDate == null || DATE_PATTERN.test(doc.profile.birthDate)) &&
     [doc.slots, doc.foods, doc.meals].every(Array.isArray) &&
-    isMacroSplit(doc.macroSplit)
+    isMacroSplit(doc.macroSplit) &&
+    isStreak(doc.streak)
   );
 }
 
@@ -120,12 +127,14 @@ export function readBackup(text) {
 }
 
 // Replaces every doc with readBackup's docs. The days are saved like any days save, dropping
-// those before 7 days ago (SPEC §4.3), and with their past days locked, as on app load (SPEC
-// §3.5), since an older export can hold days that have passed since. bundledFoods: for lock-in.
+// those before 7 days ago (SPEC §4.3) after taking them into the core doc's streak, and with
+// their past days locked, as on app load (SPEC §3.5), since an older export can hold days that
+// have passed since. bundledFoods: for lock-in.
 export async function importDocs(store, docs, today, bundledFoods) {
-  const core = docs[CORE_DOC_ID];
+  const weighIns = docs[WEIGHT_DOC_ID].weighIns ?? [];
+  const core = foldPrunedDays(docs[CORE_DOC_ID], docs[DAYS_DOC_ID], today, weighIns);
   const foods = [...core.foods, ...bundledFoods];
-  const days = lockPastDays(pruneDays(docs[DAYS_DOC_ID], today), today, core, foods);
+  const days = lockPastDays(pruneDays(docs[DAYS_DOC_ID], today), today, core, foods, weighIns);
   await store.save(CORE_DOC_ID, core);
   await store.save(DAYS_DOC_ID, days);
   await store.save(WEIGHT_DOC_ID, { weighIns: docs[WEIGHT_DOC_ID].weighIns ?? [] });

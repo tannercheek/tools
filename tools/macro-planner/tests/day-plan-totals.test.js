@@ -237,6 +237,18 @@ test('lock-in reads a day’s version of the slot after the template has moved o
   assertTotals(breakfast, times(OATS_TOTALS, 2));
 });
 
+test('lock-in writes a portioned planned food marked planned, with its portion', () => {
+  const doc = itemsDoc();
+  const ids = slotIds(doc);
+  const [, banana] = itemsOf(doc, 'Breakfast');
+  const day = setItemPortion(doc, emptyDay(), ids.Breakfast, banana.id, 1.5, getFood);
+  const locked = lockDay(day, doc, doc.meals, FOODS);
+  const bananaEntry = locked.entries.find(({ label }) => label === 'Banana');
+  assert.equal(bananaEntry.portion, 1.5);
+  assert.equal(bananaEntry.planned, true);
+  assertTotals(bananaEntry, times(BANANA_TOTALS, 1.5));
+});
+
 test('an old-shape change left on a slot that’s since turned flex locks in nothing for it', () => {
   const doc = itemsDoc();
   const ids = slotIds(doc);

@@ -140,6 +140,9 @@ test('readBackup refuses an export with a doc missing or the wrong shape', async
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'percent' } } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'percent', percent: { protein: 30, fat: 25, carbs: 44 } } } },
     { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], macroSplit: { by: 'bodyweight', percent: { protein: 30.5, fat: 25, carbs: 44.5 } } } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], streak: 4 } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], streak: { count: -1, through: '2026-10-12' } } },
+    { [CORE_DOC_ID]: { ...docs[CORE_DOC_ID], streak: { count: 4 } } },
     { [DAYS_DOC_ID]: { 'Oct 20': emptyDay() } },
     { [DAYS_DOC_ID]: { '2026-10-20': [] } },
     { [WEIGHT_DOC_ID]: { weighIns: {} } },
@@ -194,6 +197,39 @@ test('export and import carry the birthday with the core doc', async () => {
   const imported = freshStore();
   await importDocs(imported, docs, TODAY, []);
   assert.equal((await imported.load(CORE_DOC_ID)).profile.birthDate, '1990-04-12');
+});
+
+test('export and import carry a planned item’s portion with the template', async () => {
+  const store = await storeWithData();
+  const core = await store.load(CORE_DOC_ID);
+  const slotId = core.slots[0].id;
+  const items = [{ id: 'item-1', mealId: 'meal-1', portion: 1.5 }, { id: 'item-2', foodId: 'custom-1', qty: 2, unit: 'bar', portion: 0.5 }];
+  await store.save(CORE_DOC_ID, { ...core, template: { ...core.template, [slotId]: { budget: null, items } } });
+  const docs = readBackup(asFile(await exportDocs(store, NOW)));
+  const imported = freshStore();
+  await importDocs(imported, docs, TODAY, []);
+  assert.deepEqual((await imported.load(CORE_DOC_ID)).template[slotId].items, items);
+});
+
+test('export and import carry the streak with the core doc', async () => {
+  const store = await storeWithData();
+  const core = await store.load(CORE_DOC_ID);
+  await store.save(CORE_DOC_ID, { ...core, streak: { count: 4, through: '2026-10-12' } });
+  const docs = readBackup(asFile(await exportDocs(store, NOW)));
+  const imported = freshStore();
+  await importDocs(imported, docs, TODAY, []);
+  assert.deepEqual((await imported.load(CORE_DOC_ID)).streak, { count: 4, through: '2026-10-12' });
+});
+
+test('importing an older export takes the days it drops into the streak', async () => {
+  const store = await storeWithData();
+  const core = await store.load(CORE_DOC_ID);
+  await store.save(CORE_DOC_ID, { ...core, streak: { count: 4, through: '2026-10-12' } });
+  const docs = readBackup(asFile(await exportDocs(store, NOW)));
+  const imported = freshStore();
+  // Two days later, the 13th and 14th drop out. Neither has entries, so the run carries on.
+  await importDocs(imported, docs, '2026-10-22', []);
+  assert.deepEqual((await imported.load(CORE_DOC_ID)).streak, { count: 4, through: '2026-10-14' });
 });
 
 test('an imported weight log with nothing ever saved becomes an empty one the log can add to', async () => {

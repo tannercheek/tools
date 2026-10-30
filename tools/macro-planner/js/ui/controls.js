@@ -159,10 +159,12 @@ export function tagGroup({ label, pills = [] }) {
   return group;
 }
 
-// The single-select tag filter over a list of meals: "All", then each tag, on one line that
-// scrolls sideways in its own strip. One pill is always on, and it starts on All, since the
-// filter isn't saved (SPEC §3.3). onChange gets the picked tag, or null for All.
-export function tagFilterRow({ tags, onChange }) {
+// The single-select filter over a list, also used for food categories (SPEC §3.2): "All", then
+// each tag or category, on one line that scrolls sideways in its own strip. One pill is always
+// on, and it starts on All, since the filter isn't saved (SPEC §3.3). onChange gets the picked
+// tag or category, or null for All. label names the group for screen readers ("Filter by tag",
+// "Filter by category").
+export function tagFilterRow({ tags, label = 'Filter by tag', onChange }) {
   const choices = [{ value: null, label: 'All' }, ...tags.map((tag) => ({ value: tag, label: tag }))];
   let selected = null;
 
@@ -180,7 +182,7 @@ export function tagFilterRow({ tags, onChange }) {
   const strip = document.createElement('div');
   strip.className = 'tag-filter';
   strip.setAttribute('role', 'group');
-  strip.setAttribute('aria-label', 'Filter by tag');
+  strip.setAttribute('aria-label', label);
   strip.append(...pills);
 
   return {

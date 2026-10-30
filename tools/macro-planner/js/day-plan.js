@@ -14,27 +14,35 @@ import { planSlots } from './slots.js';
 
 const mealsById = (doc) => new Map((doc.meals ?? []).map((meal) => [meal.id, meal]));
 
-// The template's planned items in a slot as day items, as they are now. slot: one of slots.js's
-// planSlots.
+// The template's planned items in a slot as day items, as they are now, each at the template's
+// portion. A food at 1× has no portion, as before portions, so a day's version saved then still
+// matches it. slot: one of slots.js's planSlots.
 function plannedItems(slot, getFood) {
-  return slot.items.map((item) =>
-    item.meal ? mealDayItem(item.id, item.meal, getFood) : foodDayItem(item.id, item.food, item.qty, item.unit),
-  );
+  return slot.items.map((item) => {
+    const asPlanned = item.meal ? mealDayItem(item.id, item.meal, getFood) : foodDayItem(item.id, item.food, item.qty, item.unit);
+    return (item.portion ?? 1) === 1 ? asPlanned : atPortion(asPlanned, item.portion);
+  });
 }
 
-// A meal day item eaten at portion: its numbers are its ingredients' total at the portion. The
-// ingredients stay at 1×.
+// A day item eaten at portion: a meal's numbers are its ingredients' total at the portion, with
+// the ingredients left at 1×; a food has no ingredients to recompute from, so its numbers rescale
+// from the last portion to the new one, with no food lookup (snapshot rule).
 function atPortion(item, portion) {
-  return { ...item, ...scaleTotals(ingredientsTotals(item.ingredients), portion), portion };
+  if (item.ingredients) return { ...item, ...scaleTotals(ingredientsTotals(item.ingredients), portion), portion };
+  return { ...item, ...scaleTotals(item, portion / (item.portion ?? 1)), portion };
 }
 
 // Whether two day items, or lists of them, are the same snapshot. Keys are compared in sorted
-// order, since a stored day can come back from sync with its keys in another order.
+// order, since a stored day can come back from sync with its keys in another order. Numbers are
+// compared to 12 significant digits, since a food's portion rescales its numbers, and 1.5× then
+// 1× then 1.5× can come back a float's last digit away from the template's.
 function sameSnapshot(a, b) {
-  const sorted = (key, value) =>
-    value && typeof value === 'object' && !Array.isArray(value)
+  const sorted = (key, value) => {
+    if (typeof value === 'number') return Number(value.toPrecision(12));
+    return value && typeof value === 'object' && !Array.isArray(value)
       ? Object.fromEntries(Object.entries(value).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)))
       : value;
+  };
   return JSON.stringify(a, sorted) === JSON.stringify(b, sorted);
 }
 
@@ -105,7 +113,8 @@ function readSlot(slot, change, meals, getFood) {
 //   slot stays planned whatever the day's changes leave in it.
 // - budget: a flex slot's pinned budget, or null. It counts only while the slot is open.
 // - items: what the day eats of the plan, as data.js's day items, in order: the template's, as
-//   they are now, until the day has its own version, then that. None while skipped, or flex.
+//   they are now and at its portions, until the day has its own version, then that. None while
+//   skipped, or flex.
 // - ownVersion: whether the day has its own version of the slot's planned items, which a change to
 //   the template no longer reaches. With skipped, whether As planned has anything to undo.
 // - entries: the day's entries added to the slot. An entry in Other or for a slot that's gone
@@ -215,13 +224,15 @@ export function swapPlannedItemToDefault(doc, day, slotId, itemId, item, placedI
   });
 }
 
-// Portion (SPEC §3.5) on a meal in the slot, edited or not: its numbers become its ingredients'
-// total at portion. A food's amount is its own, so it has no portion.
+// Portion (SPEC §3.5) on a meal or a food in the slot, planned or swapped in: a meal's numbers
+// become its ingredients' total at portion; a food's rescale from the last portion to the new
+// one. The portion is set outright, not multiplied by the template's. Quick numbers swapped in
+// have no portion.
 export function setItemPortion(doc, day, slotId, itemId, portion, getFood) {
   if (!Number.isFinite(portion) || portion <= 0) throw new RangeError(`Not a portion above 0: ${portion}`);
   return changeItems(doc, day, slotId, getFood, (items) =>
     withItem(items, itemId, (item) => {
-      assertMeal(item);
+      if (item.source !== 'meal' && item.source !== 'food') throw new RangeError(`Not a meal or a food: ${item.label}`);
       return atPortion(item, portion);
     }),
   );

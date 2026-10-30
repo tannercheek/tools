@@ -5,12 +5,12 @@
 // named and ordered in Settings.
 
 import { loadBundledFoods } from '../bundled-foods.js';
-import { foodTotals, leftForFlex, mealTotals, profileTargets, templateTotal } from '../calc.js';
+import { foodTotals, leftForFlex, mealTotals, profileTargets, scaleTotals, templateTotal } from '../calc.js';
 import { CoreDocUnavailableError, createWeightLog, currentWeight, localDate, updateCoreDoc } from '../data.js';
 import { miniRings } from '../rings.js';
 import { hashFor, mealRoute } from '../routes.js';
 import { foodLookup } from '../saved-meals.js';
-import { addPlannedFood, addPlannedMeal, planSlots, removePlannedItem, setSlotBudget } from '../slots.js';
+import { addPlannedFood, addPlannedMeal, planSlots, removePlannedItem, setPlannedPortion, setSlotBudget } from '../slots.js';
 import { CORE_DOC_ID } from '../store.js';
 import { textLink } from '../ui/buttons.js';
 import { formError } from '../ui/inputs.js';
@@ -18,7 +18,7 @@ import { listRow, rowGroup } from '../ui/row.js';
 import { budgetSheet } from './budget-sheet.js';
 import { newMealSheet } from './new-meal-sheet.js';
 import { planSlotSheet } from './plan-slot-sheet.js';
-import { itemsRow } from './today-rows.js';
+import { itemsRow, portionMark } from './today-rows.js';
 
 const integer = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -112,13 +112,25 @@ export function render(container, { store }) {
   }
 
   // What a planned slot plans, as Today's slot rows list what a slot holds (SPEC §3.4, §3.6): its
-  // items in order, a meal at 1× and a food at its amount. items: slots.js's planSlots' items.
+  // items in order, a meal at its portion and a food at its amount and portion (14.25). With
+  // several items, each line shows its own portion mark; with one, the slot's eyebrow does
+  // (planEyebrow). items: slots.js's planSlots' items.
   function plannedItems(items) {
-    return items.map((item) =>
-      item.meal
-        ? { emoji: item.meal.emoji, label: item.meal.name, ...mealTotals(item.meal, getFood) }
-        : { emoji: item.food.emoji, label: item.food.name, ...foodTotals(item.food, item.qty, item.unit) },
-    );
+    return items.map((item) => {
+      const marks = portionMark(item.portion);
+      return item.meal
+        ? { emoji: item.meal.emoji, label: item.meal.name, marks, ...scaleTotals(mealTotals(item.meal, getFood), item.portion ?? 1) }
+        : { emoji: item.food.emoji, label: item.food.name, marks, ...scaleTotals(foodTotals(item.food, item.qty, item.unit), item.portion ?? 1) };
+    });
+  }
+
+  // The slot's name and, while it plans one item, that item's portion (14.25), as Today's
+  // slotEyebrow shows its changes. With several items, each line shows its own (plannedItems).
+  function planEyebrow(plan) {
+    const marks = [plan.name];
+    if (plan.flex) marks.push('Flex');
+    else if (plan.items.length === 1) marks.push(...portionMark(plan.items[0].portion));
+    return marks.join(' · ');
   }
 
   // A planned slot shows what it plans like a Today slot: one thing as itself, more than one as
@@ -127,7 +139,7 @@ export function render(container, { store }) {
   // slot it is.
   function slotGroup(plan) {
     const onClick = () => choose(plan);
-    const eyebrow = plan.flex ? `${plan.name} · Flex` : plan.name;
+    const eyebrow = planEyebrow(plan);
     const item = plan.flex
       ? listRow({
           placeholderIcon: 'plus',
@@ -183,6 +195,10 @@ export function render(container, { store }) {
       removeItem: (itemId) => {
         changed = true;
         return apply(plan.id, (d) => removePlannedItem(d, plan.id, itemId));
+      },
+      setPortion: (itemId, portion) => {
+        changed = true;
+        return apply(plan.id, (d) => setPlannedPortion(d, plan.id, itemId, portion));
       },
     });
     if (result?.buildMeal) {

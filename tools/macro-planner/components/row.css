@@ -114,6 +114,34 @@
   height: var(--icon-size-sm);
 }
 
+/* A row whose content opens something while trailing keeps its own button (js/ui/row.js's
+   actionRow), like Plan's planned item row: the row itself carries the border and fill, and the
+   content button inside it is transparent, filling the space up to trailing. */
+.row__content {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--inline-gap);
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.row__content:active {
+  background: var(--color-surface-sunken);
+}
+
+.row__content:focus-visible {
+  outline: var(--focus-width) solid var(--color-ink);
+  outline-offset: var(--focus-offset);
+}
+
 /* Ingredient row: the name, then the quantity field on a line of its own under it, so every
    row in the list has the same layout and the fields line up. The name wraps rather than
    truncating. The tile stays with the name; the remove button is centred on the row, like

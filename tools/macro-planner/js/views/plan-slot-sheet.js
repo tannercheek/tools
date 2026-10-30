@@ -1,31 +1,47 @@
 // Plan's slot sheet (SPEC §3.4, DESIGN §8): what a slot plans every day. Its planned items, a row
-// each with a remove button, then, while the slot is flex, Pin a budget; then a Meal · Food
-// picker, laid out like the add sheet's (DESIGN §8), without Recent and Quick. Picking plans it
-// in the slot and the sheet stays open, like the Ingredients sheet; the budget button closes it
-// for the caller to apply.
+// each with a remove button, tapping the rest opening its Portion sheet (14.24, 14.25); then,
+// while the slot is flex, Pin a budget; then a Meal · Food picker, laid out like the add sheet's
+// (DESIGN §8), without Recent and Quick. Picking plans it in the slot and the sheet stays open,
+// like the Ingredients sheet; the budget button closes it for the caller to apply.
 
-import { foodTotals, mealTotals } from '../calc.js';
+import { foodTotals, mealTotals, scaleTotals } from '../calc.js';
 import { amountLabel } from '../portions.js';
 import { iconButton, secondaryButton } from '../ui/buttons.js';
 import { segmentedPanes } from '../ui/controls.js';
 import { emptyState } from '../ui/empty-state.js';
-import { listRow, rowList } from '../ui/row.js';
+import { actionRow, rowList } from '../ui/row.js';
 import { openSheet } from '../ui/sheet.js';
 import { foodPicker } from './add-food-sheet.js';
 import { mealPicker } from './meal-picker.js';
+import { portionSheet } from './slot-actions-sheet.js';
+import { portionMark } from './today-rows.js';
 
-// A planned item at its amount (DESIGN §8): a meal as itself, at 1×, like a saved meal row, or a
-// food with its amount in the eyebrow, like a food search result. getFood: saved-meals.js's
+// A planned item at its amount and portion (DESIGN §8): a meal at its portion, like a saved meal
+// row, or a food with its portion and amount in the eyebrow, like a food search result
+// ("1.5× · 1 MEDIUM · 120 G"). Tapping the row opens its Portion sheet. getFood: saved-meals.js's
 // foodLookup, for the meal's totals.
-function itemRow(item, getFood, remove) {
-  if (item.meal) return listRow({ emoji: item.meal.emoji, title: item.meal.name, numbers: mealTotals(item.meal, getFood), trailing: remove });
-  return listRow({
-    emoji: item.food.emoji,
-    eyebrow: amountLabel(item.food, item),
-    title: item.food.name,
-    numbers: foodTotals(item.food, item.qty, item.unit),
-    trailing: remove,
-  });
+function itemRow(item, getFood, remove, openPortion) {
+  const onClick = () => openPortion(item);
+  const row = item.meal
+    ? actionRow({
+        emoji: item.meal.emoji,
+        eyebrow: portionMark(item.portion).join(' · ') || undefined,
+        title: item.meal.name,
+        numbers: scaleTotals(mealTotals(item.meal, getFood), item.portion ?? 1),
+        trailing: remove,
+        onClick,
+      })
+    : actionRow({
+        emoji: item.food.emoji,
+        eyebrow: [...portionMark(item.portion), amountLabel(item.food, item)].join(' · '),
+        title: item.food.name,
+        numbers: scaleTotals(foodTotals(item.food, item.qty, item.unit), item.portion ?? 1),
+        trailing: remove,
+        onClick,
+      });
+  // For openPortion to focus the row back once its sheet closes.
+  row.querySelector('.row__content').dataset.itemId = item.id;
+  return row;
 }
 
 // plan: one of slots.js's planSlots. meals: the saved meals. foods: bundled and custom foods
@@ -34,10 +50,11 @@ function itemRow(item, getFood, remove) {
 // the meal in the slot, returning its next plan; a meal already there is unchanged. addFood(food,
 // qty, unit): plans the food, returning its next plan; one already there gets the amount added
 // to it. removeItem(itemId): takes the item out, returning the next plan, flex again once none
-// are left. Resolves to { pinBudget: true } on a flex slot's budget button, to { buildMeal: true }
+// are left. setPortion(itemId, portion): sets the item's portion (14.24), returning the next plan.
+// Resolves to { pinBudget: true } on a flex slot's budget button, to { buildMeal: true }
 // when there are no meals yet and "Build a meal" is tapped, or to null once the sheet closes with
 // neither.
-export async function planSlotSheet({ plan, meals, foods, getFood, store, addMeal, addFood, removeItem }) {
+export async function planSlotSheet({ plan, meals, foods, getFood, store, addMeal, addFood, removeItem, setPortion }) {
   let current = plan;
   let result = null;
   let sheet;
@@ -59,7 +76,7 @@ export async function planSlotSheet({ plan, meals, foods, getFood, store, addMea
       ...current.items.map((item) => {
         const button = iconButton('x', `Remove ${item.meal ? item.meal.name : item.food.name}`, { onClick: () => removeOne(item.id) });
         removeButtons.push(button);
-        return itemRow(item, getFood, button);
+        return itemRow(item, getFood, button, openPortion);
       }),
     );
     list.hidden = current.items.length === 0;
@@ -77,6 +94,20 @@ export async function planSlotSheet({ plan, meals, foods, getFood, store, addMea
     current = removeItem(itemId);
     showItems();
     (removeButtons[Math.min(index, removeButtons.length - 1)] ?? budgetButton)?.focus();
+  }
+
+  // Opens the item's Portion sheet (14.25): 0.5×, 1×, 1.5× or Custom, saving straight away. Focus
+  // comes back to the row once it closes.
+  async function openPortion(item) {
+    await portionSheet({
+      title: item.meal ? item.meal.name : item.food.name,
+      portion: item.portion ?? 1,
+      onPortion: (portion) => {
+        current = setPortion(item.id, portion);
+        showItems();
+      },
+    });
+    list.querySelector(`[data-item-id="${item.id}"]`)?.focus();
   }
 
   function pickMeal(meal) {

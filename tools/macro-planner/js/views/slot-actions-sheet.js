@@ -30,7 +30,7 @@ function entryList(entries, choose) {
         emoji: entry.emoji,
         title: entry.label,
         numbers: entry,
-        trailing: rowActionIcon('chevron-right', hasIngredients(entry) ? 'Swap, portion, edit or remove' : 'Swap or remove'),
+        trailing: rowActionIcon('chevron-right', entryHint(entry)),
         onClick: () => choose('entry', entry),
       }),
     ),
@@ -63,8 +63,9 @@ function customPortionForm({ portion, onSet }) {
   return { form, input: amount.input };
 }
 
-// Portion (SPEC §3.5) for a meal in the slot: 0.5×, 1×, 1.5× or Custom. portion: the meal's now,
-// or null on a skipped slot, which shows none, so any pick, even 1×, takes the skip back. A preset
+// Portion (SPEC §3.5) for a meal or a food in the slot: 0.5×, 1×, 1.5× or Custom. portion: the
+// item's now, or null on a skipped slot, which shows none, so any pick, even 1×, takes the skip
+// back. A preset
 // applies as it's picked, through onPick(portion), and the sheet stays open, since arrow keys move
 // through the presets one by one. Custom's "Set portion" applies through onPick, then onSet()
 // closes the sheet. Returns the control and Custom's form, to lay out in order.
@@ -95,9 +96,27 @@ function portionControls({ portion, onPick, onSet }) {
 }
 
 const isMeal = (item) => item.source === 'meal';
-// Only a meal added with its ingredients can take a portion or be edited: one added before
-// entries kept them has none.
+// A meal or a food takes a portion; quick numbers don't (SPEC §3.5).
+const hasPortion = (item) => item.source === 'meal' || item.source === 'food';
+// Only a meal added with its ingredients can be edited: one added before entries kept them has
+// none, and a food has no ingredients to edit.
 const hasIngredients = (entry) => entry.ingredients?.length > 0;
+// An added entry takes a portion when it's a meal with ingredients, kept at its portion, or a food.
+const entryHasPortion = (entry) => hasIngredients(entry) || entry.source === 'food';
+
+// The chevron's hidden text for a planned item's row, naming what its item sheet offers.
+function itemHint(item) {
+  if (isMeal(item)) return 'Swap, portion, edit or remove for today';
+  if (item.source === 'food') return 'Swap, portion or remove for today';
+  return 'Swap or remove for today';
+}
+
+// The chevron's hidden text for an added entry's row, naming what its item sheet offers.
+function entryHint(entry) {
+  if (hasIngredients(entry)) return 'Swap, portion, edit or remove';
+  if (entry.source === 'food') return 'Swap, portion or remove';
+  return 'Swap or remove';
+}
 
 // The slot's planned items for the day (SPEC §3.6), when it plans several: each a row button with
 // a chevron, like an added entry's, picking { action: 'item', item }. The eyebrow carries the
@@ -116,7 +135,7 @@ function plannedItemList(items, getFood, choose) {
         eyebrow: marks.join(' · ') || undefined,
         title: item.label,
         numbers: item,
-        trailing: rowActionIcon('chevron-right', isMeal(item) ? 'Swap, portion, edit or remove for today' : 'Swap or remove for today'),
+        trailing: rowActionIcon('chevron-right', itemHint(item)),
         onClick: () => choose('item', { item }),
       });
     }),
@@ -143,8 +162,9 @@ function addedGroup(entries, add, choose) {
 // slot. planned: day-plan.js's plannedDayItems, what the template plans there, which a skipped
 // slot shows, since it eats none of its items.
 // - Planning one item: Swap, Skip and Edit in one row, short since the title names the slot and
-//   item, then Portion for a meal. Edit is disabled for a food or quick numbers, which have no
-//   ingredients, and on a skipped slot, which eats none of them; Portion only shows for a meal.
+//   item, then Portion for a meal or a food. Edit is disabled for a food or quick numbers, which
+//   have no ingredients, and on a skipped slot, which eats none of them; Portion doesn't show for
+//   quick numbers.
 // - Planning several: Skip, then a row per item, each opening its own actions. A skipped slot
 //   lists none.
 // Then what's been added and Add to this slot, as one group, and As planned while the slot has a
@@ -182,12 +202,12 @@ export async function slotActionsSheet({ slot, planned, getFood, onPortion }) {
     const row = document.createElement('div');
     row.className = 'slot-actions__row';
     row.append(swap, skip, edit);
-    const portion = isMeal(one)
+    const portion = hasPortion(one)
       ? portionControls({
-          portion: slot.skipped ? null : one.portion,
+          portion: slot.skipped ? null : (one.portion ?? 1),
           onPick: (next) => {
             now = onPortion(one.id, next) ?? now;
-            edit.disabled = false;
+            edit.disabled = !isMeal(one);
             showActions();
           },
           onSet: () => sheet.close(),
@@ -207,13 +227,13 @@ export async function slotActionsSheet({ slot, planned, getFood, onPortion }) {
   return picked;
 }
 
-// The item sheet (SPEC §3.6, DESIGN §8), titled with what it acts on: Swap, then for a meal
-// Portion and Edit ingredients, then remove, labelled removeLabel. portion: the meal's now, or
-// undefined for anything that isn't a meal with ingredients, which shows only Swap and remove. A
-// preset portion applies through onPortion(portion), and the sheet stays open; Custom's applies
-// and closes. The rest close it for the caller to act on. Resolves to { action: 'swap' },
+// The item sheet (SPEC §3.6, DESIGN §8), titled with what it acts on: Swap, then Portion for a
+// meal or a food, then Edit ingredients for a meal with ingredients, then remove, labelled
+// removeLabel. portion: the item's now, or undefined for quick numbers, which shows only Swap and
+// remove. A preset portion applies through onPortion(portion), and the sheet stays open; Custom's
+// applies and closes. The rest close it for the caller to act on. Resolves to { action: 'swap' },
 // { action: 'ingredients' } or { action: 'remove' }, or null.
-async function itemSheet({ title, portion, onPortion, removeLabel }) {
+async function itemSheet({ title, portion, onPortion, editIngredients, removeLabel }) {
   let picked = null;
   let sheet;
   const choose = (action) => {
@@ -223,31 +243,45 @@ async function itemSheet({ title, portion, onPortion, removeLabel }) {
 
   const swap = secondaryButton('Swap', { block: true, onClick: () => choose('swap') });
   const remove = secondaryButton(removeLabel, { block: true, onClick: () => choose('remove') });
-  const mealActions =
-    portion === undefined
-      ? []
-      : [
-          ...portionControls({ portion, onPick: onPortion, onSet: () => sheet.close() }),
-          secondaryButton('Edit ingredients', { block: true, onClick: () => choose('ingredients') }),
-        ];
-  sheet = openSheet({ title, content: [swap, ...mealActions, remove] });
+  const portionControlsEl = portion === undefined ? [] : portionControls({ portion, onPick: onPortion, onSet: () => sheet.close() });
+  const editButton = editIngredients ? [secondaryButton('Edit ingredients', { block: true, onClick: () => choose('ingredients') })] : [];
+  sheet = openSheet({ title, content: [swap, ...portionControlsEl, ...editButton, remove] });
   await sheet.closed;
   return picked;
+}
+
+// A small Portion sheet on its own (SPEC §3.4, PLAN 14.25), for Plan's slot sheet, which sets a
+// planned item's portion in the template rather than the day's. title: the item's name. portion:
+// its now, always 1 or more, since a template item is never skipped. A preset or Custom's "Set
+// portion" both apply through onPortion(portion) and close the sheet straight away.
+export async function portionSheet({ title, portion, onPortion }) {
+  let sheet;
+  const controls = portionControls({
+    portion,
+    onPick: (next) => {
+      onPortion(next);
+      sheet.close();
+    },
+    onSet: () => sheet.close(),
+  });
+  sheet = openSheet({ title, content: controls });
+  await sheet.closed;
 }
 
 // A planned item's own actions, in a slot planning several, titled with the item. Remove for
 // today doesn't ask first, since As planned undoes it. item: one of the slot's day items.
 export function plannedItemSheet({ item, onPortion }) {
-  const portion = isMeal(item) ? item.portion : undefined;
-  return itemSheet({ title: item.label, portion, onPortion, removeLabel: 'Remove for today' });
+  const portion = hasPortion(item) ? (item.portion ?? 1) : undefined;
+  return itemSheet({ title: item.label, portion, onPortion, editIngredients: isMeal(item), removeLabel: 'Remove for today' });
 }
 
 // Something added to a slot or to Other, titled with it (SPEC §3.5): a meal with its ingredients
-// at its portion, or 1× before it's had one, as a planned meal; anything else, Swap and Remove
-// from slot. Remove from slot is for the caller to ask about first, since nothing brings it back.
+// at its portion, or 1× before it's had one, as a planned meal; a food at its portion; anything
+// else, Swap and Remove from slot. Remove from slot is for the caller to ask about first, since
+// nothing brings it back.
 export function entrySheet({ entry, onPortion }) {
-  const portion = hasIngredients(entry) ? (entry.portion ?? 1) : undefined;
-  return itemSheet({ title: entry.label, portion, onPortion, removeLabel: 'Remove from slot' });
+  const portion = entryHasPortion(entry) ? (entry.portion ?? 1) : undefined;
+  return itemSheet({ title: entry.label, portion, onPortion, editIngredients: hasIngredients(entry), removeLabel: 'Remove from slot' });
 }
 
 // The filled flex sheet: entries, each a row to open, then one button to add more, labelled

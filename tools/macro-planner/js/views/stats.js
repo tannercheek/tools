@@ -1,11 +1,85 @@
 // Stats (SPEC §3.7): the daily averages over the last 7 days, then the weight trend and log, under "Weight".
 
-import { lastSevenDaysAverage, profileTargets } from '../calc.js';
+import { currentStreak, lastSevenDates, lastSevenDayMarks, lastSevenDaysAverage, profileTargets } from '../calc.js';
 import { DAYS_DOC_ID, createWeightLog, currentWeight, localDate } from '../data.js';
+import { icon } from '../icons.js';
 import { miniRings } from '../rings.js';
+import { hashFor } from '../routes.js';
 import { CORE_DOC_ID } from '../store.js';
+import { textLink } from '../ui/buttons.js';
 import { emptyState } from '../ui/empty-state.js';
 import { weighInsSection } from './weigh-ins.js';
+
+const weekdayLetter = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' });
+const weekdayLong = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
+
+const MARK_RESULT = { hit: 'on target', miss: 'missed', uncounted: 'not counted' };
+
+// One marker (DESIGN §7): the weekday letter above a shape carrying the mark, hit, miss or
+// uncounted. The visible letter and shape are decorative; the li's own label carries the day and
+// the result for a screen reader.
+function dayMarker(date, mark) {
+  const item = document.createElement('li');
+  item.className = `days-on-target__marker days-on-target__marker--${mark}`;
+  item.setAttribute('aria-label', `${weekdayLong.format(new Date(`${date}T00:00`))}, ${MARK_RESULT[mark]}`);
+  const letter = document.createElement('span');
+  letter.className = 'days-on-target__marker-day';
+  letter.setAttribute('aria-hidden', 'true');
+  letter.textContent = weekdayLetter.format(new Date(`${date}T00:00`));
+  const shape = document.createElement('span');
+  shape.className = 'days-on-target__marker-shape';
+  shape.setAttribute('aria-hidden', 'true');
+  if (mark === 'hit') shape.innerHTML = icon('check');
+  item.append(letter, shape);
+  return item;
+}
+
+function streakText(count) {
+  return `${count} day${count === 1 ? '' : 's'} in a row on target`;
+}
+
+// Days on target (SPEC §3.7, DESIGN §7): how many of the last 7 days landed on their calorie
+// target, a marker per day, and the streak carried on from the core doc's streak. With no targets,
+// the link to set them (DESIGN §13), since nothing counts yet. setTargets(targets) redraws it
+// against new targets, as the averages do. streakDoc: the core doc's `streak`.
+function daysOnTargetSection(daysDoc, today, targets, streakDoc) {
+  if (!targets) {
+    const element = document.createElement('p');
+    element.className = 'stats__note';
+    element.append(textLink('Set your targets in Settings', hashFor('settings')));
+    return { element, setTargets() {} };
+  }
+
+  const dates = lastSevenDates(today);
+  const card = document.createElement('div');
+  card.className = 'days-on-target';
+
+  const stat = document.createElement('p');
+  stat.className = 'days-on-target__stat';
+  const count = document.createElement('span');
+  count.className = 'days-on-target__count';
+  stat.append(count, ' of 7 days on target');
+
+  const markers = document.createElement('ol');
+  markers.className = 'days-on-target__markers';
+
+  const streak = document.createElement('p');
+  streak.className = 'days-on-target__streak';
+
+  card.append(stat, markers, streak);
+
+  function show(nextTargets) {
+    const marks = lastSevenDayMarks(daysDoc, today, nextTargets);
+    count.textContent = marks.filter((mark) => mark === 'hit').length;
+    markers.replaceChildren(...dates.map((date, i) => dayMarker(date, marks[i])));
+    const streakCount = currentStreak(streakDoc, daysDoc, today, nextTargets);
+    streak.textContent = streakText(streakCount);
+    streak.hidden = streakCount < 1;
+  }
+
+  show(targets);
+  return { element: card, setTargets: show };
+}
 
 // With fewer counted days than this, the averages give way to the empty state (SPEC §3.7).
 const MIN_COUNTED_DAYS = 2;
@@ -80,9 +154,14 @@ export function render(container, { store, lockIn }) {
       const targetsFor = (log) =>
         profileTargets(doc.profile ?? {}, currentWeight(log), doc.overrides ?? {}, doc.macroSplit, today);
       const averages = averagesSection(days, today, targetsFor(weighIns));
-      const onChange = (log) => averages.setTargets(targetsFor(log));
+      const daysOnTarget = daysOnTargetSection(days, today, targetsFor(weighIns), doc.streak);
+      const onChange = (log) => {
+        const targets = targetsFor(log);
+        averages.setTargets(targets);
+        daysOnTarget.setTargets(targets);
+      };
       const weight = weighInsSection({ weightLog, weighIns, units, profile: doc.profile ?? {}, onChange });
-      screen.replaceChildren(averages.element, section('Weight', ...weight));
+      screen.replaceChildren(averages.element, daysOnTarget.element, section('Weight', ...weight));
     },
     (err) => {
       console.error('[macro-planner] stats failed to load:', err);

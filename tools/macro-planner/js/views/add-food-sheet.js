@@ -2,10 +2,12 @@
 // has (SPEC §3.2). One step shows at a time, in the same sheet.
 
 import { foodTotals } from '../calc.js';
+import { categoriesInUse, filterFoods } from '../categories.js';
 import { parseAmount } from '../custom-foods.js';
 import { amountLabel, defaultAmount, foodUnits } from '../portions.js';
 import { searchFoods } from '../search.js';
 import { iconButton, primaryButton, secondaryButton } from '../ui/buttons.js';
+import { tagFilterRow } from '../ui/controls.js';
 import { emptyState } from '../ui/empty-state.js';
 import { searchField } from '../ui/inputs.js';
 import { listRow, rowList } from '../ui/row.js';
@@ -46,12 +48,25 @@ function noMatch(query, onAdd) {
 // { element, searchInput }.
 export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   let choices = foods;
+  let category = null;
 
   const body = document.createElement('div');
   body.className = 'add-food';
 
   // Step 1: search. Each food's row is built once, so a keystroke only re-orders rows.
   const search = searchField({ label: 'Search foods' });
+  // The categories in use at the start, archived foods left out since they never match a search
+  // (search.js): stable through the picker's life, so filtering down to one still shows every
+  // category to switch back to (SPEC §3.2). Hidden while none has one.
+  const categories = categoriesInUse(choices.filter((food) => !food.archived));
+  const filter = tagFilterRow({
+    tags: categories,
+    label: 'Filter by category',
+    onChange: (next) => {
+      category = next;
+      update();
+    },
+  });
   const list = rowList([]);
   const results = document.createElement('div');
   const rows = new Map();
@@ -63,10 +78,10 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
     return rows.get(food);
   }
 
-  // An empty query lists every food, as the foods list does.
+  // An empty query lists every food in the category, as the foods list does.
   function update() {
     const query = search.input.value.trim();
-    const matches = searchFoods(choices, query);
+    const matches = searchFoods(filterFoods(choices, category), query);
     if (matches.length > 0) {
       list.replaceChildren(...matches.map(rowFor));
       results.replaceChildren(list);
@@ -89,7 +104,7 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
   }
 
   function showSearch(focusTarget) {
-    body.replaceChildren(search.element, results);
+    body.replaceChildren(search.element, ...(categories.length > 0 ? [filter.element] : []), results);
     focusTarget.focus();
   }
 
@@ -139,7 +154,7 @@ export function foodPicker({ foods, store, submitLabel, startAmount, onAdd }) {
     amount.input.select();
   }
 
-  body.append(search.element, results);
+  body.append(search.element, ...(categories.length > 0 ? [filter.element] : []), results);
   return { element: body, searchInput: search.input };
 }
 

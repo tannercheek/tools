@@ -1,7 +1,16 @@
 // Doc shapes, defaults, and the day and weigh-in helpers. Pure: the store is passed in,
 // so this never touches window and runs in Node.
 
-import { addDays, foodTotals, ingredientsTotals, lastSevenDates, roundTotals, scaleTotals } from './calc.js';
+import {
+  addDays,
+  continueStreak,
+  foodTotals,
+  ingredientsTotals,
+  lastSevenDates,
+  profileTargets,
+  roundTotals,
+  scaleTotals,
+} from './calc.js';
 import { ingredient, mealIngredients } from './ingredients.js';
 import { CORE_DOC_ID } from './store.js';
 
@@ -115,6 +124,21 @@ export function pruneDays(daysDoc, today) {
   return Object.fromEntries(Object.entries(daysDoc).filter(([date]) => date >= oldestKept));
 }
 
+// Whether a save on today prunes any of daysDoc's days.
+function prunesDays(daysDoc, today) {
+  const oldestKept = oldestKeptDate(today);
+  return Object.keys(daysDoc).some((date) => date < oldestKept);
+}
+
+// The core doc with the days a save on today prunes taken into its streak (SPEC §3.7), since the
+// streak is all that's left of them once pruneDays drops them, or the same doc when there are
+// none. weighIns: the weight log's, for the current target.
+export function foldPrunedDays(doc, daysDoc, today, weighIns) {
+  if (!prunesDays(daysDoc, today)) return doc;
+  const until = addDays(oldestKeptDate(today), -1);
+  return { ...doc, streak: continueStreak(doc.streak, daysDoc, until, targetsOn(doc, weighIns, today)?.kcal) };
+}
+
 // --- Entries (SPEC §3.5) ---
 // An entry is a snapshot: it keeps its own label, emoji and numbers, and its slot's name, so
 // editing or deleting a food, a meal or a slot later never changes it. slot: { id, name }, or OTHER.
@@ -149,11 +173,13 @@ export function quickEntry(slot, numbers, label = '') {
 }
 
 // A Recent entry added again: its label, emoji, numbers and source, as a new entry in this slot.
-// An added meal's ingredients and portion come too, as they are, but not the list it was first
-// added with: this is a new add, so the meal as added is the meal as it is now.
+// An added meal's ingredients come too, as they are, but not the list it was first added with:
+// this is a new add, so the meal as added is the meal as it is now. A meal's or a food's portion
+// comes too, so Recent adds back what was eaten.
 export function repeatEntry(slot, { label, emoji, source, kcal, protein, fat, carbs, ingredients, portion }) {
   const entry = createEntry(slot, { label, emoji, source }, { kcal, protein, fat, carbs });
-  return ingredients ? { ...entry, ingredients, ...(portion !== undefined && { portion }) } : entry;
+  const withIngredients = ingredients ? { ...entry, ingredients } : entry;
+  return portion !== undefined ? { ...withIngredients, portion } : withIngredients;
 }
 
 // The add sheet's Recent (SPEC §3.5): what was added in the 7 days before today, each as
@@ -202,14 +228,16 @@ export function swapDayEntry(day, entryId, entry) {
   return withEntry(day, entryId, ({ slotId, slotName }) => ({ ...entry, slotId, slotName }));
 }
 
-// Portion (SPEC §3.5) on an added meal, as on a planned one: its numbers become its ingredients'
-// total at portion, and the ingredients stay at 1×. An entry with no portion is at 1×. Only a meal
-// added with its ingredients has a total to scale.
+// Portion (SPEC §3.5) on an added meal or food, as on a planned one. A meal's numbers become its
+// ingredients' total at portion, and the ingredients stay at 1×. A food has no ingredients to
+// recompute from, so its numbers rescale from the last portion to the new one, with no food
+// lookup (snapshot rule). An entry with no portion is at 1×. Quick numbers have no portion.
 export function setEntryPortion(day, entryId, portion) {
   if (!Number.isFinite(portion) || portion <= 0) throw new RangeError(`Not a portion above 0: ${portion}`);
   return withEntry(day, entryId, (entry) => {
-    if (!entry.ingredients) throw new RangeError(`No ingredients to portion: ${entry.label}`);
-    return { ...entry, ...scaleTotals(ingredientsTotals(entry.ingredients), portion), portion };
+    if (entry.ingredients) return { ...entry, ...scaleTotals(ingredientsTotals(entry.ingredients), portion), portion };
+    if (entry.source === 'food') return { ...entry, ...scaleTotals(entry, portion / (entry.portion ?? 1)), portion };
+    throw new RangeError(`Not a meal or a food: ${entry.label}`);
   });
 }
 
@@ -336,8 +364,15 @@ export function createDays(store) {
   // An empty days doc that wasn't read from the cloud may just be a read that failed, and building
   // a write on it would replace every other day on the next sync, like the weight log
   // (WeightLogUnavailableError). stored: the days doc the write builds on.
+  // Days about to be pruned go into the core doc's streak first. It's saved before the days, so if
+  // the days save then fails, the next save takes the same days in again, which changes nothing,
+  // and none are lost. Without a core doc, it rejects with CoreDocUnavailableError.
   async function save(stored, next, today) {
     if (Object.keys(stored).length === 0 && !(await store.loaded(DAYS_DOC_ID))) throw new DaysUnavailableError();
+    if (prunesDays(next, today)) {
+      const { weighIns = [] } = await store.load(WEIGHT_DOC_ID);
+      await updateCoreDoc(store, (doc) => foldPrunedDays(doc, next, today, weighIns));
+    }
     await store.save(DAYS_DOC_ID, pruneDays(next, today));
   }
 
@@ -353,8 +388,9 @@ export function createDays(store) {
       return (await store.load(DAYS_DOC_ID))[date] ?? emptyDay();
     },
 
-    // Every save also drops days before 7 days ago, so a day older than that
-    // isn't kept even when it's the one being saved. Rejects with DaysUnavailableError without saving.
+    // Every save also drops days before 7 days ago, after taking them into the streak, so a day
+    // older than that isn't kept even when it's the one being saved. Rejects with
+    // DaysUnavailableError, or CoreDocUnavailableError when there are days to drop, without saving.
     async saveDay(date, day, today) {
       assertDate(date);
       const daysDoc = await store.load(DAYS_DOC_ID);
@@ -443,6 +479,13 @@ export function listedWeighIns(weighIns, today) {
 export function currentWeight(weighIns) {
   const latest = weighIns.reduce((found, w) => (!found || w.date > found.date ? w : found), null);
   return latest ? latest.kg : null;
+}
+
+// The targets on date (SPEC §3.1): the core doc's profile at its age then, with the latest weigh-in
+// up to then, or null without a complete profile. On today, they're the targets every view shows.
+export function targetsOn(doc, weighIns, date) {
+  const weightKg = currentWeight(weighIns.filter((w) => w.date <= date));
+  return profileTargets(doc.profile ?? {}, weightKg, doc.overrides ?? {}, doc.macroSplit, date);
 }
 
 // Thrown by the weight log's add and remove when a write could wipe the real log.

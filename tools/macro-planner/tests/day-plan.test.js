@@ -439,11 +439,10 @@ test('a meal swapped in and edited resets to the meal as swapped in, still swapp
   assert.deepEqual(planOf(dayPlan(doc, day, getFood), 'Breakfast').items[0], swappedIn(oats.id, mealDayItem('picked', RICE_BOWL, getFood)));
 });
 
-test('a portion and ingredients are only for a meal, a portion is above 0, and a meal keeps an ingredient', () => {
+test('ingredients are only for a meal, a portion is above 0, a meal keeps an ingredient, and quick numbers have no portion', () => {
   const doc = itemsDoc();
   const ids = slotIds(doc);
   const [oats, banana] = itemsOf(doc, 'Breakfast');
-  assert.throws(() => setItemPortion(doc, emptyDay(), ids.Breakfast, banana.id, 1.5, getFood), RangeError);
   assert.throws(() => setItemIngredients(doc, emptyDay(), ids.Breakfast, banana.id, OATS_EDIT, getFood), RangeError);
   assert.throws(() => resetItemIngredients(doc, emptyDay(), ids.Breakfast, banana.id, getFood), RangeError);
   for (const portion of [0, -1, NaN]) {
@@ -451,6 +450,29 @@ test('a portion and ingredients are only for a meal, a portion is above 0, and a
   }
   assert.throws(() => setItemIngredients(doc, emptyDay(), ids.Breakfast, oats.id, [], getFood), RangeError);
   assert.throws(() => swapPlannedItem(doc, emptyDay(), ids.Breakfast, oats.id, null, getFood), RangeError);
+
+  const breakfastSlot = slotNamed(doc, 'Breakfast');
+  const quick = swapPlannedItem(doc, emptyDay(), ids.Breakfast, oats.id, quickDayItem('picked', breakfastSlot, NUMBERS), getFood);
+  assert.throws(() => setItemPortion(doc, quick, ids.Breakfast, oats.id, 1.5, getFood), RangeError);
+});
+
+test('a portion on a planned food counts at that multiple, and a new portion replaces the last one with no drift', () => {
+  const doc = itemsDoc();
+  const ids = slotIds(doc);
+  const [, banana] = itemsOf(doc, 'Breakfast');
+  const unportioned = planOf(dayPlan(doc, emptyDay(), getFood), 'Breakfast').items[1];
+  assert.equal(Object.hasOwn(unportioned, 'portion'), false, 'reads as 1×');
+
+  let day = setItemPortion(doc, emptyDay(), ids.Breakfast, banana.id, 1.5, getFood);
+  let portioned = planOf(dayPlan(doc, day, getFood), 'Breakfast').items[1];
+  assert.equal(portioned.portion, 1.5);
+  assertTotals(portioned, times(BANANA_TOTALS, 1.5));
+
+  // A second portion replaces the first rather than multiplying it.
+  day = setItemPortion(doc, day, ids.Breakfast, banana.id, 0.5, getFood);
+  portioned = planOf(dayPlan(doc, day, getFood), 'Breakfast').items[1];
+  assert.equal(portioned.portion, 0.5);
+  assertTotals(portioned, times(BANANA_TOTALS, 0.5));
 });
 
 test('an item that isn’t in the slot, or a slot that plans nothing, leaves the day as it was', () => {

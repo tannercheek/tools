@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { CATEGORIES } from '../js/categories.js';
 import {
   CATEGORY_EMOJI,
   WEIGHT_UNITS,
@@ -64,7 +65,7 @@ function withEnergy(...energyRows) {
   });
 }
 
-const entry = (overrides = {}) => ({ fdcId: 171287, name: 'Egg, large', emoji: '🥚', ...overrides });
+const entry = (overrides = {}) => ({ fdcId: 171287, name: 'Egg, large', emoji: '🥚', category: 'Dairy & eggs', ...overrides });
 
 // --- CSV ---
 
@@ -142,12 +143,13 @@ test('with no portion, a food is per 100 g with USDA values as given, in the SPE
       carbs: 0.72,
       grams: 100,
       portions: [],
+      category: 'Dairy & eggs',
       custom: false,
       archived: false,
     },
   ]);
   assert.deepEqual(Object.keys(foods[0]), [
-    'id', 'name', 'serving', 'emoji', 'kcal', 'protein', 'fat', 'carbs', 'grams', 'portions', 'custom', 'archived',
+    'id', 'name', 'serving', 'emoji', 'kcal', 'protein', 'fat', 'carbs', 'grams', 'portions', 'category', 'custom', 'archived',
   ]);
 });
 
@@ -166,7 +168,7 @@ test("a portion's amount becomes the serving qty, and grams is the whole serving
     nutrients: [['2', '1008', '598'], ['2', '1003', '22.21'], ['2', '1004', '51.36'], ['2', '1005', '22.31']],
     portions: [['2', '2', '9999', 'tbsp', '32']],
   });
-  const { foods } = buildFoods([{ fdcId: 2, name: 'Peanut butter', portion: '2 tbsp = 32 g', unit: 'tbsp', emoji: '🥜' }], index);
+  const { foods } = buildFoods([{ fdcId: 2, name: 'Peanut butter', portion: '2 tbsp = 32 g', unit: 'tbsp', emoji: '🥜', category: 'Nuts & seeds' }], index);
   assert.deepEqual(foods[0].serving, { qty: 2, unit: 'tbsp' });
   assert.equal(foods[0].kcal, 191.36);
   assert.equal(foods[0].grams, 32);
@@ -179,7 +181,7 @@ test('scaling strips float noise but keeps USDA precision', () => {
     nutrients: [['3', '1008', '148.0'], ['3', '1003', '12.4'], ['3', '1004', '9.96'], ['3', '1005', '0.96']],
     portions: [['3', '1.0', '1124', 'whole without shell', '50.3']],
   });
-  const { foods } = buildFoods([{ fdcId: 3, name: 'Egg', portion: '1 egg, whole without shell = 50.3 g', unit: 'egg', emoji: '🥚' }], index);
+  const { foods } = buildFoods([{ fdcId: 3, name: 'Egg', portion: '1 egg, whole without shell = 50.3 g', unit: 'egg', emoji: '🥚', category: 'Dairy & eggs' }], index);
   assert.deepEqual([foods[0].kcal, foods[0].protein, foods[0].fat, foods[0].carbs], [74.444, 6.2372, 5.00988, 0.48288]);
 });
 
@@ -217,7 +219,7 @@ const RICE = {
     ['168878', '3', '9999', 'oz', '85'],
   ],
 };
-const rice = (portions) => ({ fdcId: 168878, name: 'Rice, white, cooked', emoji: '🍚', portions });
+const rice = (portions) => ({ fdcId: 168878, name: 'Rice, white, cooked', emoji: '🍚', category: 'Grains & pasta', portions });
 
 test('portions are written in the listed order as { unit, grams }, grams being 1 of the unit', () => {
   const { foods, problems } = buildFoods(
@@ -299,17 +301,17 @@ test('every portion problem is reported, alongside the rest', () => {
 
 // --- Emoji ---
 
-test('a category fills in its default emoji from SPEC §3.2', () => {
-  const { foods } = buildFoods([entry({ emoji: undefined, category: 'poultry' })], usda(EGG));
+test('an emojiGroup fills in its default emoji from SPEC §3.2', () => {
+  const { foods } = buildFoods([entry({ emoji: undefined, emojiGroup: 'poultry' })], usda(EGG));
   assert.equal(foods[0].emoji, '🍗');
 });
 
-test('an exact emoji wins over a category', () => {
-  const { foods } = buildFoods([entry({ emoji: '🥚', category: 'dairy' })], usda(EGG));
+test('an exact emoji wins over an emojiGroup', () => {
+  const { foods } = buildFoods([entry({ emoji: '🥚', emojiGroup: 'dairy' })], usda(EGG));
   assert.equal(foods[0].emoji, '🥚');
 });
 
-test('every SPEC §3.2 category has its default emoji', () => {
+test('every SPEC §3.2 emoji group has its default emoji', () => {
   assert.deepEqual(CATEGORY_EMOJI, {
     meat: '🥩',
     poultry: '🍗',
@@ -325,15 +327,15 @@ test('every SPEC §3.2 category has its default emoji', () => {
   });
 });
 
-test('an entry with neither an emoji nor a category fails', () => {
+test('an entry with neither an emoji nor an emojiGroup fails', () => {
   const { foods, problems } = buildFoods([entry({ emoji: undefined })], usda(EGG));
   assert.deepEqual(foods, []);
-  assert.deepEqual(problems, ['entry 1 (Egg, large): needs an emoji or a category']);
+  assert.deepEqual(problems, ['entry 1 (Egg, large): needs an emoji or an emojiGroup']);
 });
 
-test('an unknown category fails', () => {
-  const { problems } = buildFoods([entry({ emoji: undefined, category: 'eggs' })], usda(EGG));
-  assert.deepEqual(problems, ['entry 1 (Egg, large): unknown category "eggs"']);
+test('an unknown emojiGroup fails', () => {
+  const { problems } = buildFoods([entry({ emoji: undefined, emojiGroup: 'eggs' })], usda(EGG));
+  assert.deepEqual(problems, ['entry 1 (Egg, large): unknown emojiGroup "eggs"']);
 });
 
 test('an emoji must be one emoji character', () => {
@@ -347,6 +349,31 @@ test('an emoji must be one emoji character', () => {
   assert.deepEqual(problems, ['entry 1 (Egg, large): emoji "egg" isn\'t a single emoji character']);
 });
 
+// --- Category (SPEC §3.2) ---
+
+test('the category is written to the food', () => {
+  const { foods } = buildFoods([entry({ category: 'Nuts & seeds' })], usda(EGG));
+  assert.equal(foods[0].category, 'Nuts & seeds');
+});
+
+test('an entry with no category fails', () => {
+  const { foods, problems } = buildFoods([entry({ category: undefined })], usda(EGG));
+  assert.deepEqual(foods, []);
+  assert.deepEqual(problems, ['entry 1 (Egg, large): needs a category']);
+});
+
+test('an unknown category fails', () => {
+  const { problems } = buildFoods([entry({ category: 'Eggs' })], usda(EGG));
+  assert.deepEqual(problems, ['entry 1 (Egg, large): unknown category "Eggs"']);
+});
+
+test('every CATEGORIES entry is accepted', () => {
+  for (const category of CATEGORIES) {
+    const { problems } = buildFoods([entry({ category })], usda(EGG));
+    assert.deepEqual(problems, [], category);
+  }
+});
+
 // --- Which foods and values are used ---
 
 test('an fdcId that is not in the datasets fails', () => {
@@ -357,28 +384,28 @@ test('an fdcId that is not in the datasets fails', () => {
 
 test("a superseded food (in food.csv but not the dataset's own list) is not used", () => {
   const index = usda({ ...EGG, superseded: [['322892', 'Milk, whole, older version']] });
-  const { problems } = buildFoods([{ fdcId: 322892, name: 'Milk', emoji: '🥛' }], index);
+  const { problems } = buildFoods([{ fdcId: 322892, name: 'Milk', emoji: '🥛', category: 'Dairy & eggs' }], index);
   assert.deepEqual(problems, ["entry 1 (Milk): fdcId 322892 isn't a current Foundation or SR Legacy food"]);
 });
 
 test('energy comes from Energy (1008) when USDA has it', () => {
-  const { foods } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚' }], withEnergy(['2047', '170'], ['2048', '175'], ['1008', '176']));
+  const { foods } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚', category: 'Dairy & eggs' }], withEnergy(['2047', '170'], ['2048', '175'], ['1008', '176']));
   assert.equal(foods[0].kcal, 176);
 });
 
 test('without 1008, energy comes from the Atwater specific factors (2048)', () => {
-  const { foods, sources } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚' }], withEnergy(['2047', '170'], ['2048', '175']));
+  const { foods, sources } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚', category: 'Dairy & eggs' }], withEnergy(['2047', '170'], ['2048', '175']));
   assert.equal(foods[0].kcal, 175);
   assert.equal(sources[0].energy, 'Energy (Atwater Specific Factors)');
 });
 
 test('with only the Atwater general factors (2047), energy comes from those', () => {
-  const { foods } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚' }], withEnergy(['2047', '170']));
+  const { foods } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚', category: 'Dairy & eggs' }], withEnergy(['2047', '170']));
   assert.equal(foods[0].kcal, 170);
 });
 
 test('a missing value fails rather than counting as 0', () => {
-  const { foods, problems } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚' }], withEnergy());
+  const { foods, problems } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚', category: 'Dairy & eggs' }], withEnergy());
   assert.deepEqual(foods, []);
   assert.deepEqual(problems, ['entry 1 (Test): USDA has no kcal value for it']);
 });
@@ -388,7 +415,7 @@ test('an empty amount in the CSV counts as missing, not 0', () => {
     foods: [['1', 'Test']],
     nutrients: [['1', '1008', '100'], ['1', '1003', ''], ['1', '1004', '1'], ['1', '1005', '1']],
   });
-  const { problems } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚' }], index);
+  const { problems } = buildFoods([{ fdcId: 1, name: 'Test', emoji: '🥚', category: 'Dairy & eggs' }], index);
   assert.deepEqual(problems, ['entry 1 (Test): USDA has no protein value for it']);
 });
 
@@ -442,7 +469,7 @@ test('every problem is reported, not just the first', () => {
 });
 
 test('an entry needs a whole-number fdcId and a name', () => {
-  assert.deepEqual(entryProblems({ fdcId: '171287', name: ' ', emoji: '🥚' }), ['fdcId must be a whole number', 'name is missing']);
+  assert.deepEqual(entryProblems({ fdcId: '171287', name: ' ', emoji: '🥚', category: 'Dairy & eggs' }), ['fdcId must be a whole number', 'name is missing']);
 });
 
 // --- The committed files ---
@@ -457,21 +484,27 @@ test('food-list.json entries are all valid, with no id used twice', () => {
 
 test('foods.json was rebuilt from the current food-list.json', () => {
   assert.deepEqual(
-    bundledFoods.map(({ id, name, emoji, serving, portions }) => ({
+    bundledFoods.map(({ id, name, emoji, serving, portions, category }) => ({
       id,
       name,
       emoji,
       unit: serving.unit,
       portions: portions.map(({ unit }) => unit),
+      category,
     })),
     foodList.map((item) => ({
       id: foodId(item),
       name: item.name,
-      emoji: item.emoji ?? CATEGORY_EMOJI[item.category],
+      emoji: item.emoji ?? CATEGORY_EMOJI[item.emojiGroup],
       unit: item.unit ?? 'g',
       portions: (item.portions ?? []).map(({ unit }) => unit),
+      category: item.category,
     })),
   );
+});
+
+test('every bundled food has a category from CATEGORIES', () => {
+  for (const food of bundledFoods) assert.ok(CATEGORIES.includes(food.category), food.name);
 });
 
 test("every bundled food has its serving's weight and portions in units of their own", () => {

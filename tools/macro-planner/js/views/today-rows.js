@@ -13,6 +13,12 @@ import { listRow, rowActionIcon } from '../ui/row.js';
 const portionFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 const integer = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
+// A portion other than 1×, as its own mark ("1.5×"), or none at 1×. Shared by a day item's marks
+// and a template item's, in Plan.
+export function portionMark(portion = 1) {
+  return portion === 1 ? [] : [`${portionFormat.format(portion)}×`];
+}
+
 // A planned item's changes for the day (SPEC §3.5), in the order swapped, edited, portion:
 // ["Swapped", "Edited", "1.5×"]. item: one of dayPlan's day items. The slot actions sheet's item
 // rows show them too.
@@ -20,7 +26,7 @@ export function itemMarks(item) {
   const marks = [];
   if (item.swapped) marks.push('Swapped');
   if (item.originalIngredients) marks.push('Edited');
-  if (item.source === 'meal' && item.portion !== 1) marks.push(`${portionFormat.format(item.portion)}×`);
+  if (item.source === 'meal' || item.source === 'food') marks.push(...portionMark(item.portion));
   return marks;
 }
 

@@ -7,7 +7,7 @@ Small, reviewable steps. Each one should take a single Claude Code session and e
 All work happens on `main`. Hand Claude Code this, changing the step id:
 
 ```
-Read CLAUDE.md, SPEC.md, PLAN.md and DESIGN.md in tools/macro-planner/.
+Read CLAUDE.md, SPEC.md, PLAN.md and DESIGN.md in tools/tools/macro-planner/.
 Do step 1.1 only. Follow CLAUDE.md's working style: say what you'll change,
 do it, run the tests, then show me this step's changes and a "how to check
 it" list. Don't run git commands that change the repo, and don't start the
@@ -796,3 +796,152 @@ One open-ended phase: steps are added here as they come up, in the order they sh
   - it works at 360px and 390px in light and dark
 
   _Model:_ Sonnet 5, medium effort. One form, built from existing components.
+
+- [x] **14.22 Portion on foods: logic**
+      A food in a slot gets a portion, as a meal does (SPEC §3.5), so 1.5 bananas is 1 banana at 1.5×, not a swap for a different amount of itself. Pure logic, no UI.
+  - A food day item or entry can have a `portion`; none means 1×. Its numbers are the numbers for its amount, times the portion. A new portion rescales the numbers by new ÷ old, so the food isn't looked up again (snapshot rule).
+  - In `day-plan.js`, `setItemPortion` takes a planned food as well as a meal. In `data.js`, `setEntryPortion` takes an added food: one with no ingredients is scaled by its numbers, not refused.
+  - In `lock-in.js`, a food is written with its portion, and is still marked `planned` when the portion was changed for the day, as for a meal.
+  - `repeatEntry` carries a food's portion, so Recent adds back what was eaten. Recent merges by label and numbers, as now.
+  - A swap from a portioned food starts at the old amount at 1×.
+  - In SPEC §3.5, Portion applies to a meal or a food. Drop "A food's amount is its own, so it has no portion", and add `portion` to the food day item and food entry shapes.
+
+  _Done when:_ tests cover:
+  - a planned banana at 1.5× counting as 1.5 bananas in `dayTotal` and `flexGap`
+  - 1.5× then 0.5× ending at half a banana's numbers, with no drift
+  - an added food at a portion, and Recent adding it back at that portion
+  - lock-in writing a portioned planned food marked planned, with its portion
+  - a food saved before this step reading as 1×
+
+  _Model:_ Sonnet 5, high effort. Small and pure, but it touches totals and lock-in.
+
+- [x] **14.23 Portion on foods: Today**
+      The Portion control shows for foods on Today, using 14.22.
+  - A slot planning one food shows Portion under Swap, Skip and Edit, as for a meal. Edit stays disabled, since a food has no ingredients.
+  - A planned food's item sheet and an added food's item sheet get Portion, as a meal's do (14.15, 14.18).
+  - The slot's name or the item's line shows the portion ("Snack · 1.5×"), as for a meal. On a locked day, a food entry's line shows its portion too.
+  - Update DESIGN §8's slot actions sheet, item sheet, and the added entry row.
+
+  _Done when:_
+  - a planned banana at 1.5× shows "Snack · 1.5×" and moves the rings by half a banana
+  - a banana added to Lunch at Custom 2× counts as two
+  - As planned takes a planned banana back to 1×
+  - the next day, the locked day shows the banana at 1.5×
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Sonnet 5, medium effort. It reuses the meal's Portion control in sheets that already have it.
+
+- [x] **14.24 Portion in the plan: logic**
+      A planned meal or food has a portion in the template, so Plan can say "1.5× Oats & whey every day" (SPEC §3.4). Pure logic, no UI.
+  - Template items can have a `portion`; none means 1×. In `slots.js`, `setPlannedPortion(doc, slotId, itemId, portion)` returns a new doc. Adding a meal or food that's already planned keeps its portion.
+  - `planSlots` and the Plan totals count each item at its portion.
+  - `dayPlan` gives a day with no version of its own the template's portions. The day's first change copies them into its snapshots, and As planned brings them back. A day change to a portion sets the portion outright; it isn't multiplied by the template's.
+  - Lock-in writes a planned item at its template portion, marked planned.
+  - `replacePlannedItem` (Make this the default) puts the pick in at 1×.
+  - Export and import carry `portion`. Update SPEC §3.4: "A meal is planned at 1×" becomes a portion on any planned item.
+
+  _Done when:_ tests cover:
+  - a meal planned at 1.5× counting at 1.5× in Plan totals and on a day with no changes
+  - a template portion change reaching a day with no version of its own, and not one that has one
+  - a day setting 1× on a meal planned at 1.5× eating it at 1×, and As planned bringing back 1.5×
+  - lock-in writing the template portion, marked planned, and Recent leaving it out
+  - a template saved before this step reading as 1×
+
+  _Model:_ Opus 5.5, high effort. It changes what every day reads from the template, and lock-in writes days for good.
+
+- [x] **14.25 Portion in the plan: Plan**
+      Plan's slot sheet sets a planned item's portion, using 14.24.
+  - Each planned item row in the slot sheet keeps its remove icon button. Tapping the rest of the row opens a small sheet titled with the item, holding the Portion control (0.5×, 1×, 1.5×, Custom). It saves straight away and comes back to the slot sheet.
+  - A row at a portion other than 1× shows it in the eyebrow ("1.5×", or "1.5× · 2 BANANA" for a food), and its numbers are at that portion. Plan's slot rows show it the same way.
+  - The totals card moves with it.
+  - Today shows a planned portion other than 1× in the slot's name or the item's line, as for a day's portion. As planned doesn't show, since it isn't a change.
+  - Update DESIGN §8's Plan slot rows and slot sheet.
+
+  _Done when:_
+  - setting Breakfast's Oats & whey to 1.5× in Plan shows "1.5×" on its row, moves the totals card, and shows "Breakfast · 1.5×" on Today with no As planned
+  - a day already changed in that slot keeps its own portion
+  - it survives a reload and syncs between browsers
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Sonnet 5, medium effort. One sheet, reusing the Portion control.
+
+- [x] **14.26 Food categories: data and logic**
+      Every food gets a category, named like a supermarket section, so the food picker can be filtered as the meal picker is by tag (SPEC §3.2). No UI.
+  - Categories, in the order you'd walk a store: Produce, Meat & fish, Dairy & eggs, Tofu & plant protein, Bakery, Grains & pasta, Beans & legumes, Nuts & seeds, Oils & condiments, Snacks & sweets, Supplements. The list is one constant in a new `js/categories.js`, so a category can be added later in one place.
+  - `food-list.json` already has a `category` for 161 foods, but it only picks a default emoji, from a different list (meat, poultry, fish…). Rename that key to `emojiGroup` everywhere it's used, then give every food a `category` from the new list. `build-foods.mjs` checks each one against the list and writes it to `foods.json`. Re-run it: `foods.json` changes by its categories only.
+  - Custom foods can have a `category`; one without it shows under All only. A duplicate keeps it. Export and import carry it.
+  - In `categories.js`, pure `filterFoods(foods, category)` (null is All) and `categoriesInUse(foods)`, in the list's order.
+  - Add `category` to SPEC §3.2's food record and the decisions log. This step changes only data and logic.
+
+  _You'll need to:_ have the USDA CSVs unzipped, and skim the categories, since an item like peanut butter could go under more than one.
+
+  _Done when:_
+  - every bundled food has a category from the list, and `foods.json` differs from before by its categories only
+  - tests cover the filter, categories in store order, a custom food without one showing under All only, and a duplicate keeping its category
+  - you've skimmed the categories and moved any you'd look for elsewhere
+
+  _Model:_ Sonnet 5, medium effort. Mostly data, with a small pure helper.
+
+- [x] **14.27 Food categories: filter row**
+      Category pills above the food lists, like the meal picker's tag filter row (SPEC §3.3, DESIGN §9).
+  - Make `tagFilterRow` general, with its group label passed in ("Filter by tag", "Filter by category").
+  - The food picker (the add sheet, swap sheet, Plan's slot sheet, the Ingredients sheet and the meal editor's Add food) and the Foods list get the row above their lists: "All", then each category in use, in store order. Picking one narrows both the empty-search list and search results. On the Foods list it works together with "Custom foods only".
+  - Like the tag filter, it isn't saved and starts on All each time.
+  - The custom food form gets a Category field after the emoji and name: a sheet listing the categories, with "None" first.
+  - Update SPEC §3.2, and DESIGN §9's filter row and §10's custom food form.
+
+  _Done when:_
+  - Produce in the add sheet lists only fruit and vegetables, and searching "oat" under Grains & pasta finds oats, not oat milk
+  - a custom food set to Dairy & eggs shows under it, and one with None only under All
+  - the row scrolls sideways without scrolling the page, at 360px and 390px in light and dark
+  - a picker opens on All every time
+
+  _Model:_ Sonnet 5, medium effort. It reuses the tag filter row across several pickers.
+
+- [x] **14.28 Days on target: logic**
+      Whether each day landed on its calorie target, and a streak of them, for Stats (SPEC §3.7). DESIGN §7 already describes how this looks. Pure logic, no UI.
+  - A day is **on target** when its kcal is within ±10% of the kcal target. A day with no entries isn't counted, as in the averages: it isn't on target or a miss, and it neither breaks nor adds to a streak.
+  - Lock-in stores the day's kcal target on the day (`kcalTarget`), so a later weigh-in or profile change doesn't change whether a past day was on target. A day locked before this step uses the current target. With no targets, nothing counts.
+  - In `calc.js`, pure `onTarget(day, target)`, and `lastSevenDayMarks(daysDoc, today, targets)`: the 7 days before today, oldest first, each `'hit'`, `'miss'` or `'uncounted'`.
+  - **Streak:** the days on target in a row up to yesterday. The days doc only keeps 7 days, so the core doc keeps `streak: { count, through }`: the run up to a day that's since been pruned. Before a day is pruned, `pruneDays`' caller folds it into `streak`. The streak shown is that run continued through the kept days, worked out live, so removing or adding an entry on a locked day moves it. A gap with no days, from not opening the app for more than a week, starts it again from 0. Export and import carry `streak`.
+  - Update SPEC §3.7 with days on target and the streak, drop "Days-on-target counts" from §7, and add a decisions-log row for ±10%.
+
+  _Done when:_ tests cover:
+  - 2,250 kcal hitting a 2,500 target, and 2,240 and 2,760 missing
+  - a day with no entries uncounted, and not breaking a streak
+  - a day locked with one target staying on target after the profile's target changes
+  - a streak of 10 days surviving the pruning of its first 3
+  - removing an entry on a locked day breaking the streak, and adding it back restoring it
+  - a gap of more than 7 days starting the streak again
+  - no targets giving no marks and no streak
+
+  _Model:_ Opus 5.5, high effort. The streak lives across pruning, and it has to stay right when you edit a past day.
+
+- [x] **14.29 Days on target: Stats**
+      The tracker on Stats, using 14.28, as DESIGN §7 describes it.
+  - A section after the averages: the stat number ("5") with "of 7 days on target" in body `--color-text-2`, then a row of 7 day markers, oldest on the left, each labelled with its weekday letter. Hit is a filled ink circle with a check, miss an outlined circle, and an uncounted day a dashed outline, so shape carries the meaning. Each marker's accessible name says the day and what it was ("Monday, on target").
+  - Under it, the streak: "4 days in a row on target", hidden at 0.
+  - With no targets yet, the section shows the no-targets state (DESIGN §13).
+  - Add the uncounted marker and the streak line to DESIGN §7.
+
+  _Done when:_
+  - a seeded week with 5 hits, a miss and an uncounted day shows "5 of 7 days on target" and the markers in order
+  - the streak counts back from yesterday, and goes when yesterday was a miss
+  - VoiceOver reads each marker's day and result
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Sonnet 5, medium effort. One section, drawn to a spec DESIGN already has.
+
+- [x] **14.30 Streak on Today**
+      The streak on Today, so it's seen every day and not just on Stats.
+  - A small line under the rings, with Lucide's `flame` icon added to `icons.js`: "4 days in a row on target". It shows only for a streak of 2 or more, and only on today, not on other days.
+  - Tapping it opens Stats.
+  - Update SPEC §3.6 and DESIGN §8.
+
+  _Done when:_
+  - a 4-day streak shows on today and not on yesterday or tomorrow
+  - a streak of 1 or 0 shows nothing
+  - tapping it opens Stats
+  - it works at 360px and 390px in light and dark
+
+  _Model:_ Sonnet 5, low effort. One line, using 14.28's streak.

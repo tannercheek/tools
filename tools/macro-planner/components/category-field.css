@@ -1,0 +1,40 @@
+/* Category field for js/ui/category-field.js (DESIGN §10). Every value comes from tokens.css. */
+
+/* A field box as a button, opening the Category sheet: the text at the start, a chevron at the
+   end, like a unit button but filling the whole field instead of sitting in a suffix. */
+.category-field__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  appearance: none;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-base);
+  cursor: pointer;
+}
+
+.category-field__button:focus-visible {
+  outline: none;
+  border-color: var(--color-ink);
+}
+
+.category-field__button--empty {
+  color: var(--color-text-3);
+}
+
+.category-field__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-field__button .icon {
+  flex: none;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  color: var(--color-text-2);
+}

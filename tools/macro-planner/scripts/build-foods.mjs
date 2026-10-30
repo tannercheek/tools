@@ -8,9 +8,9 @@
 // scripts/food-list.json are written, and every number comes straight from USDA.
 //
 // food-list.json is an array of entries like these:
-//   { "fdcId": 171287, "variant": "large", "name": "Egg, large", "portion": "1 large = 50 g", "unit": "egg", "emoji": "🥚" }
-//   { "fdcId": 168878, "name": "Rice, white, cooked", "emoji": "🍚", "portions": [{ "portion": "1 cup = 158 g", "unit": "cup" }] }
-//   { "fdcId": 2646170, "name": "Chicken breast, skinless, raw", "category": "poultry", "portions": [{ "unit": "oz" }] }
+//   { "fdcId": 171287, "variant": "large", "name": "Egg, large", "portion": "1 large = 50 g", "unit": "egg", "emoji": "🥚", "category": "Dairy & eggs" }
+//   { "fdcId": 168878, "name": "Rice, white, cooked", "emoji": "🍚", "category": "Grains & pasta", "portions": [{ "portion": "1 cup = 158 g", "unit": "cup" }] }
+//   { "fdcId": 2646170, "name": "Chicken breast, skinless, raw", "emojiGroup": "poultry", "category": "Meat & fish", "portions": [{ "unit": "oz" }] }
 // - The id is usda-<fdcId>, plus -<variant> when one USDA food gives several entries (egg sizes).
 //   Ids must be unique and never change once set, because meals refer to foods by id.
 // - portion + unit: the serving is that USDA portion, counted in `unit`. Without them it's 100 g.
@@ -18,13 +18,16 @@
 // - portions: the food's other units (SPEC §3.2), the first one its default. Each is a USDA
 //   portion shown as `unit`, matched like the serving's, or { "unit": "oz" }, which needs no
 //   USDA portion because an ounce is the same weight on any food.
-// - emoji, or a category for its default emoji (SPEC §3.2). An emoji wins over a category.
+// - emoji, or an emojiGroup for its default emoji (SPEC §3.2). An emoji wins over an emojiGroup.
+// - category: the supermarket section the food is filtered and browsed by (SPEC §3.2), one of
+//   js/categories.js's CATEGORIES. Every entry needs one.
 //
 // Any problem fails the whole build and writes nothing, so foods.json is never half-built.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CATEGORIES } from '../js/categories.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const FOOD_LIST = join(SCRIPT_DIR, 'food-list.json');
@@ -209,11 +212,13 @@ export function entryProblems(entry) {
   }
   if (entry.emoji !== undefined) {
     if (!isSingleEmoji(entry.emoji)) problems.push(`emoji "${entry.emoji}" isn't a single emoji character`);
-  } else if (entry.category === undefined) {
-    problems.push('needs an emoji or a category');
-  } else if (!Object.hasOwn(CATEGORY_EMOJI, entry.category)) {
-    problems.push(`unknown category "${entry.category}"`);
+  } else if (entry.emojiGroup === undefined) {
+    problems.push('needs an emoji or an emojiGroup');
+  } else if (!Object.hasOwn(CATEGORY_EMOJI, entry.emojiGroup)) {
+    problems.push(`unknown emojiGroup "${entry.emojiGroup}"`);
   }
+  if (entry.category === undefined) problems.push('needs a category');
+  else if (!CATEGORIES.includes(entry.category)) problems.push(`unknown category "${entry.category}"`);
   if ((entry.portion === undefined) !== (entry.unit === undefined)) {
     problems.push('portion and unit go together: give both, or neither for 100 g');
   }
@@ -319,13 +324,14 @@ function buildFood(entry, usdaFoods) {
     id: foodId(entry),
     name: entry.name.trim(),
     serving,
-    emoji: entry.emoji ?? CATEGORY_EMOJI[entry.category],
+    emoji: entry.emoji ?? CATEGORY_EMOJI[entry.emojiGroup],
     kcal: perServing(per100g.kcal, grams),
     protein: perServing(per100g.protein, grams),
     fat: perServing(per100g.fat, grams),
     carbs: perServing(per100g.carbs, grams),
     grams,
     portions,
+    category: entry.category,
     custom: false,
     archived: false,
   };
