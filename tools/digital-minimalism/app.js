@@ -3,9 +3,12 @@
    Merged from the privacy-lockdown and footprint-deletion guides,
    reorganised around attention rather than vendors.
 
-   To add or edit content, edit the PHASES array below.
+   To add or edit content, edit the PHASES array below
+   (Survival Devices lives in survival.js).
    Item ids must stay stable — they're the persistence keys.
    ═══════════════════════════════════════════════════════════ */
+
+import { SURVIVAL } from "./survival.js";
 
 /* ── the work, in phases ─────────────────────────────────── */
 
@@ -228,12 +231,105 @@ const PHASES = [
           {
             id: "d-b5",
             sev: "rec",
-            text: "<b>Freeze your credit at all three bureaus.</b> Free, reversible, and blocks the most damaging downstream use of leaked personal data.",
+            text: '<b>Freeze your credit at all three bureaus.</b> Free, reversible, and blocks the most damaging downstream use of leaked personal data. <a href="https://www.equifax.com/personal/credit-report-services/credit-freeze/" target="_blank" rel="noopener">Equifax</a> · <a href="https://www.experian.com/freeze/center.html" target="_blank" rel="noopener">Experian</a> · <a href="https://www.transunion.com/credit-freeze" target="_blank" rel="noopener">TransUnion</a>',
           },
           {
             id: "d-b6",
             sev: "opt",
             text: "<b>Record which brokers you've cleared and when.</b> You'll need it — most re-list within 6–12 months.",
+          },
+          {
+            id: "d-b7",
+            sev: "rec",
+            text: '<b>Freeze the two bureaus most people miss:</b> Innovis, and ChexSystems, which blocks fraudulent bank accounts. Keep every bureau\'s PIN with your recovery codes. A thaw is free and quick when you need to apply for credit. <a href="https://www.innovis.com/personal/securityFreeze" target="_blank" rel="noopener">Innovis</a> · <a href="https://www.chexsystems.com/security-freeze" target="_blank" rel="noopener">ChexSystems</a>',
+          },
+          {
+            id: "d-b8",
+            sev: "opt",
+            text: '<b>Opt out of the next tier of people-search sites</b> if a removal service isn\'t already covering them: <a href="https://www.intelius.com/opt-out" target="_blank" rel="noopener">Intelius</a> · <a href="https://www.truepeoplesearch.com/removal" target="_blank" rel="noopener">TruePeopleSearch</a> · <a href="https://www.fastpeoplesearch.com/removal" target="_blank" rel="noopener">FastPeopleSearch</a> · <a href="https://www.usphonebook.com/opt-out" target="_blank" rel="noopener">USPhonebook</a> · <a href="https://thatsthem.com/optout" target="_blank" rel="noopener">ThatsThem</a> · <a href="https://www.peoplefinder.com/optout" target="_blank" rel="noopener">PeopleFinder</a> · <a href="https://www.mylife.com/privacy-policy#opt-out" target="_blank" rel="noopener">MyLife</a> · <a href="https://nuwber.com/removal/link" target="_blank" rel="noopener">Nuwber</a> · <a href="https://clustrmaps.com/bl/opt-out" target="_blank" rel="noopener">ClustrMaps</a>. MyLife also publishes a public "reputation score". Get that removed too.',
+          },
+        ],
+      },
+      {
+        id: "d-wholesale",
+        name: "Wholesale Data Brokers",
+        why:
+          "People-search sites are the retail end. These companies are the wholesale end: they buy court, utility, employer, insurance and DMV records " +
+          "and sell full profiles to banks, insurers, landlords, employers and investigators. " +
+          "Clearing Spokeo does nothing here, so you have to opt out of both layers. Their opt-out pages are deliberately hard to find.",
+        items: [
+          {
+            id: "d-w1",
+            sev: "core",
+            text: '<b>LexisNexis and Thomson Reuters CLEAR.</b> The two giants. CLEAR is the one investigators use, and LexisNexis holds your insurance-claims (CLUE) history. <a href="https://optout.lexisnexis.com/" target="_blank" rel="noopener">LexisNexis</a> · <a href="https://legalsolutions.thomsonreuters.com/law-products/clear/consumer-privacy-form" target="_blank" rel="noopener">CLEAR</a>',
+          },
+          {
+            id: "d-w2",
+            sev: "rec",
+            text: '<b>The Work Number.</b> Your employer reports your pay to it every pay period, and Equifax sells it to landlords, lenders and background checkers. Request a data freeze. <a href="https://www.equifax.com/personal/help/workforce-solutions-contact/" target="_blank" rel="noopener">The Work Number</a>',
+          },
+          {
+            id: "d-w3",
+            sev: "rec",
+            text: '<b>CoreLogic and Verisk.</b> CoreLogic feeds tenant screening and property records. Verisk\'s ClaimSearch holds every home and auto insurance claim you\'ve filed. <a href="https://www.corelogic.com/privacy/consumer-data-privacy-request/" target="_blank" rel="noopener">CoreLogic</a> · <a href="https://www.verisk.com/privacy-notice/" target="_blank" rel="noopener">Verisk</a>',
+          },
+          {
+            id: "d-w4",
+            sev: "opt",
+            text: '<b>Skip tracers and list sellers:</b> TransUnion TLO (separate from your credit file), Tracers, Merlin (utility hook-ups reveal when you moved in) and Data Axle (mailing and phone lists). <a href="https://www.transunion.com/consumer-privacy" target="_blank" rel="noopener">TransUnion TLO</a> · <a href="https://www.tracersinfo.com/consumer-privacy/" target="_blank" rel="noopener">Tracers</a> · <a href="https://merlindata.com/consumer-opt-out/" target="_blank" rel="noopener">Merlin</a> · <a href="https://www.data.com/consumer-access/" target="_blank" rel="noopener">Data Axle</a>',
+          },
+          {
+            id: "d-w5",
+            sev: "opt",
+            text: '<b>Request your Sift score.</b> Sift rates whether you look like a fraudster, based on your behaviour across every site that uses it. <a href="https://sift.com/resources/how-to-get-your-sift-score" target="_blank" rel="noopener">Sift</a>',
+          },
+        ],
+      },
+      {
+        id: "d-adloc",
+        name: "Ad & Location Brokers",
+        why:
+          "People-search brokers sell who you are. Ad brokers sell what you do, and location brokers sell where you go: " +
+          'where you sleep, work, worship and see a doctor. "Anonymised" location data rarely is. One home-to-work path identifies one person.',
+        items: [
+          {
+            id: "d-l1",
+            sev: "core",
+            text: '<b>Opt out of the big identity graphs:</b> Acxiom, LiveRamp (which ties your offline identity to your online activity), Epsilon and Lotame. <a href="https://isapps.acxiom.com/optout/optout.aspx" target="_blank" rel="noopener">Acxiom</a> · <a href="https://liveramp.com/opt_out/" target="_blank" rel="noopener">LiveRamp</a> · <a href="https://www.epsilon.com/us/consumer-information" target="_blank" rel="noopener">Epsilon</a> · <a href="https://www.lotame.com/about-lotame/privacy/lotames-products-services-privacy-policy/" target="_blank" rel="noopener">Lotame</a>',
+          },
+          {
+            id: "d-l2",
+            sev: "opt",
+            text: '<b>Run the industry-wide ad opt-outs:</b> NAI and DAA WebChoices cover 100+ ad networks at once. They\'re stored as cookies, so clearing cookies wipes them. Redo them per browser, or lean on the Lock Down network settings instead. <a href="https://optout.networkadvertising.org/" target="_blank" rel="noopener">NAI</a> · <a href="https://optout.aboutads.info/" target="_blank" rel="noopener">DAA</a>',
+          },
+          {
+            id: "d-l3",
+            sev: "rec",
+            text: '<b>Opt out of the location brokers:</b> SafeGraph (privacy@safegraph.com), Placer.ai (privacy@placer.ai), Outlogic (formerly X-Mode), and Gravy Analytics (privacy@gravyanalytics.com). Gravy was breached in 2025, and its subsidiary Venntel sold phone location data to federal agencies. <a href="https://www.safegraph.com/privacy-policy" target="_blank" rel="noopener">SafeGraph</a> · <a href="https://www.placer.ai/privacy" target="_blank" rel="noopener">Placer.ai</a> · <a href="https://xmode.io/opt-out/" target="_blank" rel="noopener">Outlogic</a> · <a href="https://gravyanalytics.com/privacy/" target="_blank" rel="noopener">Gravy Analytics</a>',
+          },
+        ],
+      },
+      {
+        id: "d-letters",
+        name: "When There's No Opt-Out",
+        why:
+          "No web form doesn't mean no obligation to delete. It's a bet that you won't write a letter. " +
+          "Ignored requests still count: they're the paper trail regulators use to build enforcement cases.",
+        items: [
+          {
+            id: "d-r1",
+            sev: "rec",
+            text: '<b>California residents: file one DROP request.</b> The state\'s Delete Request and Opt-out Platform sends a single deletion request to every registered data broker (600+), and brokers have had to process it since August 2026. <a href="https://privacy.ca.gov/drop/" target="_blank" rel="noopener">DROP</a>',
+          },
+          {
+            id: "d-r2",
+            sev: "rec",
+            text: '<b>Send a formal deletion request</b> to any broker without a form. datarequests.org generates a ready-to-send letter. Send it by email and certified mail, and note the date you sent it. <a href="https://www.datarequests.org/generator/" target="_blank" rel="noopener">datarequests.org</a>',
+          },
+          {
+            id: "d-r3",
+            sev: "opt",
+            text: '<b>Escalate the ones that ignore you.</b> File with your state attorney general and the FTC; California residents can also file with the CPPA. Each complaint is a data point in someone\'s next case. <a href="https://reportfraud.ftc.gov/" target="_blank" rel="noopener">FTC</a> · <a href="https://cppa.ca.gov/complaints/" target="_blank" rel="noopener">CPPA</a>',
           },
         ],
       },
@@ -387,7 +483,51 @@ const PHASES = [
           {
             id: "l-f5",
             sev: "rec",
-            text: "<b>Back up recovery codes</b> for your 2FA accounts somewhere offline. Losing an authenticator without codes is its own disaster.",
+            text: "<b>Print your recovery codes and store them off-device</b>, not on your phone and not in your cloud. Write down where each set lives. If you can't say where they are, they don't exist.",
+          },
+          {
+            id: "l-f6",
+            sev: "core",
+            text: '<b>Run your password manager\'s health report</b> and change every breached or reused password, email and anything that holds money first. <a href="https://my.1password.com/watchtower" target="_blank" rel="noopener">1Password Watchtower</a> · <a href="https://vault.bitwarden.com/#/reports/exposed-passwords" target="_blank" rel="noopener">Bitwarden Exposed Passwords</a> · iCloud Keychain: System Settings → Passwords → Security Recommendations · Firefox: about:logins → Alerts.',
+          },
+          {
+            id: "l-f7",
+            sev: "rec",
+            text: '<b>Use a passphrase for the few passwords you type from memory:</b> Mac login, password manager, primary email. Four or more random words beats any "complex" password, and you\'ll remember it. Your password manager can generate one. Everything else gets a generated 20+ character string. Check your Mac login password against known breaches at <a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener">haveibeenpwned.com/Passwords</a>.',
+          },
+        ],
+      },
+      {
+        id: "l-recovery",
+        name: "Account Recovery",
+        why:
+          "Most account takeovers don't crack the password. They walk through the recovery path. " +
+          "The test: if you lost your phone tomorrow, could you get back into your email without SMS and without calling anyone?",
+        items: [
+          {
+            id: "l-r1",
+            sev: "core",
+            text: '<b>Map the recovery chain on your critical accounts.</b> Start "Forgot password" on email, Apple ID, Google and banking, note each step, and stop before the final reset. You\'re mapping the path, not walking it. Look for any step a stranger could pass. <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Google</a> · <a href="https://appleid.apple.com/account/manage" target="_blank" rel="noopener">Apple</a>',
+          },
+          {
+            id: "l-r2",
+            sev: "core",
+            text: "<b>Remove SMS as the only way back in</b> on email, financial accounts, Apple ID and Google. A SIM swap defeats an SMS code.",
+          },
+          {
+            id: "l-r3",
+            sev: "core",
+            text: "<b>Add a second recovery path that doesn't depend on your phone:</b> a recovery email with a different provider, a hardware key, or a trusted recovery contact.",
+          },
+          {
+            id: "l-r4",
+            sev: "rec",
+            text: "<b>Set up a backup authenticator on an old phone.</b> Scan each critical account's 2FA QR code on both phones. It works without a SIM or signal. Keep the old phone powered off and stored safely, and turn it on only to recover. If 2FA is already set up, turn it off and on again to get a fresh QR code.",
+          },
+          {
+            id: "l-r5",
+            sev: "rec",
+            text: "<b>Do the phone-loss drill.</b> Describe, out loud, how you'd get into your primary email if your phone and laptop were both gone. If you can't finish the sentence, something above isn't done.",
           },
         ],
       },
@@ -490,6 +630,11 @@ const PHASES = [
             sev: "opt",
             text: "<b>Auto-clear cookies on browser close,</b> with exceptions for the handful of sites where staying logged in is worth it.",
           },
+          {
+            id: "l-n9",
+            sev: "rec",
+            text: '<b>Turn on Global Privacy Control.</b> Firefox: Settings → Privacy & Security → "Tell websites not to sell or share my data." In several US states, including California, sites must treat it as an opt-out of selling your data.',
+          },
         ],
       },
       {
@@ -532,10 +677,131 @@ const PHASES = [
             sev: "opt",
             text: "<b>Set up per-project email aliases</b> for your six music projects so label, distribution and fan mail stay separable — and one leaking doesn't expose the others.",
           },
+          {
+            id: "l-a8",
+            sev: "rec",
+            text: "<b>Review active sessions and login history</b> on email, Apple ID, Google, social and messaging accounts. Sign out any device you don't recognise or no longer own.",
+          },
+          {
+            id: "l-a9",
+            sev: "rec",
+            text: "<b>Turn on transaction alerts</b> for every bank, card and payment app (PayPal, Venmo, Cash App), so a drained account tells you within minutes.",
+          },
+          {
+            id: "l-a10",
+            sev: "rec",
+            text: "<b>Lock your messengers.</b> Signal: Settings → Account → Registration Lock. WhatsApp: Settings → Account → Two-step verification. Both stop someone who steals your number from taking over the account.",
+          },
+          {
+            id: "l-a11",
+            sev: "rec",
+            text: '<b>Check what strangers can see</b> on every platform you kept: profile, email, phone, and friends or connections list. Venmo makes transactions public by default, so set them to private. Facebook shows your friends list, LinkedIn shows your connections, and X lets people find you by email or phone. <a href="https://venmo.com/account/settings/privacy" target="_blank" rel="noopener">Venmo</a> · <a href="https://twitter.com/settings/audience_and_tagging" target="_blank" rel="noopener">X</a>',
+          },
+          {
+            id: "l-a12",
+            sev: "opt",
+            text: '<b>Audit cloud share links</b> in iCloud Drive, Google Drive and Dropbox. Old "anyone with the link" shares on tax returns or ID scans are an open door. Remove sync from any device you no longer own.',
+          },
+        ],
+      },
+      {
+        id: "l-identity",
+        name: "Legal Identity",
+        why:
+          "Your SSN and driver's licence can't be changed like a password, and copies sit with every service that ever asked you to " +
+          '"verify your identity". The defence is layering checks on top, so a stolen ID isn\'t enough on its own.',
+        items: [
+          {
+            id: "l-g1",
+            sev: "core",
+            text: '<b>Get an IRS Identity Protection PIN.</b> It stops anyone filing a tax return in your name, even with your SSN. A new one is issued every year. <a href="https://www.irs.gov/identity-theft-fraud-scams/get-an-identity-protection-pin" target="_blank" rel="noopener">IRS IP PIN</a>',
+          },
+          {
+            id: "l-g2",
+            sev: "core",
+            text: '<b>Claim your my Social Security and IRS online accounts</b> before someone else does. An unregistered account is one an identity thief can register in your name. <a href="https://www.ssa.gov/myaccount/" target="_blank" rel="noopener">my Social Security</a> · <a href="https://www.irs.gov/payments/your-online-account" target="_blank" rel="noopener">IRS</a>',
+          },
+          {
+            id: "l-g3",
+            sev: "rec",
+            text: '<b>Pull your credit reports</b> from all three bureaus and look for accounts you didn\'t open. <a href="https://www.annualcreditreport.com/" target="_blank" rel="noopener">AnnualCreditReport.com</a>',
+          },
+          {
+            id: "l-g4",
+            sev: "rec",
+            text: "<b>List who holds a copy of your ID:</b> banks, employers, landlords, car rental, gig and rideshare apps, crypto exchanges and brokerages, social and dating verification, telehealth, insurers, hotels, background-check firms, ID-verification services (ID.me, Jumio, Persona…), and TSA PreCheck or Global Entry. Close any account on that list you no longer use. Each one is a breach waiting to leak your licence.",
+          },
+          {
+            id: "l-g5",
+            sev: "opt",
+            text: '<b>If your ID shows up in a breach:</b> confirm your freezes are still on, file at IdentityTheft.gov for a recovery plan, and ask your state DMV about a fraud flag on your licence. <a href="https://www.identitytheft.gov/" target="_blank" rel="noopener">IdentityTheft.gov</a>',
+          },
+        ],
+      },
+      {
+        id: "l-scams",
+        name: "Scams & Callbacks",
+        why:
+          "The attack that beats good settings is a person on the phone. Genuine alerts are usually calm and factual. " +
+          "Fakes add a deadline, a link, and a request for something only you should know.",
+        items: [
+          {
+            id: "l-x1",
+            sev: "core",
+            text: "<b>Adopt a callback rule.</b> Never act on an incoming call, text or email about your accounts. Hang up and contact the company yourself, using the number on your card or bill or an address you type in. Caller ID can be spoofed.",
+          },
+          {
+            id: "l-x2",
+            sev: "core",
+            text: "<b>Never read a verification code to anyone.</b> No real company asks for one. A code you didn't request means someone is trying to reset your account right now.",
+          },
+          {
+            id: "l-x3",
+            sev: "rec",
+            text: "<b>Check the domain, not the display name.</b> Read what comes after the @, and hover over (or long-press) links before tapping. If the domain doesn't match the company, don't click.",
+          },
+          {
+            id: "l-x4",
+            sev: "opt",
+            text: '<b>Check a suspicious link without opening it</b> by pasting it into VirusTotal or urlscan.io. A WHOIS lookup shows whether the domain was registered last week. <a href="https://www.virustotal.com/gui/home/url" target="_blank" rel="noopener">VirusTotal</a> · <a href="https://urlscan.io/" target="_blank" rel="noopener">urlscan.io</a> · <a href="https://www.whois.com/whois/" target="_blank" rel="noopener">WHOIS</a>',
+          },
+        ],
+      },
+      {
+        id: "l-travel",
+        name: "Border Crossings",
+        why:
+          "At some borders your phone can be searched, and everything signed in on it is visible. " +
+          "The defence is a clean travel device, with your real accounts signed out and recoverable once you're through. " +
+          "Only worth doing for international trips where that matters to you.",
+        items: [
+          {
+            id: "l-t1",
+            sev: "opt",
+            text: "<b>Create a travel recovery email</b> with a separate provider such as Proton, unlinked to your name or number, with a memorised password. Add it as a backup recovery address on your real accounts before you leave.",
+          },
+          {
+            id: "l-t2",
+            sev: "opt",
+            text: "<b>Sign out of every real account on the travel device</b> and remove their apps, saved passwords and browser history.",
+          },
+          {
+            id: "l-t3",
+            sev: "opt",
+            text: "<b>Clean the trail:</b> no password-reset emails in the travel inbox (empty sent and trash too), no SMS codes, no screenshots of QR or recovery codes, no notes with passwords, and a password manager with nothing real in it, or none at all.",
+          },
+          {
+            id: "l-t4",
+            sev: "opt",
+            text: "<b>Write the recovery plan before you go:</b> step by step, how you'll get back into your real email once you're through. Keep your real recovery codes off the device.",
+          },
         ],
       },
     ],
   },
+
+  /* ═══════════ SURVIVAL DEVICES — see survival.js ═══════════ */
+  SURVIVAL,
 
   /* ═══════════ MAINTAIN ═══════════ */
   {
@@ -591,6 +857,11 @@ const PHASES = [
             cadence: "monthly",
             text: "<b>Audit third-party app grants</b> on Google, Apple and Meta. New ones accumulate silently.",
           },
+          {
+            id: "m-m5",
+            cadence: "monthly",
+            text: "<b>Review active sessions</b> on email, Apple ID and Google, and sign out anything unfamiliar.",
+          },
         ],
       },
       {
@@ -617,6 +888,11 @@ const PHASES = [
             cadence: "quarterly",
             text: "<b>Revisit your operating procedures.</b> Rules you keep breaking are usually wrong rules, not weak willpower.",
           },
+          {
+            id: "m-q5",
+            cadence: "quarterly",
+            text: "<b>Follow up on deletion letters.</b> Anything past 45 days with no reply gets a complaint. See Delete → When There's No Opt-Out.",
+          },
         ],
       },
       {
@@ -642,6 +918,16 @@ const PHASES = [
             id: "m-y4",
             cadence: "yearly",
             text: "<b>Run another 30-day declutter.</b> Annual is about the right cadence — sprawl returns quietly.",
+          },
+          {
+            id: "m-y5",
+            cadence: "yearly",
+            text: "<b>Run the phone-loss drill again,</b> and power up the backup authenticator phone to confirm every critical account is still on it.",
+          },
+          {
+            id: "m-y6",
+            cadence: "yearly",
+            text: "<b>Pull your credit reports, confirm all five freezes are still on,</b> and get this year's IRS IP PIN before tax season.",
           },
         ],
       },
@@ -722,11 +1008,14 @@ const esc = (s) =>
 
 /* ── counting ───────────────────────────────────────── */
 
+// a group's items array can hold { heading } and { note } entries; only entries with an id are tasks
+const tasks = (g) => g.items.filter((it) => it.id);
+
 function phaseTally(phase) {
   let done = 0,
     total = 0;
   phase.groups.forEach((g) =>
-    g.items.forEach((it) => {
+    tasks(g).forEach((it) => {
       total++;
       if (isDone(it.id)) done++;
     }),
@@ -737,7 +1026,7 @@ function phaseTally(phase) {
 function allTally() {
   let done = 0,
     total = 0;
-  PHASES.forEach((p) => {
+  PHASES.filter((p) => p.inOverall !== false).forEach((p) => {
     const [d, t] = phaseTally(p);
     done += d;
     total += t;
@@ -827,14 +1116,21 @@ function renderGuide() {
       <li><strong>Reduce first,</strong> because 30 days without a tool tells you far more than any amount of reasoning about it. It also tells you what to delete.</li>
       <li><strong>Delete second,</strong> because there's no sense carefully configuring privacy settings on an account you're about to remove.</li>
       <li><strong>Lock down third,</strong> on the smaller set of things that survived.</li>
+      <li><strong>Survival Devices,</strong> making the devices you kept work offline.</li>
       <li><strong>Maintain forever,</strong> because none of this holds on its own.</li>
     </ul>
 
     <h2>What to expect</h2>
     <p>The Foundation group in Lock Down — password manager, two-factor, email aliases, no social sign-in —
     accounts for the majority of the real security benefit. If you do nothing else on that page, do those four.</p>
+    <p>Account Recovery is the other half of that. Most takeovers don't crack
+    a password; they walk through a reset that ends in an SMS code. If you
+    could lose your phone tomorrow and still get into your email without
+    calling anyone, you're ahead of nearly everyone.</p>
     <p>Data brokers are the most tedious and least satisfying work here, because removal isn't permanent.
-    They re-scrape. Budget for it as a recurring quarterly chore or pay a service to handle it.</p>
+    They re-scrape. Budget for it as a recurring quarterly chore or pay a service to handle it.
+    There are also two layers: people-search sites are the retail end and wholesale aggregators are the
+    source, so clearing one doesn't touch the other.</p>
     <p>The Reduce phase is the one that changes your daily experience. The others reduce risk; this one
     gives you hours back.</p>
 
@@ -857,19 +1153,26 @@ function renderPhase(phase) {
     <p class="lede">${phase.lede}</p>
     ${phase.groups
       .map((g) => {
-        const gd = g.items.filter((i) => isDone(i.id)).length;
+        const gt = tasks(g);
+        const gd = gt.filter((i) => isDone(i.id)).length;
         return `
-      <section class="group" id="g-${esc(g.id)}">
+      <section class="group ${phase.collapsedByDefault ? "collapsed" : ""}" id="g-${esc(g.id)}">
         <button class="group-head">
           <span class="chev">▾</span>
           <span class="group-name">${esc(g.name)}</span>
-          <span class="group-tally ${gd === g.items.length ? "done" : ""}">${gd}/${g.items.length}</span>
+          <span class="group-tally ${gd === gt.length ? "done" : ""}">${gd}/${gt.length}</span>
         </button>
         <div class="group-body">
-          ${g.why ? `<p class="why">${g.why}</p>` : ""}
+          ${g.why ? `<div class="why">${g.why}</div>` : ""}
           ${g.items
-            .map(
-              (it) => `
+            .map((it) =>
+              it.heading
+                ? `
+            <h3 class="subhead">${esc(it.heading)}</h3>`
+                : it.note
+                  ? `
+            <p class="note">${it.note}</p>`
+                  : `
             <div class="item ${isDone(it.id) ? "done" : ""}" data-item="${esc(it.id)}">
               <input type="checkbox" id="cb-${esc(it.id)}" ${isDone(it.id) ? "checked" : ""}>
               ${it.sev ? `<span class="sev sev-${it.sev === "core" ? "core" : it.sev === "rec" ? "rec" : "opt"}">${it.sev === "rec" ? "advised" : it.sev}</span>` : ""}
@@ -904,7 +1207,7 @@ function renderPhase(phase) {
 
   document.getElementById("reset").onclick = () => {
     if (!confirm(`Reset all ${t} items in ${phase.name}?`)) return;
-    phase.groups.forEach((g) => g.items.forEach((it) => setDone(it.id, false)));
+    phase.groups.forEach((g) => tasks(g).forEach((it) => setDone(it.id, false)));
     render();
   };
 }
@@ -913,9 +1216,10 @@ function refreshTallies(phase) {
   phase.groups.forEach((g) => {
     const el = document.querySelector(`#g-${CSS.escape(g.id)} .group-tally`);
     if (!el) return;
-    const gd = g.items.filter((i) => isDone(i.id)).length;
-    el.textContent = `${gd}/${g.items.length}`;
-    el.classList.toggle("done", gd === g.items.length);
+    const gt = tasks(g);
+    const gd = gt.filter((i) => isDone(i.id)).length;
+    el.textContent = `${gd}/${gt.length}`;
+    el.classList.toggle("done", gd === gt.length);
   });
   const [d, t] = phaseTally(phase);
   const note = document.querySelector(".foot-note");
