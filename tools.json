@@ -60,7 +60,7 @@
   },
   {
     "name": "Job Search",
-    "desc": "Prep checklist, daily and weekly search rounds, and interview problem practice for SWE and cybersecurity roles",
+    "desc": "Prep checklist, search rounds, a Security+ and home lab study plan, and coding practice for an IT support to cybersecurity path",
     "icon": "checklist",
     "tags": [
       "checklist",
@@ -70,7 +70,7 @@
       "study"
     ],
     "url": "tools/job-search/",
-    "updated": "2026-10-13T23:18:29-07:00",
+    "updated": "2026-11-13T00:38:50-08:00",
     "synced": true
   },
   {
