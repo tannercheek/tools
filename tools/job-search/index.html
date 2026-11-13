@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Job Search</title>
-  <meta name="description" content="Prep checklist, daily and weekly search rounds, and interview problem practice for SWE and cybersecurity roles">
+  <meta name="description" content="Prep checklist, search rounds, a Security+ and home lab study plan, and coding practice for an IT support to cybersecurity path">
   <meta name="icon" content="checklist">
   <meta name="tags" content="checklist, career, weekly, interview, study">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,12 +18,13 @@
       <h1>Job search</h1>
       <p class="sync" id="sync" role="status">Loading saved progress</p>
     </header>
-    <p class="lede">Prepare once, work the search every day and week, and practice interview problems in short sessions. For entry-level software engineering and cybersecurity roles.</p>
+    <p class="lede">Get ready once, work the search every day and week, and study for Security+ alongside. Help desk and IT support now, security operations next, with software engineering kept open.</p>
 
     <div class="bar">
       <div class="tabs" role="tablist" aria-label="Plan">
         <button class="tab" type="button" role="tab" id="tab-prepare" data-tab="prepare" aria-controls="panel-prepare" aria-selected="true">Prepare</button>
         <button class="tab" type="button" role="tab" id="tab-search" data-tab="search" aria-controls="panel-search" aria-selected="false" tabindex="-1">Search</button>
+        <button class="tab" type="button" role="tab" id="tab-study" data-tab="study" aria-controls="panel-study" aria-selected="false" tabindex="-1">Study</button>
         <button class="tab" type="button" role="tab" id="tab-interview" data-tab="interview" aria-controls="panel-interview" aria-selected="false" tabindex="-1">Interview prep</button>
       </div>
       <div class="bar-row">
@@ -37,9 +38,10 @@
 
     <div class="controls" id="controls">
       <div class="segmented" id="track-picker" role="group" aria-label="Track">
-        <button type="button" data-track="all">Both tracks</button>
-        <button type="button" data-track="swe">Software eng.</button>
-        <button type="button" data-track="sec">Cybersecurity</button>
+        <button type="button" data-track="all">All</button>
+        <button type="button" data-track="it">IT support</button>
+        <button type="button" data-track="sec">Security</button>
+        <button type="button" data-track="swe">Software</button>
       </div>
       <label class="toggle"><input type="checkbox" id="hide-done"> Hide completed</label>
     </div>
@@ -54,7 +56,7 @@
           <div>
             <p class="counter-name">Applications sent</p>
             <p class="counter-goal">
-              Goal: 10–15, aimed at roles that fit. Tailor the resume version and log each one in the tracker.
+              Goal: 10–15, tailored. Help desk and desktop support first, then government and institutions, then web and adjacent roles. Match the resume version and log each one.
               <span class="last" id="last-apps"></span>
             </p>
           </div>
@@ -68,7 +70,7 @@
           <div>
             <p class="counter-name">Outreach messages sent</p>
             <p class="counter-goal">
-              Goal: 3–5, to alumni, past contacts and people at target companies. Be specific, and don't ask for a job in the first message.
+              Goal: 5, mostly PSU CS alumni on LinkedIn, plus past contacts and people at target companies. Be specific, and don't ask for a job in the first message.
               <span class="last" id="last-outreach"></span>
             </p>
           </div>
@@ -84,13 +86,39 @@
 
       <section class="phase" aria-labelledby="where-h">
         <div class="phase-head"><h2 id="where-h">Where to look</h2></div>
-        <p class="phase-intro">In order of payoff. First-pass tasks here stay checked; the recurring checks live in your daily and weekly rounds above.</p>
+        <p class="phase-intro">In order of odds. First-pass tasks here stay checked; the recurring checks live in your daily and weekly rounds above.</p>
         <div id="channels"></div>
       </section>
 
       <footer>
         One referral usually does more than 30 cold applications, so keep warm contacts moving even on weeks when the boards are busy.
       </footer>
+    </section>
+
+    <section class="panel" id="panel-study" role="tabpanel" aria-labelledby="tab-study" hidden>
+      <section class="ticket" aria-labelledby="exam-h">
+        <h2 class="tape" id="exam-h">Security+</h2>
+        <div class="exam">
+          <label class="counter-name" for="exam-date">Exam date</label>
+          <input type="date" id="exam-date" disabled>
+          <span class="exam-left" id="exam-left" aria-live="polite"></span>
+        </div>
+        <p class="exam-pace" id="exam-pace"></p>
+        <div class="counter">
+          <div>
+            <p class="counter-name">Study sessions this week</p>
+            <p class="counter-goal">
+              Goal: 5, about an hour each. Messer videos, notes in your own words, then practice questions.
+              <span class="last" id="last-study"></span>
+            </p>
+          </div>
+          <div class="stepper">
+            <button class="step" type="button" data-counter="study" data-delta="-1" aria-label="Remove one study session" disabled>−</button>
+            <span class="count" id="count-study" aria-live="polite">0</span>
+            <button class="step" type="button" data-counter="study" data-delta="1" aria-label="Add one study session" disabled>+</button>
+          </div>
+        </div>
+      </section>
     </section>
 
     <section class="panel" id="panel-interview" role="tabpanel" aria-labelledby="tab-interview" hidden>
@@ -107,7 +135,7 @@
 
       <section class="phase" aria-labelledby="road-h">
         <div class="phase-head"><h2 id="road-h">Problems</h2></div>
-        <p class="phase-intro">Work top to bottom. Phase 1 covers what most entry-level screens ask.</p>
+        <p class="phase-intro">Coding problems for software interviews, the side path. IT and SOC interview prep lives under Prepare and Study. Work top to bottom; Phase 1 covers what most entry-level screens ask.</p>
         <div id="roadmap"></div>
       </section>
     </section>

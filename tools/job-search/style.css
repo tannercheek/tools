@@ -8,6 +8,7 @@
   --tape-ink: #ffffff;
   --good: #2a7548;
   --warn: #a85f00;
+  --it: #1d6b73;
   --swe: #3d4fa3;
   --sec: #8a2f7f;
   --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
@@ -24,6 +25,7 @@
     --tape-ink: #10141a;
     --good: #6fc292;
     --warn: #e6a94a;
+    --it: #7fcbd2;
     --swe: #a9b6f2;
     --sec: #e7a8de;
   }
@@ -38,6 +40,7 @@
   --tape-ink: #10141a;
   --good: #6fc292;
   --warn: #e6a94a;
+  --it: #7fcbd2;
   --swe: #a9b6f2;
   --sec: #e7a8de;
 }
@@ -163,6 +166,16 @@ input[type="checkbox"]:disabled { opacity: 0.45; cursor: progress; }
 .count { min-width: 2.5rem; text-align: center; font: 600 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
 .count.met { color: var(--good); }
 
+/* Security+ exam */
+.exam { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.exam input {
+  font: 500 1rem/1.2 var(--body); color: var(--ink); color-scheme: light dark;
+  background: var(--steel); border: 1.5px solid var(--ink); border-radius: 3px;
+  padding: 0.4rem 0.5rem; min-height: 2.5rem;
+}
+.exam-left { font: 600 1.35rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.exam-pace { color: var(--muted); font-size: 0.9rem; margin: 0.6rem 0 1rem; max-width: 34rem; }
+
 /* Next up */
 .orders { list-style: none; margin: 0; padding: 0; }
 .order { padding: 0 0 1rem; }
@@ -215,6 +228,7 @@ input:checked + .item-text .item-label { color: var(--muted); text-decoration: l
   font: 600 0.7rem/1.2 var(--body); letter-spacing: 0.04em;
   border: 1px solid currentColor; border-radius: 3px; padding: 0.05rem 0.3rem;
 }
+.badge-it { color: var(--it); }
 .badge-swe { color: var(--swe); }
 .badge-sec { color: var(--sec); }
 .extras { padding: 0 0 0.75rem 1.7rem; }
