@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Song Seed</title>
+  <meta name="description" content="Roll drums, chords and strums for a new song">
+  <meta name="icon" content="folder">
+  <meta name="tags" content="music, writing, audio">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand">
+        <h1 class="title">Song Seed</h1>
+        <span class="sync" id="sync" data-state="local"><span class="sync-dot" aria-hidden="true"></span><span id="syncText">This device</span></span>
+      </div>
+      <div class="transport">
+        <button type="button" class="btn btn-primary" id="play" aria-pressed="false" aria-label="Play">
+          <span data-icon="play"></span><span class="btn-label">Play</span>
+        </button>
+        <button type="button" class="btn btn-quiet" id="rollAll" title="Randomize unlocked layers (R)">
+          <span data-icon="shuffle"></span><span class="btn-label">Randomize</span>
+        </button>
+        <button type="button" class="icon-btn" id="back" aria-label="Previous idea" title="Previous idea"><span data-icon="undo"></span></button>
+        <button type="button" class="icon-btn" id="fwd" aria-label="Next idea" title="Next idea"><span data-icon="redo"></span></button>
+      </div>
+      <div class="keep">
+        <button type="button" class="btn btn-ghost" id="save" aria-label="Save"><span data-icon="bookmark"></span><span class="btn-label">Save</span></button>
+        <button type="button" class="btn btn-ghost" id="copyLink" aria-label="Copy link"><span data-icon="link"></span><span class="btn-label">Copy link</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- Strip (DESIGN §5.6): the settings every lane shares. Each cell gets a
+         lock and a reroll from app.js. -->
+    <!-- Settings toolbar (DESIGN §5.6): one compact line, like a DAW's LCD.
+         Each field shows its value over a small label; a click opens its menu
+         (choices, then Lock and Reroll). Tempo also drags up and down.
+         Filled and wired by settings-bar.js. -->
+    <section class="fields strip" aria-label="Song settings">
+      <button type="button" class="field" data-field="tonic" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+      <button type="button" class="field" data-field="mode" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+      <button type="button" class="field is-tempo" data-field="tempo" aria-haspopup="dialog" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+      <button type="button" class="field" data-field="meter" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+      <button type="button" class="field" data-field="feel" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+      <div class="ed-menu field-menu" id="stripMenu" role="menu" hidden></div>
+    </section>
+
+    <!-- Loop: chords, strum and drums on one grid with a playhead, then one lane
+         row per lane group (DESIGN §5.7). Sits on paper. -->
+    <section class="loop" aria-label="Loop">
+      <div class="loop-head">
+        <h2 class="h2">Loop</h2>
+        <p class="meta" id="loopMeta"></p>
+        <div class="loop-ctl">
+          <div class="seg" role="group" aria-label="Grid" id="grid">
+            <button type="button" data-value="8">8ths</button>
+            <button type="button" data-value="16">16ths</button>
+          </div>
+          <button type="button" class="chip" id="muteChords" aria-pressed="true"><span data-icon="speaker"></span><span class="chip-label">Chords</span></button>
+          <button type="button" class="chip" id="muteDrums" aria-pressed="true"><span data-icon="speaker"></span><span class="chip-label">Drums</span></button>
+          <div class="seg" role="group" aria-label="Chord sound" id="sound">
+            <button type="button" data-value="guitar">Guitar</button>
+            <button type="button" data-value="keys">Keys</button>
+          </div>
+        </div>
+      </div>
+      <div class="tl-scroll" id="tlScroll">
+        <div class="tl" id="tl"></div>
+      </div>
+      <!-- The chord menu (PLAN step 20), the hit menu (step 21) and the stroke menu
+           (step 22): filled and placed by chord-lane.js, drum-lane.js and
+           strum-lane.js, kept inside the Loop rather than the scroll box so they're
+           never clipped. -->
+      <div class="ed-menu chord-menu" id="chordMenu" role="menu" aria-label="Chord" hidden></div>
+      <div class="ed-menu hit-menu" id="drumMenu" role="menu" aria-label="Hit" hidden></div>
+      <div class="ed-menu stroke-menu" id="strumMenu" role="menu" aria-label="Stroke" hidden></div>
+      <div class="loop-foot">
+        <p class="hint">Click a chord to hear it · Space plays and stops · R randomizes</p>
+        <div class="loop-links">
+          <button type="button" class="text-link" id="importMidi" title="Add grooves and progressions from MIDI files"><span data-icon="upload"></span><span class="text-link-label">Import MIDI</span></button>
+          <div class="loop-export" role="group" aria-label="Download MIDI">
+            <button type="button" class="text-link" id="exportDrums" title="Download the drums as a MIDI file"><span data-icon="download"></span><span class="text-link-label">Drums.mid</span></button>
+            <button type="button" class="text-link" id="exportChords" title="Download the chords as a MIDI file"><span data-icon="download"></span><span class="text-link-label">Chords.mid</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lane rows (DESIGN §5.7): a field bar per lane group, the settings
+           toolbar's model. The main field's menu lists the library, then Lock,
+           Reroll, Start over and the row's own actions. Filled and wired by
+           lane-bars.js. -->
+      <div class="lanes">
+        <section class="fields is-lane" data-lane="drums" aria-label="Drums">
+          <button type="button" class="field is-main" data-field="groove" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <button type="button" class="field" data-field="grooveBars" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <div class="ed-menu field-menu" role="menu" hidden></div>
+        </section>
+        <section class="fields is-lane" data-lane="strum" aria-label="Strum">
+          <button type="button" class="field is-main is-glyphs" data-field="strum" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <button type="button" class="field" data-field="strumBars" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <button type="button" class="field" data-field="strumRes" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <div class="ed-menu field-menu" role="menu" hidden></div>
+        </section>
+        <section class="fields is-lane" data-lane="chords" aria-label="Chords">
+          <button type="button" class="field is-main" data-field="chords" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <button type="button" class="field" data-field="bars" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <button type="button" class="field" data-field="count" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <button type="button" class="field" data-field="color" aria-haspopup="menu" aria-expanded="false"><span class="field-value"></span><span class="field-label"></span></button>
+          <div class="ed-menu field-menu" role="menu" hidden></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Melody: reference notes. The melody itself is yours. -->
+    <section class="band melody" aria-labelledby="hMelody">
+      <div class="band-head">
+        <h2 class="h2" id="hMelody">Melody</h2>
+        <svg class="motif" viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="xMinYMid slice" aria-hidden="true">
+          <circle cx="3" cy="14" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="15" cy="8" r="1.6"/><circle cx="21" cy="10" r="1.6"/>
+          <circle cx="27" cy="6" r="1.6"/><circle cx="33" cy="3" r="2.2"/><circle cx="39" cy="8" r="1.6"/><circle cx="45" cy="12" r="1.6"/>
+          <circle cx="51" cy="10" r="1.6"/><circle cx="57" cy="14" r="1.6"/><circle cx="63" cy="17" r="2.2"/><circle cx="69" cy="12" r="1.6"/>
+        </svg>
+      </div>
+      <div class="band-body">
+        <div class="melody-top">
+          <div class="mel-scale">
+            <h3 class="label sub">Scale</h3>
+            <ol class="scale" id="scale"></ol>
+            <p class="hint colour-hint" id="colourHint"></p>
+          </div>
+          <div class="mel-tones">
+            <h3 class="label sub">Chord tones</h3>
+            <ul class="tones" id="tones"></ul>
+          </div>
+          <!-- Circle of fifths: drawn by app.js (renderCircle). -->
+          <div class="mel-circle" id="circle"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band saved" aria-labelledby="hSaved">
+      <div class="band-head">
+        <h2 class="h2" id="hSaved">Saved</h2>
+        <span class="meta band-count" id="favCount"></span>
+      </div>
+      <ul class="favs" id="favs"></ul>
+      <p class="empty" id="favsEmpty">Nothing saved yet. Press Save to keep an idea.</p>
+    </section>
+  </main>
+
+  <!-- Import MIDI (PLAN step 18): filled and opened by import-panel.js. -->
+  <dialog class="dialog" id="importDlg" aria-labelledby="importTitle">
+    <div class="band-head">
+      <h2 class="h2" id="importTitle">Import MIDI</h2>
+      <button type="button" class="icon-btn dialog-close" id="importClose" aria-label="Close"><span data-icon="x"></span></button>
+    </div>
+    <div class="drop" id="importDrop">
+      <span class="drop-icon" data-icon="upload"></span>
+      <p class="drop-text" id="importDropText">Drop .mid files here</p>
+      <button type="button" class="btn btn-ghost" id="importChoose" autofocus>Choose files</button>
+      <input type="file" class="sr-only" id="importFile" multiple accept=".mid,.midi" tabindex="-1" aria-hidden="true">
+    </div>
+    <ul class="import-list" id="importList"></ul>
+    <div class="dialog-foot">
+      <button type="button" class="btn btn-ghost" id="importCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="importAdd" disabled>Add</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

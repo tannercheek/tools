@@ -1,0 +1,322 @@
+/* ==========================================================================
+   Song Seed — design tokens
+   Every design value lives here. Components reference tokens only;
+   no raw hex, px font sizes, durations or radii in component CSS.
+   Light is the default; dark overrides sit under prefers-color-scheme.
+   Reduced motion is handled here by zeroing durations (see bottom).
+   Rules for using these tokens: DESIGN.md.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---------- Colour: paper & ink (light) ---------- */
+  --color-paper:      #F7F3EC;  /* page background, top bar, timeline ground */
+  --color-surface:    #EEE8DC;  /* the strip and the Melody and Saved bands */
+  --color-surface-2:  #E5DDCD;  /* segmented-control track, tags. Only ink / ink-2 text on it */
+  --color-field:      #FBF8F3;  /* inputs, selects, scale tiles, fingerprints */
+  --color-raised:     #FFFDF9;  /* selected segment */
+  --color-ink:        #1E1B17;  /* primary text, Play button, locked lock button, toast */
+  --color-ink-2:      #4F483F;  /* secondary text, row labels, icon buttons */
+  --color-ink-3:      #6B6357;  /* hints, meta, lane names. Not on --color-surface-2 */
+  --color-on-ink:     #F7F3EC;  /* text/icons on --color-ink */
+  --color-rule:       #DCD3C3;  /* hairline dividers between rows and list items */
+  --color-line:       #968B79;  /* outlines of fields and chips (≥3:1 on field/paper) */
+  --color-hatch:      #D3C9B7;  /* locked-state hatch lines */
+  --color-hover:      rgba(30, 27, 23, 0.06);  /* hover wash for ghost/icon buttons */
+  --color-press:      rgba(30, 27, 23, 0.11);  /* :active wash */
+  --color-ink-hover:  #3A352E;  /* hover on ink-filled buttons */
+  --color-accent:     #A84A24;  /* burnt orange: colour note, delete confirm. Use sparingly */
+  --color-on-accent:  #FFF8F0;
+  --color-focus:      #3F6E9C;  /* focus ring */
+
+  /* ---------- Colour: timeline lanes ---------- */
+  --lane-kick:        #C4572A;  /* burnt orange */
+  --lane-snare:       #3F6E9C;  /* dusty blue */
+  --lane-cymbal:      #8A8172;  /* warm grey */
+  --lane-chord:       #E9E0CE;  /* chord block */
+  --lane-chord-now:   #C3E5CB;  /* current chord (timeline, chord tones, circle of fifths) */
+  --lane-chord-ink:   #1E1B17;  /* chord symbol text on blocks */
+  --lane-strum:       #1E1B17;  /* strum glyphs ↓ ↑ × */
+  --lane-rest:        #6B6357;  /* rest glyph · */
+
+  /* ---------- Colour: timeline grid ---------- */
+  --grid-step:        #EBE4D7;  /* every step */
+  --grid-beat:        #DCD3C2;  /* beat starts */
+  --grid-bar:         #B3A894;  /* bar starts, timeline right edge */
+  --playhead:         #1E1B17;
+
+  /* ---------- Patterns (flat texture, no images) ---------- */
+  --pattern-hatch: repeating-linear-gradient(135deg, var(--color-hatch) 0 1px, transparent 1px 8px);
+
+  /* ---------- Typography ---------- */
+  --font-display: 'Newsreader', 'Song Seed Accidentals', Georgia, 'Times New Roman', serif;
+  --font-ui:      'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Google Fonts:
+     https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap */
+
+  --text-xs:    11px;  /* row labels (caps), hints, meta, lane names, tags */
+  --text-sm:    13px;  /* buttons, chips, segments, chord tones, numerals */
+  --text-md:    15px;  /* body, select text */
+  --text-lg:    18px;  /* saved names, chord-tone symbols, compact chord symbols */
+  --text-xl:    22px;  /* chord symbols, key/mode select values, tempo number, note names */
+  --text-2xl:   28px;  /* section headings, app title */
+
+  --weight-regular:  400;
+  --weight-medium:   500;  /* UI labels, display serif headings and chord symbols */
+  --weight-semibold: 600;  /* caps labels, selected segment, tags */
+
+  --leading-tight: 1.1;
+  --leading-snug:  1.25;
+  --leading-body:  1.45;
+  --tracking-caps:    0.08em;
+  --tracking-display: -0.01em;
+
+  /* ---------- Space (4 · 8 · 12 · 16 · 24 · 40) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 40px;
+
+  /* ---------- Layout ---------- */
+  --page-max:      1200px;
+  --page-pad:      var(--space-6);  /* side padding, overridden per breakpoint in app CSS */
+  --section-gap:   var(--space-6);
+  /* Breakpoints (custom properties can't be used inside @media; use these literals):
+     compact  < 600px    medium 600–959px    wide ≥ 960px                         */
+
+  /* ---------- Radius ---------- */
+  --radius-sm:   6px;   /* chord blocks, tags, fingerprints */
+  --radius-md:   10px;  /* fields, rows, icon buttons, tiles */
+  --radius-lg:   18px;  /* bands */
+  --radius-pill: 999px; /* buttons, chips, segmented, toast */
+
+  /* ---------- Shadow (only the toast floats) ---------- */
+  --shadow-none:  none;
+  --shadow-toast: 0 8px 24px rgba(30, 27, 23, 0.18);
+
+  /* ---------- Focus ---------- */
+  --focus-w:      2px;
+  --focus-offset: 2px;
+
+  /* ---------- Hit targets & icons ---------- */
+  --tap:     44px;  /* minimum for anything clickable */
+  --icon:    20px;
+  --icon-stroke: 1.6;
+  --seg-inset:   3px;  /* inset ring that makes the selected segment look like a pill inside the track */
+
+  /* ---------- Timeline sizes ---------- */
+  --tl-label-w:   88px;   /* lane-name column */
+  --tl-step-min:  16px;   /* min step width; below this the timeline scrolls */
+  --tl-ruler:     22px;   /* bar-number row */
+  --tl-chord:     64px;   /* chord lane */
+  --tl-strum:     var(--tap);  /* strum lane: a full tap target (PLAN step 21) */
+  --tl-lane:      var(--tap);  /* each drum lane, the same */
+  --tl-gap:       3px;    /* gap between chord blocks */
+  --tl-chord-now-bar: 3px;/* ink bar on top of the current chord block */
+  --tl-playhead-w:    2px;
+  --tl-playhead-head: 10px;
+  --tl-glyph:     16px;   /* strum glyph size */
+
+  /* ---------- Drum hit marks (shape carries meaning, not colour) ---------- */
+  --hit-cymbal:        8px;   /* square */
+  --hit-cymbal-acc:    11px;
+  --hit-drum:          12px;  /* kick / snare square */
+  --hit-drum-acc:      16px;
+  --hit-ghost-ring:    1.5px; /* ghost = outline only, same size as normal */
+  --hit-radius:        3px;   /* kick / snare corner */
+  --hit-cymbal-radius: 2px;
+
+  /* ---------- Saved fingerprint ---------- */
+  --fp-w:   64px;
+  --fp-h:   38px;
+  --fp-pad: 3px;
+
+  /* ---------- Motion ---------- */
+  --dur-fast:  120ms;  /* hover, press, chord highlight */
+  --dur-base:  200ms;  /* segment change, lock state, toast in/out */
+  --dur-slow:  320ms;  /* timeline auto-scroll */
+  --ease:      cubic-bezier(0.2, 0.7, 0.2, 1);
+  --toast-hold: 2400ms;  /* how long a toast stays; not motion, not reduced */
+  --motion: 1;           /* 1 = full, 0 = reduced. JS reads this (see DESIGN.md › Motion) */
+}
+
+/* ==========================================================================
+   Added in the design pass (PLAN step 7). These are the numbers DESIGN.md
+   gives inline, so style.css can stay token-only. Same in both themes.
+   ========================================================================== */
+
+/* Newsreader has no ♭ or ♯, and the next font that does (Times New Roman)
+   draws them with wide gaps: "E ♭ m". This face covers only ♭ ♮ ♯ and maps
+   them to the system symbol font; every other character skips it. */
+@font-face {
+  font-family: 'Song Seed Accidentals';
+  src: local('Apple Symbols'), local('AppleSymbols'), local('Segoe UI Symbol'), local('SegoeUISymbol');
+  unicode-range: U+266D-266F;
+}
+@font-face { /* the same glyphs for italic numerals (♭VII) */
+  font-family: 'Song Seed Accidentals';
+  font-style: italic;
+  src: local('Apple Symbols'), local('AppleSymbols'), local('Segoe UI Symbol'), local('SegoeUISymbol');
+  unicode-range: U+266D-266F;
+}
+
+:root {
+  --text-2xs:           10px;   /* Locked / Now tags */
+  --radius-xs:          4px;    /* Locked / Now tags */
+  --opacity-disabled:   0.35;
+  --icon-sm:            16px;   /* icon inside a text link */
+  --link-underline-offset: 3px;
+
+  --sync-dot:           7px;
+  --sync-ring:          1.5px;  /* "This device" hollow ring */
+  --sync-pulse-dim:     0.35;   /* "Syncing…" dot fades to this and back */
+  --dur-pulse:          700ms;  /* one way of the "Syncing…" pulse; 0 under reduced motion */
+
+  --band-pad-top:       18px;   /* band padding 18 / 12 / 12 */
+
+  --field-chevron-room: 40px;   /* select right padding, room for the chevron */
+  --tempo-input-w:      76px;
+
+  --tl-label-w-compact:  64px;
+  --tl-step-min-compact: var(--tap);  /* every cell a full tap target on a phone (PLAN step 21) */
+  --tl-chord-pad-y:     6px;
+  --tl-chord-pad-x:     10px;
+  --hit-drum-ghost:     9px;    /* SPEC §1: ghost = small outline */
+  --hit-cymbal-ghost:   6px;
+
+  --scale-gap:          6px;
+  --scale-gap-compact:  3px;
+  --tile-min-h:         56px;
+  --colour-ring:        2px;    /* colour-note ring on its scale tile */
+  --colour-dot:         6px;
+  --tones-sym-w:        84px;
+  --tones-word-gap:     6px;
+  --melody-col-gap:     clamp(24px, 4.5vw, 64px); /* between Scale, Chord tones and the circle, wide layout */
+  --melody-inset-end:   40px;   /* the circle's inset from the band's right edge, wide layout */
+
+  --saved-row-min-h:    60px;
+  --fp-stroke-drum:     2.4;    /* kick and snare strokes */
+  --fp-stroke-cymbal:   1.6;
+  --fp-stroke-chord:    1.6;
+}
+
+/* Circle of fifths (PLAN step 10, DESIGN §5.11). Sizes only, so they're the
+   same in both themes. --circle-size is also the svg's viewBox, so the other
+   sizes scale with it when the circle shrinks to fit. */
+:root {
+  --circle-size:       200px;
+  --circle-note-r:     14px;   /* radius of each note */
+  --circle-tonic-ring: 2px;    /* ink ring around the tonic */
+  --circle-dot:        6px;    /* chord-root dot */
+  --circle-dot-now:    10px;   /* the current chord's root dot, while playing */
+  --cof-key-swatch:    20px;   /* each mark in the key under the circle (step 28) */
+}
+
+/* Timeline cells with a menu (PLAN steps 14 and 20–22). Sizes only, so they're the same in both themes. */
+:root {
+  --ed-open-ring:   2px;    /* ink ring on the cell whose menu is open */
+}
+
+/* Editing the loop (PLAN step 20, DESIGN §5.18). Sizes only, so they're the
+   same in both themes. */
+:root {
+  --menu-item-h:    52px;   /* a menu item: symbol or glyph over its name */
+  --chord-menu-w:   400px;  /* the chord menu in wide and medium; in compact it spans the Loop */
+  --tl-edge-hit:    12px;   /* the drag zone on the edge between two chords */
+  --tl-edge-w:      2px;    /* the ink bar shown on that edge on hover and while dragging */
+  --drag-slop:      4px;    /* pointer travel before a press becomes a drag */
+}
+
+/* Repeats of a groove in the drum lanes (PLAN step 21, DESIGN §5.18). The line
+   follows dark mode through --grid-bar. */
+:root {
+  --repeat-opacity: 0.5;                         /* drum marks past the groove's length */
+  --repeat-line:    2px dashed var(--grid-bar);  /* where each repeat starts, in place of its bar line */
+}
+
+/* Field bars: the settings toolbar and the lane rows (PLAN steps 26–27,
+   DESIGN §5.6–5.7). Sizes only, so they're the same in both themes. */
+:root {
+  --field-bar-pad:          4px;   /* around the fields */
+  --field-bar-inner-radius: calc(var(--radius-lg) - var(--field-bar-pad));  /* end fields, concentric with the bar */
+  --field-h:                52px;  /* a field: value over label */
+  --field-pad-x:            16px;
+  --field-pad-x-compact:    6px;   /* so all five toolbar fields fit on one line at 360px */
+  --tempo-drag-step:        4px;   /* pointer travel per BPM when dragging Tempo */
+  --list-menu-w:            360px; /* a lane's library menu, wide and medium */
+  --menu-list-max-h:        288px; /* its list scrolls past this */
+  --menu-inner-radius:      calc(var(--radius-md) - 1px);  /* a menu's footer tray, inside its 1px outline */
+  --icon-xs:                14px;  /* the lock and cue in a field's label; the lock after a locked lane's name */
+}
+
+/* Import dialog (PLAN step 18, DESIGN §5.17). The scrim is also set on
+   ::backdrop, which doesn't inherit from :root in every browser. */
+:root {
+  --dialog-w:       640px;
+  --drop-h:         120px;  /* the empty drop zone */
+}
+:root, ::backdrop {
+  --color-scrim:    rgba(30, 27, 23, 0.35);  /* behind the dialog; only it separates the dialog from the page */
+}
+
+/* ==========================================================================
+   Dark — warm ink, same roles
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper:      #161411;
+    --color-surface:    #201D19;
+    --color-surface-2:  #2B2722;
+    --color-field:      #1A1815;
+    --color-raised:     #3A352E;
+    --color-ink:        #EEE7DA;
+    --color-ink-2:      #C2B8A7;
+    --color-ink-3:      #9C9283;
+    --color-on-ink:     #161411;
+    --color-rule:       #322D27;
+    --color-line:       #736A5D;
+    --color-hatch:      #3A342D;
+    --color-hover:      rgba(238, 231, 218, 0.07);
+    --color-press:      rgba(238, 231, 218, 0.12);
+    --color-ink-hover:  #FFF8EC;
+    --color-accent:     #E28A5E;
+    --color-on-accent:  #1A1410;
+    --color-focus:      #86AED6;
+
+    --lane-kick:        #E07A4F;
+    --lane-snare:       #86AED6;
+    --lane-cymbal:      #A79D8D;
+    --lane-chord:       #2A2621;
+    --lane-chord-now:   #26432F;
+    --lane-chord-ink:   #EEE7DA;
+    --lane-strum:       #EEE7DA;
+    --lane-rest:        #9C9283;
+
+    --grid-step:        #211E1A;
+    --grid-beat:        #2E2A24;
+    --grid-bar:         #564E43;
+    --playhead:         #F3ECDF;
+
+    --pattern-hatch: repeating-linear-gradient(135deg, var(--color-hatch) 0 1px, transparent 1px 8px);
+    --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+  :root, ::backdrop {
+    --color-scrim:      rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* ==========================================================================
+   Reduced motion — durations collapse; JS checks --motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-pulse: 0ms;
+    --motion: 0;
+  }
+}
