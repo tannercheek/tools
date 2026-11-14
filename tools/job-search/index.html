@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Job Search</title>
-  <meta name="description" content="Prep checklist, search rounds, a Security+ and home lab study plan, and coding practice for an IT support to cybersecurity path">
+  <meta name="description" content="Get materials ready, work daily and weekly search rounds, and study what interviews ask, all aimed at landing a help desk or IT support job">
   <meta name="icon" content="checklist">
-  <meta name="tags" content="checklist, career, weekly, interview, study">
+  <meta name="tags" content="checklist, career, weekly, study">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
@@ -18,14 +18,13 @@
       <h1>Job search</h1>
       <p class="sync" id="sync" role="status">Loading saved progress</p>
     </header>
-    <p class="lede">Get ready once, work the search every day and week, and study for Security+ alongside. Help desk and IT support now, security operations next, with software engineering kept open.</p>
+    <p class="lede">One goal: a help desk or IT support job. Get your materials ready once, work the search every day and week, and study what help desk interviews ask about.</p>
 
     <div class="bar">
       <div class="tabs" role="tablist" aria-label="Plan">
         <button class="tab" type="button" role="tab" id="tab-prepare" data-tab="prepare" aria-controls="panel-prepare" aria-selected="true">Prepare</button>
         <button class="tab" type="button" role="tab" id="tab-search" data-tab="search" aria-controls="panel-search" aria-selected="false" tabindex="-1">Search</button>
         <button class="tab" type="button" role="tab" id="tab-study" data-tab="study" aria-controls="panel-study" aria-selected="false" tabindex="-1">Study</button>
-        <button class="tab" type="button" role="tab" id="tab-interview" data-tab="interview" aria-controls="panel-interview" aria-selected="false" tabindex="-1">Interview prep</button>
       </div>
       <div class="bar-row">
         <span class="bar-label" id="bar-label">Ready to apply</span>
@@ -37,13 +36,8 @@
     </div>
 
     <div class="controls" id="controls">
-      <div class="segmented" id="track-picker" role="group" aria-label="Track">
-        <button type="button" data-track="all">All</button>
-        <button type="button" data-track="it">IT support</button>
-        <button type="button" data-track="sec">Security</button>
-        <button type="button" data-track="swe">Software</button>
-      </div>
       <label class="toggle"><input type="checkbox" id="hide-done"> Hide completed</label>
+      <button type="button" id="fold-all" aria-label="Collapse all sections">Collapse all</button>
     </div>
 
     <section class="panel" id="panel-prepare" role="tabpanel" aria-labelledby="tab-prepare"></section>
@@ -56,7 +50,7 @@
           <div>
             <p class="counter-name">Applications sent</p>
             <p class="counter-goal">
-              Goal: 10–15, tailored. Help desk and desktop support first, then government and institutions, then web and adjacent roles. Match the resume version and log each one.
+              Goal: 10–15, tailored. Help desk, desktop support, service desk and IT support roles first, then government and institutions. Log each one.
               <span class="last" id="last-apps"></span>
             </p>
           </div>
@@ -96,19 +90,13 @@
     </section>
 
     <section class="panel" id="panel-study" role="tabpanel" aria-labelledby="tab-study" hidden>
-      <section class="ticket" aria-labelledby="exam-h">
-        <h2 class="tape" id="exam-h">Security+</h2>
-        <div class="exam">
-          <label class="counter-name" for="exam-date">Exam date</label>
-          <input type="date" id="exam-date" disabled>
-          <span class="exam-left" id="exam-left" aria-live="polite"></span>
-        </div>
-        <p class="exam-pace" id="exam-pace"></p>
+      <section class="ticket" aria-labelledby="study-h">
+        <h2 class="tape" id="study-h">This week</h2>
         <div class="counter">
           <div>
-            <p class="counter-name">Study sessions this week</p>
+            <p class="counter-name">Study sessions</p>
             <p class="counter-goal">
-              Goal: 5, about an hour each. Messer videos, notes in your own words, then practice questions.
+              Goal: 5, about an hour each. Coddy on weekdays, the Windows lab on weekends.
               <span class="last" id="last-study"></span>
             </p>
           </div>
@@ -118,25 +106,6 @@
             <button class="step" type="button" data-counter="study" data-delta="1" aria-label="Add one study session" disabled>+</button>
           </div>
         </div>
-      </section>
-    </section>
-
-    <section class="panel" id="panel-interview" role="tabpanel" aria-labelledby="tab-interview" hidden>
-      <section class="ticket" aria-labelledby="next-h">
-        <h2 class="tape" id="next-h">Next up</h2>
-        <ul class="orders" id="orders"></ul>
-        <div class="timer">
-          <span class="timer-read" id="timer-read" aria-live="off">25:00</span>
-          <button type="button" data-act="timer-toggle" id="timer-toggle">Start timer</button>
-          <button type="button" class="quiet" data-act="timer-reset">Reset</button>
-          <span class="timer-msg" id="timer-msg" role="status"></span>
-        </div>
-      </section>
-
-      <section class="phase" aria-labelledby="road-h">
-        <div class="phase-head"><h2 id="road-h">Problems</h2></div>
-        <p class="phase-intro">Coding problems for software interviews, the side path. IT and SOC interview prep lives under Prepare and Study. Work top to bottom; Phase 1 covers what most entry-level screens ask.</p>
-        <div id="roadmap"></div>
       </section>
     </section>
   </main>

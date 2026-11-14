@@ -1,13 +1,11 @@
-// Job Search: a one-time prep checklist, daily and weekly search rounds,
-// a Security+ and home lab study plan, and interview problem practice, as four tabs.
-import { mountInterview } from "./interview.js";
+// Job Search: one goal, a help desk / IT support job, as three tabs.
+// Prepare is a one-time checklist of materials to apply with, Search is the
+// daily and weekly rounds plus where to look, and Study is the skills help
+// desk interviews ask about, ending with interview readiness.
 import { PREPARE, ROUNDS, CHANNELS } from "./content.js";
-import { STUDY, mountExam } from "./study.js";
+import { STUDY } from "./study.js";
 
 const COUNTERS = { apps: 10, outreach: 5, study: 5 }; // low end of each goal
-const BADGE = { it: "IT", sec: "SEC", swe: "SWE" };
-const TRACKS = ["all", ...Object.keys(BADGE)];
-const tracksOf = (track) => [].concat(track || "all");
 
 // ── Dates ─────────────────────────────────────────────
 function isoDate(d) {
@@ -30,7 +28,7 @@ function stateKey(id, kind) {
   if (kind === "weekly") return `week:${WEEK}:${id}`;
   if (kind === "daily") return `day:${TODAY}:${id}`;
   if (kind === "plan") return `plan:${id}`;
-  return id; // setup / optional / study / later: bare ids, unchanged from the original checklist
+  return id; // setup / study: bare ids, unchanged from the original checklist
 }
 
 // ── Unlock ────────────────────────────────────────────
@@ -103,10 +101,8 @@ function chipsNode(chips) {
   return wrap;
 }
 
-function itemNode(item, kind, defaultTrack) {
-  const tracks = tracksOf(item.track || defaultTrack);
+function itemNode(item, kind) {
   const li = el("li");
-  li.dataset.track = tracks.join(" ");
 
   const label = el("label", "item");
   const box = el("input");
@@ -117,9 +113,7 @@ function itemNode(item, kind, defaultTrack) {
   if (item.objective) box.dataset.objective = "";
 
   const text = el("span", "item-text");
-  const name = el("span", "item-label", item.label);
-  for (const t of tracks) if (BADGE[t]) name.append(el("span", `badge badge-${t}`, BADGE[t]));
-  text.append(name);
+  text.append(el("span", "item-label", item.label));
   if (item.note) text.append(el("span", "item-note", item.note));
   label.append(box, text);
   li.append(label);
@@ -133,9 +127,9 @@ function itemNode(item, kind, defaultTrack) {
   return li;
 }
 
-function listNode(items, kind, defaultTrack) {
+function listNode(items, kind) {
   const ul = el("ul", "items");
-  for (const item of items) ul.append(itemNode(item, kind, defaultTrack));
+  for (const item of items) ul.append(itemNode(item, kind));
   return ul;
 }
 
@@ -148,7 +142,7 @@ function summaryNode(title, tag) {
   name.append(el("h3", null, title));
   if (tag) name.append(el("span", "tag", tag));
   left.append(chev, name);
-  summary.append(left, el("span", "sec-count"));
+  summary.append(left, el("span", "group-count"));
   return summary;
 }
 
@@ -198,7 +192,7 @@ for (const round of ROUNDS) {
   const meta = el("span", "meta");
   meta.append(
     el("span", null, round.kind === "daily" ? `${dayLabel} · ` : "Resets Monday · "),
-    el("span", "sec-count"),
+    el("span", "group-count"),
   );
   head.append(meta);
   section.append(head);
@@ -221,12 +215,11 @@ for (const ch of CHANNELS) {
   const details = el("details");
   details.open = !!ch.open;
   details.dataset.channel = ch.id;
-  details.dataset.track = tracksOf(ch.track).join(" ");
   if (ch.items) details.dataset.countable = "";
   const body = el("div", "body");
   body.append(el("p", "why", ch.why));
   if (ch.links) body.append(linksNode(ch.links));
-  if (ch.items) body.append(listNode(ch.items, "plan", ch.track));
+  if (ch.items) body.append(listNode(ch.items, "plan"));
   if (ch.routine) body.append(el("p", "routine", ch.routine));
   details.append(summaryNode(ch.title, ch.tag), body);
   channelsHost.append(details);
@@ -234,31 +227,15 @@ for (const ch of CHANNELS) {
 
 // ── Behavior ──────────────────────────────────────────
 const boxes = [...document.querySelectorAll("main ul.items input[type=checkbox]")];
-const trackPicker = document.getElementById("track-picker");
-const trackButtons = [...trackPicker.querySelectorAll("button")];
 const hideDoneInput = document.getElementById("hide-done");
-const controls = document.getElementById("controls");
+const foldButton = document.getElementById("fold-all");
 const tabs = [...document.querySelectorAll("[role=tab]")];
 const TABS = tabs.map((t) => t.dataset.tab);
-let track = "all";
 let tab = "prepare";
-let interview = null; // set once its saved state has loaded
-
-// Works on items and on channels: anything carrying a data-track list.
-const onTrack = (node) => {
-  const t = node.dataset.track.split(" ");
-  return track === "all" || t.includes("all") || t.includes(track);
-};
 
 function applyVisibility() {
   const hideDone = hideDoneInput.checked;
-  for (const box of boxes) {
-    const li = box.closest("li");
-    const on = onTrack(li);
-    li.dataset.on = on ? "1" : "";
-    li.hidden = !on || (hideDone && box.checked);
-    for (const b of li.querySelectorAll(".badge")) b.hidden = track !== "all";
-  }
+  for (const box of boxes) box.closest("li").hidden = hideDone && box.checked;
   // Hide groups and phases with nothing left to show.
   for (const g of document.querySelectorAll("[data-group]")) {
     g.hidden = !g.querySelector("li:not([hidden])");
@@ -266,48 +243,35 @@ function applyVisibility() {
   for (const p of document.querySelectorAll("[data-phase]")) {
     p.hidden = !p.querySelector("[data-group]:not([hidden])");
   }
-  // Channels off the chosen track go; the rest keep their context, and only
-  // a finished list disappears.
+  // Channels keep their context; only a finished list disappears.
   for (const ch of document.querySelectorAll("[data-channel]")) {
-    ch.hidden = !onTrack(ch);
     const ul = ch.querySelector("ul.items");
     if (ul) ul.hidden = !ul.querySelector("li:not([hidden])");
   }
-  trackButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.track === track)));
 }
 
 function tally(scope) {
-  const list = [...scope.querySelectorAll("li[data-on='1'] input")];
+  const list = [...scope.querySelectorAll("ul.items input")];
   return { done: list.filter((b) => b.checked).length, total: list.length };
 }
 
 function updateCounts() {
   for (const scope of document.querySelectorAll("[data-countable]")) {
     const { done, total } = tally(scope);
-    const count = scope.querySelector(".sec-count");
+    const count = scope.querySelector(".group-count");
     count.textContent = total ? `${done} of ${total}` : "";
     count.classList.toggle("done", total > 0 && done === total);
     const empty = scope.querySelector(":scope > .empty");
     if (empty) empty.hidden = !(total > 0 && done === total && hideDoneInput.checked);
   }
 
-  let label, done, total;
-  if (tab === "interview") {
-    const p = interview ? interview.progress() : { done: 0, total: 0, due: 0 };
-    label = p.due ? `Problems attempted · ${p.due} due for review` : "Problems attempted";
-    ({ done, total } = p);
-  } else {
-    const { kind, text } = BARS[tab];
-    const panel = document.getElementById("panel-" + tab);
-    const list = boxes.filter(
-      (b) => b.dataset.kind === kind && panel.contains(b) && b.closest("li").dataset.on === "1",
-    );
-    label = text;
-    done = list.filter((b) => b.checked).length;
-    total = list.length;
-  }
+  const { kind, text } = BARS[tab];
+  const panel = document.getElementById("panel-" + tab);
+  const list = boxes.filter((b) => b.dataset.kind === kind && panel.contains(b));
+  const done = list.filter((b) => b.checked).length;
+  const total = list.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
-  document.getElementById("bar-label").textContent = label;
+  document.getElementById("bar-label").textContent = text;
   document.getElementById("bar-count").textContent = `${done} of ${total}`;
   document.getElementById("fill").style.width = pct + "%";
   document.getElementById("meter").setAttribute("aria-valuenow", String(pct));
@@ -316,17 +280,38 @@ function updateCounts() {
 const BARS = {
   prepare: { kind: "setup", text: "Ready to apply" },
   search: { kind: "weekly", text: "Weekly rounds" },
-  study: { kind: "study", text: "Security+ and home lab" },
+  study: { kind: "study", text: "Ready to interview" },
 };
-let paintExam = () => {}; // set once saved state has loaded
+
+// Collapse / expand all: acts on every section in the current tab. The label
+// names what a click will do, judged by the sections you can see.
+const currentPanel = () => document.getElementById("panel-" + tab);
+const sectionsIn = (panel) => [...panel.querySelectorAll("details")];
+function paintFold() {
+  const panel = currentPanel();
+  const visible = sectionsIn(panel).filter((d) => !d.closest("[hidden]"));
+  const anyOpen = visible.some((d) => d.open);
+  foldButton.textContent = anyOpen ? "Collapse all" : "Expand all";
+  foldButton.setAttribute("aria-label", anyOpen ? "Collapse all sections" : "Expand all sections");
+  foldButton.hidden = visible.length === 0;
+}
+foldButton.addEventListener("click", () => {
+  const open = foldButton.textContent === "Expand all";
+  for (const d of sectionsIn(currentPanel())) d.open = open;
+  paintFold();
+});
+// toggle doesn't bubble, so listen in the capture phase for hand toggles.
+document.addEventListener("toggle", (e) => {
+  if (e.target.tagName === "DETAILS") paintFold();
+}, true);
 
 function refresh() {
   applyVisibility();
   updateCounts();
-  paintExam();
+  paintFold();
 }
 
-// Tabs: #prepare / #search / #study / #interview in the URL, last one remembered per browser.
+// Tabs: #prepare / #search / #study in the URL, last one remembered per browser.
 function showTab(name) {
   tab = TABS.includes(name) ? name : "prepare";
   for (const t of tabs) {
@@ -335,16 +320,13 @@ function showTab(name) {
     t.tabIndex = selected ? 0 : -1;
     document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
   }
-  // Track and hide-completed only apply to the checklists; everything on
-  // Study is on the security path, so it only gets hide-completed.
-  controls.hidden = tab === "interview";
-  trackPicker.hidden = tab === "study";
   try {
     localStorage.setItem("jobSearchPlan:tab", tab);
   } catch {
     // storage unavailable — the tab just won't be remembered
   }
   updateCounts();
+  paintFold();
 }
 
 function selectTab(name, focus) {
@@ -377,12 +359,7 @@ showTab(location.hash.slice(1) || savedTab || "prepare");
 refresh();
 
 // ── Saved state ───────────────────────────────────────
-// The checklists and the problem list keep the documents they had as
-// separate tools, so no saved progress needed migrating.
-const [state, prepState] = await Promise.all([
-  syncedState("job-search-checklist"),
-  syncedState("interview-prep"),
-]);
+const state = await syncedState("job-search-checklist");
 
 const statusEl = document.getElementById("sync");
 const STATUS_TEXT = {
@@ -390,16 +367,10 @@ const STATUS_TEXT = {
   "saved-locally": "Saved on this device, syncing when reachable",
   offline: "Offline. Changes are saved on this device.",
 };
-const statuses = {};
-function showStatus(doc, status) {
-  statuses[doc] = status;
-  const all = Object.values(statuses);
-  const worst = ["offline", "saved-locally", "synced"].find((s) => all.includes(s));
-  statusEl.textContent = STATUS_TEXT[worst] || "";
-  statusEl.classList.toggle("is-error", worst === "offline");
-}
-state.onStatus((s) => showStatus("plan", s));
-prepState.onStatus((s) => showStatus("prep", s));
+state.onStatus((s) => {
+  statusEl.textContent = STATUS_TEXT[s] || "";
+  statusEl.classList.toggle("is-error", s === "offline");
+});
 
 for (const box of boxes) {
   box.checked = !!state.get(box.dataset.key);
@@ -430,28 +401,16 @@ for (const btn of document.querySelectorAll(".step")) {
 }
 renderCounters();
 
-track = TRACKS.includes(state.get("track")) ? state.get("track") : "all";
 hideDoneInput.checked = !!state.get("hideDone");
-trackButtons.forEach((b) =>
-  b.addEventListener("click", () => {
-    track = b.dataset.track;
-    state.set("track", track);
-    refresh();
-  }),
-);
 hideDoneInput.addEventListener("change", () => {
   state.set("hideDone", hideDoneInput.checked);
   refresh();
 });
 refresh();
 
-paintExam = mountExam(studyPanel, state, NOW);
-
 // Finished Prepare and Study groups start collapsed; open the rest.
 for (const details of [...preparePanel.querySelectorAll("details"), ...studyPanel.querySelectorAll("details")]) {
   const { done, total } = tally(details);
   details.open = !(total > 0 && done === total);
 }
-
-interview = mountInterview(document.getElementById("panel-interview"), prepState, updateCounts);
-updateCounts();
+paintFold();

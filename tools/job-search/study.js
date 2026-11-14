@@ -1,308 +1,164 @@
-// Study tab: Security+ (SY0-701), the home lab, and SOC Tier 1 skills, plus
-// the exam-date ticket that paces the objectives.
-// kind "study" counts in the tab's bar; "later" doesn't; "weekly" resets Mondays.
-
-const o = (id, label, note) => ({ id: `sy0701-${id}`, label: `${id} ${label}`, note, objective: true });
+// Study tab: the skills help desk interviews ask about (networking, a Windows
+// Server lab, Microsoft and help desk basics), then interview readiness.
+// Every item counts in the tab's bar. Saved progress is keyed by item id.
 
 export const STUDY = [
   {
-    title: "Security+ (SY0-701)",
+    title: "Help desk foundations",
     kind: "study",
-    intro: "How to study: watch one objective's Messer videos, write a few lines of notes in your own words, then do 10–15 practice questions on it. Check it off when you could explain it to a coworker.",
+    intro: "Help desk postings ask for networking, Windows, Active Directory and Microsoft 365 basics. Coddy's networking path on weekdays, the Windows lab on weekends. Everything here is free.",
     groups: [
       {
-        label: "Get set up",
+        label: "Networking (Coddy)",
         items: [
           {
-            id: "secplus-registered",
-            label: "Exam booked, 5–6 weeks out",
-            note: "Buy the voucher and book through Pearson VUE, at a test center or online. Book SY0-701: it stays open until about mid-2027, and Messer's and Dion's material is all for 701. Then add the date above and to your resumes.",
-            links: [{ text: "Pearson VUE: CompTIA", href: "https://home.pearsonvue.com/comptia" }],
+            id: "hd-coddy-networking-started",
+            label: "Coddy Computer Networking path started",
+            note: "OSI model, IP addressing and subnetting, terminal tools, LAN labs. Free, in the browser.",
+            links: [{ text: "Coddy", href: "https://coddy.tech" }],
           },
           {
-            id: "secplus-messer-course",
-            label: "Professor Messer's course bookmarked",
-            note: "Free videos, one per exam objective, in the same order as the list below. Grab the objectives PDF from the same page.",
-            links: [{ text: "Messer SY0-701 course", href: "https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/" }],
+            id: "hd-coddy-networking-finished",
+            label: "Coddy Computer Networking path finished",
           },
           {
-            id: "secplus-dion-exams",
-            label: "Jason Dion's practice exams bought",
-            note: "Set 1 on Udemy: 540 timed questions with explanations. Udemy sales put it far below list price.",
-            links: [{ text: "Dion Set 1 on Udemy", href: "https://www.udemy.com/course/comptia-security-sy0-701-practice-exams/" }],
+            id: "hd-networking-explain",
+            label: "Can explain it out loud",
+            note: "What happens when you type a URL, DNS, DHCP, IP vs MAC, common ports, and ipconfig / ping / nslookup / tracert.",
           },
         ],
       },
       {
-        label: "1. General security concepts",
-        tag: "12%",
+        label: "Windows lab (Active Directory)",
         items: [
-          o("1.1", "Security controls", "Categories (technical, managerial, operational, physical) and types (preventive, deterrent, detective, corrective, compensating, directive)."),
-          o("1.2", "Fundamental concepts", "CIA, non-repudiation, AAA, gap analysis, Zero Trust (control and data planes), physical security, deception (honeypots, honeytokens)."),
-          o("1.3", "Change management", "Approval, ownership, impact analysis, backout plans, maintenance windows; technical effects like restarts, downtime and dependencies."),
-          o("1.4", "Cryptographic solutions", "PKI, symmetric vs asymmetric, hashing, salting, key stretching, digital signatures, certificates, TPM and HSM, obfuscation."),
+          {
+            id: "hd-lab-virtualbox",
+            label: "VirtualBox installed on the Intel MacBook Air",
+            note: "Check RAM first. With 8 GB, give the server 2 GB and the client 3–4 GB, and close other apps. 16 GB runs both comfortably.",
+            links: [{ text: "VirtualBox downloads", href: "https://www.virtualbox.org/wiki/Downloads" }],
+          },
+          {
+            id: "hd-lab-eval-isos",
+            label: "Windows Server 2025 and Windows 11 Enterprise downloaded",
+            note: "Free evaluations from the Microsoft Evaluation Center: 180 days for Server, 90 for Windows 11.",
+            links: [{ text: "Microsoft Evaluation Center", href: "https://www.microsoft.com/en-us/evalcenter" }],
+          },
+          {
+            id: "hd-lab-domain-joined",
+            label: "Domain controller built, Windows 11 joined to the domain",
+            note: "Josh Madakor's free \"Active Directory home lab\" video on YouTube is a good guide for the first build.",
+          },
+          {
+            id: "hd-lab-helpdesk-tasks",
+            label: "Help desk tasks practiced",
+            note: "Create users, reset passwords, unlock accounts, add users to groups, give a group access to a shared folder.",
+          },
+          {
+            id: "hd-lab-group-policy",
+            label: "Group Policy practiced",
+            note: "Set a wallpaper, block USB drives, map a drive.",
+          },
+          {
+            id: "hd-lab-break-fix-network",
+            label: "Broke and fixed the client's network settings",
+            note: "Set a wrong DNS server, then a wrong IP, on purpose. Find each problem with ipconfig and nslookup.",
+          },
+          {
+            id: "it-powershell-basics",
+            label: "Basic PowerShell in the lab",
+            note: "Get-ADUser, Unlock-ADAccount, Get-Service, Test-NetConnection. Run them until you don't need to look them up.",
+          },
+          {
+            id: "hd-lab-writeup",
+            label: "Lab write-up, resume and LinkedIn line",
+            note: "Screenshots on GitHub or tannercheek.com. Resume line: \"Built a Windows Server Active Directory lab: user and group management, password resets, Group Policy, file share permissions.\"",
+          },
         ],
       },
       {
-        label: "2. Threats, vulnerabilities and mitigations",
-        tag: "22%",
-        items: [
-          o("2.1", "Threat actors and motivations", "Nation-state, unskilled attacker, hacktivist, insider, organized crime, shadow IT; their resources, sophistication and motives."),
-          o("2.2", "Threat vectors and attack surfaces", "Email, SMS, removable media, unsupported systems, open ports, default credentials, supply chain, and social engineering (phishing, vishing, pretexting, typosquatting)."),
-          o("2.3", "Types of vulnerabilities", "Memory injection, buffer overflow, race conditions, SQL injection, XSS, misconfiguration, zero-day, cloud and mobile (sideloading, jailbreaking)."),
-          o("2.4", "Indicators of malicious activity", "Malware types; physical, network, application and password attacks; and the signs: impossible travel, account lockouts, missing logs, resource spikes."),
-          o("2.5", "Mitigation techniques", "Segmentation, access control, allow lists, isolation, patching, encryption, monitoring, least privilege, hardening, decommissioning."),
-        ],
-      },
-      {
-        label: "3. Security architecture",
-        tag: "18%",
-        items: [
-          o("3.1", "Architecture models", "Cloud and shared responsibility, infrastructure as code, serverless, microservices, on-prem, virtualization, containers, IoT, ICS/SCADA, embedded."),
-          o("3.2", "Securing enterprise infrastructure", "Device placement, security zones, fail-open vs fail-closed, firewalls, IDS/IPS, proxies, load balancers, VPN, 802.1X, SD-WAN, SASE."),
-          o("3.3", "Protecting data", "Data types and classifications, states (at rest, in transit, in use), sovereignty, encryption, hashing, masking, tokenization."),
-          o("3.4", "Resilience and recovery", "High availability, hot, warm and cold sites, capacity planning, testing, backups, power (UPS, generators)."),
-        ],
-      },
-      {
-        label: "4. Security operations",
-        tag: "28%",
-        items: [
-          o("4.1", "Securing computing resources", "Secure baselines, hardening, wireless (WPA3, RADIUS), mobile (MDM, BYOD, COPE, CYOD), application security."),
-          o("4.2", "Asset management", "Acquisition, ownership, inventory, and disposal (sanitization, destruction, certification, retention)."),
-          o("4.3", "Vulnerability management", "Scanning, pen testing, threat feeds, bug bounties, CVE and CVSS, prioritization, patching, exceptions, validation, reporting."),
-          o("4.4", "Alerting and monitoring", "Log aggregation, alerting, archiving, alert tuning; SIEM, SCAP, antivirus, DLP, SNMP traps, NetFlow."),
-          o("4.5", "Enhancing security", "Firewall rules, IDS/IPS signatures, web and DNS filtering, Group Policy, SELinux, email security (SPF, DKIM, DMARC), FIM, NAC, EDR/XDR."),
-          o("4.6", "Identity and access management", "Provisioning, SSO (LDAP, OAuth, SAML), federation, RBAC, ABAC, MAC, DAC, MFA, password managers, privileged access."),
-          o("4.7", "Automation and orchestration", "Use cases (provisioning, guard rails, ticketing, escalation), the benefits, and the risks: complexity, cost, technical debt."),
-          o("4.8", "Incident response", "Preparation, detection, analysis, containment, eradication, recovery, lessons learned; tabletop tests, root cause analysis, threat hunting, forensics."),
-          o("4.9", "Data sources for investigations", "Firewall, application, endpoint, OS, IDS/IPS and network logs, metadata, vulnerability scans, dashboards, packet captures."),
-        ],
-      },
-      {
-        label: "5. Program management and oversight",
-        tag: "20%",
-        items: [
-          o("5.1", "Security governance", "Policies (AUP, incident response, BCP), standards, procedures, governance structures, and data roles (owner, controller, processor, custodian)."),
-          o("5.2", "Risk management", "Qualitative vs quantitative, SLE, ARO and ALE, risk register, appetite and tolerance, transfer, accept, avoid, mitigate, BIA (RTO, RPO, MTTR, MTBF)."),
-          o("5.3", "Third-party risk", "Vendor assessment and selection, agreements (SLA, MOA, MOU, MSA, SOW, NDA, BPA), questionnaires, rules of engagement, monitoring."),
-          o("5.4", "Security compliance", "Reporting, consequences of non-compliance, compliance monitoring, privacy (GDPR, data subject rights, right to be forgotten)."),
-          o("5.5", "Audits and assessments", "Attestation, internal and external audits, pen tests (known, partially known, unknown environment; physical, offensive, defensive)."),
-          o("5.6", "Security awareness", "Phishing campaigns, recognizing anomalous behavior, user training, reporting, and running an awareness program."),
-        ],
-      },
-      {
-        label: "Practice and exam",
+        label: "Microsoft and help desk basics",
         items: [
           {
-            id: "secplus-baseline-exam",
-            label: "First full practice exam, as a baseline",
-            note: "Around the halfway point. Sort what you missed by domain; that's your re-study list.",
+            id: "hd-learn-reference",
+            label: "Microsoft Learn used as a reference",
+            note: "Free. Look things up there while building the lab. Skip certification paths for now.",
+            links: [{ text: "Microsoft Learn training", href: "https://learn.microsoft.com/training" }],
           },
           {
-            id: "secplus-weak-domains",
-            label: "Weakest domains re-studied",
-            note: "Rewatch those Messer videos and redo the questions you missed until you can say why each wrong answer is wrong.",
+            id: "hd-m365-admin-basics",
+            label: "Microsoft 365 admin basics",
+            note: "Assigning licenses, resetting MFA, fixing an Outlook profile, from Microsoft Learn and YouTube. The free Microsoft 365 developer sandbox usually rejects personal accounts, so learn this by reading and watching.",
           },
           {
-            id: "secplus-pbqs",
-            label: "Performance-based questions practiced",
-            note: "Drag-and-drop and simulation questions come first on the exam. Practice a few, and on exam day flag them and come back after the multiple choice.",
+            id: "it-ticketing-hands-on",
+            label: "A ticketing system, hands-on",
+            note: "ServiceNow's free Personal Developer Instance: open, assign, update and resolve a few incidents so you can talk about it.",
+            links: [{ text: "ServiceNow Developer", href: "https://developer.servicenow.com" }],
           },
           {
-            id: "secplus-85-twice",
-            label: "85% or better on two practice exams in a row",
-            note: "Dion's exams run harder than the real one, so this is a safe margin. Not there a week out? Reschedule; it costs less than a retake.",
-          },
-          {
-            id: "comptia-security-sy0-701-earned",
-            label: "Passed Security+",
-          },
-          {
-            id: "certs-updated-everywhere",
-            label: "Resumes, LinkedIn and tannercheek.com updated",
-            note: "Swap \"scheduled\" for the credential ID or verify link, and add it to LinkedIn's Licenses section.",
+            id: "it-troubleshooting-walkthroughs",
+            label: "Troubleshooting walkthroughs, out loud",
+            note: "\"A user can't get online / can't print / Outlook won't open / is locked out.\" Gather info, reproduce, check the simple things, isolate, fix, document, follow up.",
           },
         ],
       },
     ],
   },
   {
-    title: "Home lab",
-    tag: "Weeks 1–6",
+    title: "Interview readiness",
     kind: "study",
-    intro: "Windows Server, Active Directory, PowerShell and Splunk: what help desk and SOC postings ask for and your resume doesn't show yet. Apple Silicon Macs can't run Windows Server well, so use a spare PC, a used mini PC, or cloud VMs.",
+    intro: "Start these before the first interview is booked. There's often less than a week of notice.",
     groups: [
       {
-        label: "Build, attack, detect, write up",
+        label: "Behavioral",
         items: [
           {
-            id: "lab-host",
-            label: "Lab host and an isolated network",
-            note: "A PC or mini PC with 16 GB+ RAM running Proxmox or VirtualBox, or cloud VMs (set a billing alert). Keep lab traffic on its own internal network.",
+            id: "star-stories",
+            label: "5–6 STAR stories written",
+            note: "Shift-lead stories count: an upset customer you turned around, training a new hire, a rush you kept running, a mistake you owned. Plus a project you're proud of. Each under 2 minutes.",
           },
           {
-            id: "lab-windows-ad",
-            label: "Windows Server domain controller with Active Directory",
-            note: "Microsoft's free evaluation ISOs. Add OUs, users and groups, join a Windows 11 client, set a few Group Policies. Practice help desk basics here: password resets, unlocks, group changes.",
+            id: "tell-me-about-yourself",
+            label: "\"Tell me about yourself\" and \"Why this role?\"",
+            note: "Rehearsed, 60–90 seconds each. For help desk: customer service plus technical depth, and why support is the work you want. Tailor the \"why\" to each company.",
           },
           {
-            id: "lab-linux",
-            label: "Linux server on the lab network",
-            note: "Ubuntu Server with SSH open, so there are Linux auth logs to watch.",
+            id: "gap-answer",
+            label: "An answer for the 2022–2026 gap",
+            note: "Two or three calm sentences: what you were doing, then what you've built since (capstone, Windows lab). Say it out loud until it's easy.",
           },
           {
-            id: "lab-sysmon",
-            label: "Sysmon on the Windows machines",
-            note: "Use a community config, such as SwiftOnSecurity's or sysmon-modular.",
+            id: "project-deep-dive-lab",
+            label: "Project deep-dive ready",
+            note: "The Windows lab and the capstone: what you built and why, the hardest problem, and what you'd do differently.",
           },
           {
-            id: "lab-siem",
-            label: "Logs flowing into Splunk Free or Wazuh",
-            note: "Splunk's Universal Forwarder or the Wazuh agent on every host. Check that Windows Security, Sysmon and Linux auth logs are all searchable.",
+            id: "helpdesk-questions-out-loud",
+            label: "Common help desk questions practiced out loud",
+            note: "How do you handle a frustrated user? Walk me through a user who can't log in. What would you do if you didn't know the answer? Tell me about a time you explained something technical to a non-technical person.",
           },
           {
-            id: "lab-kali-attacks",
-            label: "Attacks run from Kali",
-            note: "Nmap scans, brute force against SSH and RDP, password spraying, a suspicious PowerShell download, Kerberoasting. Note the time of each so you can find it in the logs.",
-          },
-          {
-            id: "lab-detections",
-            label: "A detection for each attack",
-            note: "A saved search or rule per attack, mapped to its MITRE ATT&CK technique, with a note on likely false positives.",
-          },
-          {
-            id: "sec-writeups-homelab",
-            label: "Write-up published",
-            note: "A repo with setup steps, a network diagram, your detection rules and screenshots, plus a post on tannercheek.com. Pin the repo.",
-          },
-          {
-            id: "lab-resume-skills",
-            label: "New skills added to your resumes",
-            note: "Windows Server, Active Directory, Group Policy, PowerShell, Sysmon, Splunk or Wazuh, Kali. Only what you actually used and can talk about.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "SOC Tier 1 skills",
-    tag: "For 2027",
-    kind: "later",
-    intro: "What SOC interviews expect you to know cold. Security+ covers the theory; these make it hands-on, and most of it builds while you're in IT. Not counted above.",
-    groups: [
-      {
-        label: "Know cold",
-        items: [
-          {
-            id: "security-fundamentals",
-            label: "Security fundamentals",
-            note: "CIA triad, authentication vs authorization, hashing vs encryption, OWASP Top 10, common attacks (phishing, SQLi, XSS, privilege escalation).",
-          },
-          {
-            id: "phishing-analysis",
-            label: "Phishing analysis",
-            note: "Read headers (SPF, DKIM, DMARC, Received chain), check links and attachments safely in a sandbox, and write a short verdict with the indicators you found.",
-          },
-          {
-            id: "log-analysis-tools",
-            label: "Log analysis and SIEM",
-            note: "Read Windows event logs and Linux auth logs, write basic Splunk searches, inspect a packet capture in Wireshark. The home lab is your practice data.",
-          },
-          {
-            id: "incident-response-walkthrough",
-            label: "Incident response walkthrough",
-            note: "Narrate an alert end to end: triage → contain → eradicate → recover → lessons learned (NIST SP 800-61).",
-          },
-          {
-            id: "scenario-practice-sec",
-            label: "Scenario questions practiced out loud",
-            note: "\"You see this alert. What do you do?\" \"A user clicked a phishing link. Now what?\"",
+            id: "questions-to-ask",
+            label: "Questions to ask interviewers",
+            note: "3–5 per stage: about the team, the ticket queue and tools, onboarding, and what success looks like at 90 days. Never \"no questions.\"",
           },
         ],
       },
       {
-        label: "Every week",
-        kind: "weekly",
+        label: "Logistics",
         items: [
           {
-            id: "weekly-labs",
-            label: "1–2 hands-on labs",
-            note: "TryHackMe's SOC Level 1 path, LetsDefend, Blue Team Labs Online, CyberDefenders. Phishing and SIEM investigations first.",
+            id: "interview-setup",
+            label: "Video interview setup tested",
+            note: "Quiet space, stable internet, camera at eye level, Zoom / Teams / Meet all installed and tested.",
           },
-        ],
-      },
-      {
-        label: "Next cert",
-        items: [
           {
-            id: "next-sec-cert",
-            label: "Next cert chosen",
-            note: "After Security+ and some time in IT: CySA+ or BTL1 for SOC work. Ask whether your employer will pay for it.",
+            id: "salary-research",
+            label: "Salary range researched",
+            note: "Portland help desk runs about $22–30/hr, desktop support about $60–78k, some junior IT roles $75–95k. Check Glassdoor and BLS for each title, and know your number before the first recruiter call.",
           },
         ],
       },
     ],
   },
 ];
-
-// ── Exam ticket ───────────────────────────────────────
-const DAY = 86400000;
-const BUFFER_DAYS = 7; // finish objectives a week out, for practice exams
-
-function parseDate(s) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || "");
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
-}
-
-// Wires the exam date input and fills in days left and the objective pace.
-// Returns paint(), to call whenever a checkbox changes.
-export function mountExam(root, state, today) {
-  const input = root.querySelector("#exam-date");
-  const leftEl = root.querySelector("#exam-left");
-  const paceEl = root.querySelector("#exam-pace");
-  const objectives = [...root.querySelectorAll("input[data-objective]")];
-  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  input.value = state.get("secplusExamDate") || "";
-  input.disabled = false;
-  input.addEventListener("change", () => {
-    state.set("secplusExamDate", input.value || null);
-    paint();
-  });
-
-  function paint() {
-    const total = objectives.length;
-    const left = objectives.filter((b) => !b.checked).length;
-    const exam = parseDate(input.value);
-
-    if (!exam) {
-      leftEl.textContent = "Not booked yet";
-      paceEl.textContent = `${total - left} of ${total} objectives covered. Book the exam 5–6 weeks out, then add the date here to see your pace.`;
-      return;
-    }
-    const days = Math.round((exam - midnight) / DAY);
-    leftEl.textContent =
-      days > 1 ? `${days} days to go` : days === 1 ? "Tomorrow" : days === 0 ? "Today" : "Date has passed";
-
-    if (days < 0) {
-      paceEl.textContent = "Passed? Check it off below. Rescheduled? Set the new date.";
-    } else if (left === 0) {
-      paceEl.textContent = `All ${total} objectives covered. Practice exams until you score 85% or better twice in a row.`;
-    } else {
-      const toTarget = days - BUFFER_DAYS;
-      const head = `${left} of ${total} objectives left`;
-      if (toTarget >= 7) {
-        const perWeek = Math.ceil(left / (toTarget / 7));
-        paceEl.textContent = `${head}: about ${perWeek} a week to finish with a week to spare for practice exams.`;
-      } else if (toTarget > 0) {
-        const perDay = Math.ceil(left / toTarget);
-        paceEl.textContent = `${head}: about ${perDay} a day to finish with a week to spare for practice exams.`;
-      } else {
-        paceEl.textContent = `${head} and under a week of buffer. Cover Security operations (28%) and Threats (22%) first.`;
-      }
-    }
-  }
-  paint();
-  return paint;
-}
