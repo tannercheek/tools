@@ -60,17 +60,16 @@
   },
   {
     "name": "Job Search",
-    "desc": "Prep checklist, search rounds, a Security+ and home lab study plan, and coding practice for an IT support to cybersecurity path",
+    "desc": "Get materials ready, work daily and weekly search rounds, and study what interviews ask, all aimed at landing a help desk or IT support job",
     "icon": "checklist",
     "tags": [
       "checklist",
       "career",
       "weekly",
-      "interview",
       "study"
     ],
     "url": "tools/job-search/",
-    "updated": "2026-11-13T00:38:50-08:00",
+    "updated": "2026-11-14T13:09:39-08:00",
     "synced": true
   },
   {
