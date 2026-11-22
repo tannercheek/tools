@@ -72,13 +72,19 @@ function usesSync(text) {
   return SYNC_MODULE.test(text);
 }
 
-// directory-based tools often keep their logic in sibling .js files rather
-// than inline in index.html — collect those too so sync detection sees them
+// directory-based tools often keep their logic in .js files rather than
+// inline in index.html, sometimes nested (e.g. js/app.js) — collect those
+// too so sync detection sees them
 function siblingScripts(toolDir) {
   if (!existsSync(toolDir)) return [];
-  return readdirSync(toolDir, { withFileTypes: true })
-    .filter(e => e.isFile() && /\.js$/i.test(e.name))
-    .map(e => readFileSync(join(toolDir, e.name), 'utf8'));
+  const out = [];
+  for (const e of readdirSync(toolDir, { withFileTypes: true })) {
+    if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+    const p = join(toolDir, e.name);
+    if (e.isDirectory()) out.push(...siblingScripts(p));
+    else if (e.isFile() && /\.m?js$/i.test(e.name)) out.push(readFileSync(p, 'utf8'));
+  }
+  return out;
 }
 
 /* ── walk the folders ───────────────────────────────── */
